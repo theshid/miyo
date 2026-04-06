@@ -56,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
 import ani.saikou.ui.theme.OnSurface
@@ -79,8 +81,10 @@ fun MangaReaderScreen(
     mediaId: Int,
     chapterNum: Int,
     onBack: () -> Unit,
+    viewModel: MangaReaderViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
 ) {
     val context = LocalContext.current
+    val readerState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Immersive mode
     DisposableEffect(Unit) {
@@ -97,9 +101,16 @@ fun MangaReaderScreen(
     var canvasTheme by remember { mutableStateOf(CanvasTheme.DARK) }
     var zoomLevel by remember { mutableFloatStateOf(1f) }
 
-    // TODO: Replace with actual chapter pages from manga source parser
-    val totalPages = 24
+    val totalPages = readerState.totalPages.coerceAtLeast(1)
     val pagerState = rememberPagerState(pageCount = { totalPages })
+
+    // Loading state
+    if (readerState.isLoading) {
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
+        }
+        return
+    }
 
     Box(
         modifier = Modifier
@@ -122,6 +133,7 @@ fun MangaReaderScreen(
                         totalPages = totalPages,
                         zoomLevel = zoomLevel,
                         canvasTheme = canvasTheme,
+                        imageUrl = readerState.pages.getOrNull(page)?.imageUrl,
                     )
                 }
             }
@@ -135,6 +147,7 @@ fun MangaReaderScreen(
                         totalPages = totalPages,
                         zoomLevel = zoomLevel,
                         canvasTheme = canvasTheme,
+                        imageUrl = readerState.pages.getOrNull(page)?.imageUrl,
                     )
                 }
             }
@@ -149,6 +162,7 @@ fun MangaReaderScreen(
                         totalPages = totalPages,
                         zoomLevel = zoomLevel,
                         canvasTheme = canvasTheme,
+                        imageUrl = readerState.pages.getOrNull(page)?.imageUrl,
                     )
                 }
             }
@@ -181,13 +195,13 @@ fun MangaReaderScreen(
                         }
                         Column {
                             Text(
-                                text = "Chapter $chapterNum",
+                                text = readerState.title.ifEmpty { "Chapter $chapterNum" },
                                 style = MaterialTheme.typography.titleSmall,
                                 color = OnSurface,
                                 fontWeight = FontWeight.SemiBold,
                             )
                             Text(
-                                text = "CHAPTER $chapterNum",
+                                text = readerState.chapterTitle,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Primary,
                             )
@@ -356,9 +370,8 @@ private fun PageContent(
     totalPages: Int,
     zoomLevel: Float,
     canvasTheme: CanvasTheme,
+    imageUrl: String? = null,
 ) {
-    // TODO: Replace with actual manga page image from source parser
-    // For now, show a placeholder
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -368,25 +381,34 @@ private fun PageContent(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        // Placeholder — will be replaced with AsyncImage loading actual page URLs
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "$pageNum",
-                style = MaterialTheme.typography.displayLarge,
-                color = if (canvasTheme == CanvasTheme.DARK) OnSurfaceVariant.copy(alpha = 0.2f)
-                else Color.Gray.copy(alpha = 0.3f),
-                fontWeight = FontWeight.Bold,
+        if (imageUrl != null) {
+            coil.compose.AsyncImage(
+                model = imageUrl,
+                contentDescription = "Page $pageNum",
+                contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth(),
             )
-            Text(
-                text = "Page $pageNum of $totalPages",
-                style = MaterialTheme.typography.bodySmall,
-                color = if (canvasTheme == CanvasTheme.DARK) OnSurfaceVariant.copy(alpha = 0.4f)
-                else Color.Gray.copy(alpha = 0.5f),
-                textAlign = TextAlign.Center,
-            )
+        } else {
+            // Placeholder for when pages haven't loaded
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = "$pageNum",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = if (canvasTheme == CanvasTheme.DARK) OnSurfaceVariant.copy(alpha = 0.2f)
+                    else Color.Gray.copy(alpha = 0.3f),
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "Page $pageNum of $totalPages",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (canvasTheme == CanvasTheme.DARK) OnSurfaceVariant.copy(alpha = 0.4f)
+                    else Color.Gray.copy(alpha = 0.5f),
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
