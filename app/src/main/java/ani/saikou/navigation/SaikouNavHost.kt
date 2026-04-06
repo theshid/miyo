@@ -22,6 +22,7 @@ import ani.saikou.screens.manga.MangaScreen
 import ani.saikou.screens.player.VideoPlayerScreen
 import ani.saikou.screens.reader.MangaReaderScreen
 import ani.saikou.screens.search.SearchScreen
+import ani.saikou.screens.news.NewsFeedScreen
 import ani.saikou.screens.torrent.TorrentSearchScreen
 
 @Composable
@@ -56,6 +57,7 @@ fun SaikouNavHost(
                 onNavigateToAnimeList = { navController.navigate(Screen.UserLists.createRoute("ANIME")) },
                 onNavigateToMangaList = { navController.navigate(Screen.UserLists.createRoute("MANGA")) },
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
+                onNavigateToNews = { navController.navigate(Screen.News.route) },
             )
         }
 
@@ -164,6 +166,13 @@ fun SaikouNavHost(
             MangaReaderScreen(
                 mediaId = mediaId,
                 chapterNum = chapterNum,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── News Feed ─────────────────────────────────────────
+        composable(Screen.News.route) {
+            NewsFeedScreen(
                 onBack = { navController.popBackStack() },
             )
         }

@@ -52,6 +52,7 @@ fun HomeScreen(
     onNavigateToAnimeList: () -> Unit,
     onNavigateToMangaList: () -> Unit,
     onNavigateToMedia: (Int) -> Unit,
+    onNavigateToNews: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -91,10 +92,10 @@ fun HomeScreen(
                     )
                 }
             }
-            IconButton(onClick = { /* notifications */ }) {
+            IconButton(onClick = onNavigateToNews) {
                 Icon(
                     Icons.Default.Notifications,
-                    contentDescription = "Notifications",
+                    contentDescription = "News",
                     tint = OnSurfaceVariant,
                 )
             }

@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Pause
@@ -152,6 +153,17 @@ fun VideoPlayerScreen(
                 indication = null,
             ) { showControls = !showControls },
     ) {
+        // Poster background — shows while stream is loading
+        if (playerState.selectedLink == null && playerState.coverUrl != null) {
+            coil.compose.AsyncImage(
+                model = playerState.coverUrl,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                alpha = 0.6f,
+            )
+        }
+
         // ExoPlayer surface
         AndroidView(
             factory = { ctx ->
@@ -166,6 +178,20 @@ fun VideoPlayerScreen(
             },
             modifier = Modifier.fillMaxSize(),
         )
+
+        // Loading spinner while resolving stream
+        if (playerState.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(color = Primary, strokeWidth = 3.dp)
+                    Text(
+                        if (playerState.error != null) playerState.error!! else "Loading stream...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OnSurface,
+                    )
+                }
+            }
+        }
 
         // Custom overlay controls
         AnimatedVisibility(

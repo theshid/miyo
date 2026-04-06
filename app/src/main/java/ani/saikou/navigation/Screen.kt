@@ -16,6 +16,9 @@ sealed class Screen(
     data object Home : Screen("home", "Home", Icons.Default.Home)
     data object Manga : Screen("manga", "Manga", Icons.Default.Book)
 
+    // ── News ──────────────────────────────────────────────────
+    data object News : Screen("news")
+
     // ── Auth ──────────────────────────────────────────────────
     data object Login : Screen("login")
 

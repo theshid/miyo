@@ -41,6 +41,7 @@ class VideoPlayerViewModel(
             _uiState.value = _uiState.value.copy(
                 title = title,
                 episodeTitle = "Episode $episodeNum",
+                coverUrl = media?.banner ?: media?.cover,
             )
 
             animeSources = gogoParser.search(title)
@@ -103,6 +104,7 @@ class VideoPlayerViewModel(
 data class PlayerUiState(
     val title: String = "",
     val episodeTitle: String = "",
+    val coverUrl: String? = null,
     val streamLinks: List<StreamLink> = emptyList(),
     val selectedLink: StreamLink? = null,
     val availableSources: List<SourceItem> = emptyList(),
