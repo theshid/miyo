@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -53,6 +54,7 @@ fun HomeScreen(
     onNavigateToMangaList: () -> Unit,
     onNavigateToMedia: (Int) -> Unit,
     onNavigateToNews: () -> Unit = {},
+    onNavigateToTorrent: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -139,6 +141,27 @@ fun HomeScreen(
                 title = "Manga List",
                 icon = Icons.Outlined.MenuBook,
                 onClick = onNavigateToMangaList,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        // ── News & Torrent Cards ─────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ActionCard(
+                title = "News",
+                icon = Icons.Default.Notifications,
+                onClick = onNavigateToNews,
+                modifier = Modifier.weight(1f),
+            )
+            ActionCard(
+                title = "Torrents",
+                icon = Icons.Default.Download,
+                onClick = onNavigateToTorrent,
                 modifier = Modifier.weight(1f),
             )
         }

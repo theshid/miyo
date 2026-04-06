@@ -58,6 +58,7 @@ fun SaikouNavHost(
                 onNavigateToMangaList = { navController.navigate(Screen.UserLists.createRoute("MANGA")) },
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
                 onNavigateToNews = { navController.navigate(Screen.News.route) },
+                onNavigateToTorrent = { navController.navigate(Screen.TorrentSearch.createRoute()) },
             )
         }
 
