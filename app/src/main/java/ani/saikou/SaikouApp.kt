@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import ani.saikou.components.SaikouBottomBar
+import ani.saikou.di.AppModule
 import ani.saikou.navigation.SaikouNavHost
 import ani.saikou.navigation.Screen
 import ani.saikou.navigation.bottomBarScreens
@@ -20,7 +21,12 @@ fun SaikouApp() {
 
     val showBottomBar = currentRoute in bottomBarScreens.map { it.route }
 
+    // Determine start destination based on login state
+    val isLoggedIn = AppModule.repository().isLoggedIn()
+    val startDestination = if (isLoggedIn) Screen.Home.route else Screen.Login.route
+
     Scaffold(
+        containerColor = ani.saikou.ui.theme.Background,
         bottomBar = {
             if (showBottomBar) {
                 SaikouBottomBar(
@@ -38,6 +44,7 @@ fun SaikouApp() {
     ) { innerPadding ->
         SaikouNavHost(
             navController = navController,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding),
         )
     }

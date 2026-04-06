@@ -1,5 +1,7 @@
 package ani.saikou.screens.login
 
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,11 +24,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import ani.saikou.components.PillButton
+import ani.saikou.data.remote.AnilistApi
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.Epilogue
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -37,19 +43,25 @@ import ani.saikou.ui.theme.Secondary
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
 ) {
+    val context = LocalContext.current
+
+    // Subtle diagonal gradient glow
+    val gradientBrush = Brush.linearGradient(
+        colors = listOf(
+            Background,
+            Primary.copy(alpha = 0.06f),
+            Secondary.copy(alpha = 0.04f),
+            Background,
+        ),
+        start = Offset(0f, 0f),
+        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Background,
-                        Primary.copy(alpha = 0.05f),
-                        Secondary.copy(alpha = 0.03f),
-                        Background,
-                    )
-                )
-            ),
+            .background(Background)
+            .drawBehind { drawRect(gradientBrush) },
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -57,19 +69,19 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(32.dp),
         ) {
-            // App name
+            // App name — thin weight, large display
             Text(
                 text = "SAIKOU",
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontFamily = Epilogue,
                     fontWeight = FontWeight.W300,
+                    letterSpacing = 4.dp.value.sp,
                 ),
                 color = Primary,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Tagline
             Text(
                 text = "Your anime & manga companion",
                 style = MaterialTheme.typography.bodyLarge,
@@ -79,16 +91,19 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Login button
+            // Login button — launches AniList OAuth in Custom Tab
             PillButton(
                 text = "LOGIN WITH ANILIST",
-                onClick = onLoginSuccess, // TODO: wire to actual OAuth
+                onClick = {
+                    val url = "https://anilist.co/api/v2/oauth/authorize?client_id=${AnilistApi.CLIENT_ID}&response_type=token"
+                    CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(64.dp))
 
-            // Social links
+            // Social links row
             Row(
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -121,3 +136,6 @@ fun LoginScreen(
         }
     }
 }
+
+// Helper to use dp value as sp for letter spacing
+private inline val Float.sp get() = androidx.compose.ui.unit.TextUnit(this, androidx.compose.ui.unit.TextUnitType.Sp)

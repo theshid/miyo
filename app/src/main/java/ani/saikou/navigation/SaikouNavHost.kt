@@ -22,11 +22,12 @@ import ani.saikou.screens.search.SearchScreen
 @Composable
 fun SaikouNavHost(
     navController: NavHostController,
+    startDestination: String = Screen.Login.route,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route,
+        startDestination = startDestination,
         modifier = modifier,
     ) {
         // ── Login ─────────────────────────────────────────────
