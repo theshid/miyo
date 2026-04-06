@@ -20,13 +20,19 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- AniList OAuth callback -->
-            <intent-filter>
+        </activity>
+
+        <!-- Receives AniList OAuth callback, extracts token, relaunches app -->
+        <activity
+            android:name=".LoginCallbackActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|layoutDirection">
+            <intent-filter android:label="Anilist Login for Saikou">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:host="callback"
+                    android:host="anilist"
                     android:scheme="saikou" />
             </intent-filter>
         </activity>
