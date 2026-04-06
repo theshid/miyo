@@ -137,6 +137,7 @@ fun MangaReaderScreen(
     }
 
     val totalPages = readerState.totalPages.coerceAtLeast(1)
+    var currentPage by remember { mutableStateOf(1) }
 
     // Loading
     if (readerState.isLoading) {
@@ -191,6 +192,7 @@ fun MangaReaderScreen(
                         pages = readerState.pages.map { it.imageUrl },
                         totalPages = totalPages,
                         background = settings.background,
+                        onPageChanged = { currentPage = it },
                     )
                 }
                 ReadingMode.PAGER_LTR -> {
@@ -198,6 +200,7 @@ fun MangaReaderScreen(
                         pages = readerState.pages.map { it.imageUrl },
                         totalPages = totalPages,
                         reverseLayout = false,
+                        onPageChanged = { currentPage = it },
                     )
                 }
                 ReadingMode.PAGER_RTL -> {
@@ -205,6 +208,7 @@ fun MangaReaderScreen(
                         pages = readerState.pages.map { it.imageUrl },
                         totalPages = totalPages,
                         reverseLayout = true,
+                        onPageChanged = { currentPage = it },
                     )
                 }
             }
@@ -257,7 +261,7 @@ fun MangaReaderScreen(
                 ) {
                     if (settings.showPageNumber) {
                         Text(
-                            "Page — / $totalPages",
+                            "$currentPage / $totalPages",
                             style = MaterialTheme.typography.labelMedium,
                             color = OnSurface,
                         )
@@ -303,8 +307,15 @@ private fun WebtoonReader(
     pages: List<String>,
     totalPages: Int,
     background: Color,
+    onPageChanged: (Int) -> Unit,
 ) {
     val listState = rememberLazyListState()
+
+    // Track current visible page
+    LaunchedEffect(listState.firstVisibleItemIndex) {
+        onPageChanged(listState.firstVisibleItemIndex + 1)
+    }
+
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
@@ -317,7 +328,6 @@ private fun WebtoonReader(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        // Padding item for when pages haven't loaded
         if (pages.isEmpty()) {
             items(totalPages) { index ->
                 Box(
@@ -341,8 +351,14 @@ private fun PagerReader(
     pages: List<String>,
     totalPages: Int,
     reverseLayout: Boolean,
+    onPageChanged: (Int) -> Unit,
 ) {
     val pagerState = rememberPagerState(pageCount = { if (pages.isNotEmpty()) pages.size else totalPages })
+
+    // Track current page
+    LaunchedEffect(pagerState.currentPage) {
+        onPageChanged(pagerState.currentPage + 1)
+    }
 
     HorizontalPager(
         state = pagerState,
