@@ -1,0 +1,62 @@
+[
+    {
+        "merged": "ani.saikou.app-debug-60:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "ani.saikou.app-main-62:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "ani.saikou.app-main-62:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/font_epilogue_extrabold.ttf.flat",
+        "source": "ani.saikou.app-main-62:/font/epilogue_extrabold.ttf"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/font_inter_regular.ttf.flat",
+        "source": "ani.saikou.app-main-62:/font/inter_regular.ttf"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "ani.saikou.app-main-62:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/font_inter_bold.ttf.flat",
+        "source": "ani.saikou.app-main-62:/font/inter_bold.ttf"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "ani.saikou.app-main-62:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "ani.saikou.app-main-62:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "ani.saikou.app-main-62:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/font_epilogue_bold.ttf.flat",
+        "source": "ani.saikou.app-main-62:/font/epilogue_bold.ttf"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/font_inter_medium.ttf.flat",
+        "source": "ani.saikou.app-main-62:/font/inter_medium.ttf"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/font_epilogue_semibold.ttf.flat",
+        "source": "ani.saikou.app-main-62:/font/epilogue_semibold.ttf"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "ani.saikou.app-main-62:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "ani.saikou.app-main-62:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "ani.saikou.app-debug-60:/font_inter_semibold.ttf.flat",
+        "source": "ani.saikou.app-main-62:/font/inter_semibold.ttf"
+    }
+]

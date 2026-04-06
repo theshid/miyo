@@ -37,6 +37,9 @@ object AnilistQueries {
     fun mediaLists(userId: Int, type: String) =
         """{ MediaListCollection(userId:$userId,type:$type) { lists { name entries { status progress score(format:POINT_100) media { id isAdult status chapters episodes nextAiringEpisode{episode} bannerImage meanScore isFavourite coverImage{large} title{english romaji userPreferred} } } } user { mediaListOptions { rowOrder animeList{sectionOrder} mangaList{sectionOrder} } } } }"""
 
+    fun character(id: Int) =
+        """{Character(id:$id){id name{full native userPreferred}image{large medium}description gender dateOfBirth{year month day}age bloodType favourites media(sort:POPULARITY_DESC){edges{node{id type isAdult status meanScore isFavourite bannerImage coverImage{large}title{english romaji userPreferred}mediaListEntry{progress score(format:POINT_100)status}}characterRole}}}}"""
+
     fun toggleFav(isAnime: Boolean, id: Int): Pair<String, String> {
         val query = """mutation(${"$"}animeId:Int,${"$"}mangaId:Int){ToggleFavourite(animeId:${"$"}animeId,mangaId:${"$"}mangaId){anime{edges{id}}manga{edges{id}}}}"""
         val variables = if (isAnime) """{\"animeId\":\"$id\"}""" else """{\"mangaId\":\"$id\"}"""

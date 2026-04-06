@@ -62,6 +62,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
@@ -73,8 +74,10 @@ fun VideoPlayerScreen(
     mediaId: Int,
     episodeNum: Int,
     onBack: () -> Unit,
+    viewModel: VideoPlayerViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
 ) {
     val context = LocalContext.current
+    val playerState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Immersive mode
     DisposableEffect(Unit) {
@@ -90,10 +93,15 @@ fun VideoPlayerScreen(
 
     // ExoPlayer instance
     val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            // TODO: Replace with actual episode source URL from parser
-            // setMediaItem(MediaItem.fromUri("https://..."))
-            // prepare()
+        ExoPlayer.Builder(context).build()
+    }
+
+    // Load stream when available
+    LaunchedEffect(playerState.selectedLink) {
+        playerState.selectedLink?.let { link ->
+            exoPlayer.setMediaItem(MediaItem.fromUri(link.url))
+            exoPlayer.prepare()
+            exoPlayer.play()
         }
     }
 
@@ -190,14 +198,13 @@ fun VideoPlayerScreen(
                         }
                         Column {
                             Text(
-                                // TODO: Replace with actual anime title
-                                text = "Episode $episodeNum",
+                                text = "${playerState.title} - Ep ${String.format("%02d", episodeNum)}",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = OnSurface,
                                 fontWeight = FontWeight.SemiBold,
                             )
                             Text(
-                                text = "Media #$mediaId",
+                                text = playerState.episodeTitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = OnSurfaceVariant,
                             )

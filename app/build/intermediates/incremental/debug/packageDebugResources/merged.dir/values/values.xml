@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#FF0B0E11</color>
+    <color name="ic_launcher_background">#252D41</color>
+    <color name="primary">#FFFF89AB</color>
+    <color name="secondary">#FF8FA4FD</color>
+    <color name="surface_container">#FF161A1E</color>
+    <style name="Theme.Saikou" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

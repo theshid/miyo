@@ -56,6 +56,18 @@ data class Character(
     val role: String? = null,
 ) : Serializable
 
+data class CharacterDetail(
+    val id: Int,
+    val name: String?,
+    val nativeName: String? = null,
+    val image: String? = null,
+    val description: String? = null,
+    val gender: String? = null,
+    val age: String? = null,
+    val favourites: Int = 0,
+    val media: List<Media> = emptyList(),
+) : Serializable
+
 data class Studio(
     val id: Int,
     val name: String?,

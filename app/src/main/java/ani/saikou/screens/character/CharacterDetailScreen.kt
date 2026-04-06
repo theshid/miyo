@@ -1,5 +1,6 @@
 package ani.saikou.screens.character
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -25,7 +25,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,8 +38,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import ani.saikou.components.GlassCard
-import ani.saikou.components.MediaPosterCard
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import ani.saikou.domain.model.Media
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -54,10 +54,24 @@ fun CharacterDetailScreen(
     characterId: Int,
     onBack: () -> Unit,
     onNavigateToMedia: (Int) -> Unit,
+    viewModel: CharacterDetailViewModel = viewModel(),
 ) {
-    // TODO: Fetch character data from AniList API
-    // For now using placeholder structure that will be wired up
-    // when CharacterDetail query is added to AnilistQueries
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    if (state.isLoading) {
+        Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
+        }
+        return
+    }
+
+    val character = state.character
+    if (character == null) {
+        Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
+            Text("Character not found", color = OnSurfaceVariant)
+        }
+        return
+    }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -68,21 +82,19 @@ fun CharacterDetailScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // ── Collapsing Banner Header (full span) ─────────────
+        // ── Banner Header ────────────────────────────────────
         item(span = { GridItemSpan(2) }) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp),
+                    .height(320.dp),
             ) {
-                // Character art
                 AsyncImage(
-                    model = null, // TODO: character image URL
-                    contentDescription = "Character",
+                    model = character.image,
+                    contentDescription = character.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
                 )
-                // Gradient
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -93,11 +105,10 @@ fun CharacterDetailScreen(
                                     Background.copy(alpha = 0.7f),
                                     Background,
                                 ),
-                                startY = 100f,
+                                startY = 120f,
                             )
                         ),
                 )
-                // Back button
                 IconButton(
                     onClick = onBack,
                     modifier = Modifier
@@ -109,66 +120,84 @@ fun CharacterDetailScreen(
             }
         }
 
-        // ── Character Info (full span) ───────────────────────
+        // ── Character Info ───────────────────────────────────
         item(span = { GridItemSpan(2) }) {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "Character #$characterId",
+                    text = character.name ?: "Unknown",
                     style = MaterialTheme.typography.headlineMedium,
                     color = OnSurface,
                     fontWeight = FontWeight.Bold,
                 )
+                if (character.nativeName != null) {
+                    Text(
+                        text = character.nativeName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurfaceVariant,
+                    )
+                }
 
-                // Role + metadata row
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatItem(label = "MEDIA", value = "—")
-                    StatItem(label = "ALL", value = "—")
-                    StatItem(label = "FAVS", value = "—")
+                // Stats row
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    StatItem(label = "MEDIA", value = "${character.media.size}")
+                    character.gender?.let { StatItem(label = "GENDER", value = it) }
+                    character.age?.let { StatItem(label = "AGE", value = it) }
+                    StatItem(label = "FAVS", value = "${character.favourites}")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Biography
-                Text(
-                    text = "Biography",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = OnSurface,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = "Character biography will appear here once the character detail query is wired to the API.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = OnSurfaceVariant,
-                )
+                if (!character.description.isNullOrBlank()) {
+                    Text(
+                        text = "Biography",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = OnSurface,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    var expanded by remember { mutableStateOf(false) }
+                    Text(
+                        text = character.description
+                            .replace("~!", "").replace("!~", "")
+                            .replace("__", "").replace("**", "")
+                            .replace("<br>", "\n").replace(Regex("<[^>]*>"), ""),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurfaceVariant,
+                        maxLines = if (expanded) Int.MAX_VALUE else 4,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .animateContentSize()
+                            .clickable { expanded = !expanded },
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "Appears In",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = OnSurface,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                if (character.media.isNotEmpty()) {
+                    Text(
+                        text = "Appears In",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = OnSurface,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
         }
 
-        // ── "Appears In" Media Grid ──────────────────────────
-        // TODO: Replace with actual media list from character query
-        // Placeholder items to show layout structure
+        // ── Appears In Grid ──────────────────────────────────
         items(
-            items = listOf(1, 2, 3, 4),
-            key = { it },
-        ) { id ->
+            items = character.media,
+            key = { it.id },
+        ) { media ->
             AppearsInCard(
-                title = "Media #$id",
-                coverUrl = null,
-                onClick = { /* onNavigateToMedia(id) */ },
+                media = media,
+                onClick = { onNavigateToMedia(media.id) },
                 modifier = Modifier.padding(
-                    start = if (id % 2 == 1) 16.dp else 0.dp,
-                    end = if (id % 2 == 0) 16.dp else 0.dp,
+                    start = if (character.media.indexOf(media) % 2 == 0) 16.dp else 0.dp,
+                    end = if (character.media.indexOf(media) % 2 == 1) 16.dp else 0.dp,
                 ),
             )
         }
@@ -194,8 +223,7 @@ private fun StatItem(label: String, value: String) {
 
 @Composable
 private fun AppearsInCard(
-    title: String,
-    coverUrl: String?,
+    media: Media,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -213,12 +241,11 @@ private fun AppearsInCard(
                 .background(SurfaceContainer),
         ) {
             AsyncImage(
-                model = coverUrl,
-                contentDescription = title,
+                model = media.banner ?: media.cover,
+                contentDescription = media.displayTitle,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-            // Gradient overlay at bottom
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -231,7 +258,7 @@ private fun AppearsInCard(
                     ),
             )
             Text(
-                text = title,
+                text = media.displayTitle,
                 style = MaterialTheme.typography.titleSmall,
                 color = OnSurface,
                 fontWeight = FontWeight.SemiBold,

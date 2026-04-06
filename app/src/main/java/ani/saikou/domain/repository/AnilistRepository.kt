@@ -1,11 +1,13 @@
 package ani.saikou.domain.repository
 
+import ani.saikou.domain.model.CharacterDetail
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.User
 
 interface AnilistRepository {
     suspend fun getUserData(): User?
     suspend fun getMedia(id: Int): Media?
+    suspend fun getCharacter(id: Int): CharacterDetail?
     suspend fun getTrendingAnime(page: Int = 1): List<Media>
     suspend fun getPopularAnime(page: Int = 1): List<Media>
     suspend fun getRecentlyUpdatedAnime(page: Int = 1): List<Media>

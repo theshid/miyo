@@ -4,6 +4,7 @@ import ani.saikou.data.local.TokenStorage
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.AnilistQueries
 import ani.saikou.data.remote.MediaParser
+import ani.saikou.domain.model.CharacterDetail
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.User
 import ani.saikou.domain.repository.AnilistRepository
@@ -55,6 +56,37 @@ class AnilistRepositoryImpl(
         val media = response["data"]?.jsonObject?.get("Media") ?: return null
         if (media == JsonNull) return null
         return MediaParser.parseMedia(media.jsonObject)
+    }
+
+    override suspend fun getCharacter(id: Int): CharacterDetail? {
+        val response = api.execute(AnilistQueries.character(id)) ?: return null
+        val c = response["data"]?.jsonObject?.get("Character") ?: return null
+        if (c == JsonNull) return null
+        val json = c.jsonObject
+        val name = json["name"]?.jsonObject
+        val image = json["image"]?.jsonObject
+
+        val mediaEdges = json["media"]?.jsonObject?.get("edges")?.jsonArray
+        val mediaList = mediaEdges?.mapNotNull { edge ->
+            try {
+                val node = edge.jsonObject["node"]!!.jsonObject
+                MediaParser.parseMedia(node)
+            } catch (e: Exception) {
+                null
+            }
+        } ?: emptyList()
+
+        return CharacterDetail(
+            id = json["id"]!!.jsonPrimitive.content.toInt(),
+            name = name?.get("userPreferred")?.jsonPrimitive?.content,
+            nativeName = name?.get("native")?.jsonPrimitive?.content,
+            image = image?.get("large")?.jsonPrimitive?.content,
+            description = json["description"]?.jsonPrimitive?.content,
+            gender = json["gender"]?.takeIf { it != JsonNull }?.jsonPrimitive?.content,
+            age = json["age"]?.takeIf { it != JsonNull }?.jsonPrimitive?.content,
+            favourites = json["favourites"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+            media = mediaList,
+        )
     }
 
     // ── Discovery ─────────────────────────────────────────────

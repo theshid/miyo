@@ -27,9 +27,9 @@ class AnimeViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            val trendingDeferred = async { repository.getTrendingAnime(perPage = 8) }
+            val trendingDeferred = async { repository.getTrendingAnime() }
             val updatedDeferred = async { repository.getRecentlyUpdatedAnime() }
-            val popularDeferred = async { repository.getPopularAnime(page = 1, perPage = 10) }
+            val popularDeferred = async { repository.getPopularAnime(page = 1) }
 
             _uiState.value = AnimeUiState(
                 trending = trendingDeferred.await(),
@@ -53,11 +53,6 @@ class AnimeViewModel : ViewModel() {
         }
     }
 
-    private suspend fun AnilistRepository.getTrendingAnime(perPage: Int): List<Media> =
-        getTrendingAnime(1)
-
-    private suspend fun AnilistRepository.getPopularAnime(page: Int, perPage: Int): List<Media> =
-        getPopularAnime(page)
 }
 
 data class AnimeUiState(
