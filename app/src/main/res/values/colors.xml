@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Neon Nocturne palette (referenced from Compose theme, kept here for XML compatibility) -->
+    <color name="background">#FF0B0E11</color>
+    <color name="surface_container">#FF161A1E</color>
+    <color name="primary">#FFFF89AB</color>
+    <color name="secondary">#FF8FA4FD</color>
+</resources>
