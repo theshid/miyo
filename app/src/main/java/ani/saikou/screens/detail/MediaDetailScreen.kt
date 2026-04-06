@@ -55,7 +55,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GlassCard
 import ani.saikou.components.GenreChip
@@ -83,7 +83,7 @@ fun MediaDetailScreen(
     onNavigateToMedia: (Int) -> Unit,
     viewModel: MediaDetailViewModel = viewModel(),
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsState()
 
     if (state.isLoading) {
         Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {

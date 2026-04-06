@@ -62,7 +62,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
@@ -77,7 +77,7 @@ fun VideoPlayerScreen(
     viewModel: VideoPlayerViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
 ) {
     val context = LocalContext.current
-    val playerState by viewModel.uiState.collectAsStateWithLifecycle()
+    val playerState by viewModel.uiState.collectAsState()
 
     // Immersive mode
     DisposableEffect(Unit) {

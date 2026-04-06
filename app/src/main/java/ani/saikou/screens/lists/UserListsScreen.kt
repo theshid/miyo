@@ -43,7 +43,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.GlassCard
@@ -66,7 +66,7 @@ fun UserListsScreen(
     onNavigateToMedia: (Int) -> Unit,
     viewModel: UserListsViewModel = viewModel(),
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsState()
     var editingMedia by remember { mutableStateOf<Media?>(null) }
 
     Column(

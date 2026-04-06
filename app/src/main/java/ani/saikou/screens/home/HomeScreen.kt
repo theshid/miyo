@@ -35,7 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GlassCard
 import ani.saikou.components.MediaPosterCard
@@ -54,7 +54,7 @@ fun HomeScreen(
     onNavigateToMedia: (Int) -> Unit,
     viewModel: HomeViewModel = viewModel(),
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsState()
 
     if (state.isLoading) {
         ani.saikou.components.HomeShimmer()

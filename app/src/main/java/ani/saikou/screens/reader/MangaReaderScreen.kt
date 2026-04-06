@@ -57,7 +57,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
 import ani.saikou.ui.theme.OnSurface
@@ -84,7 +84,7 @@ fun MangaReaderScreen(
     viewModel: MangaReaderViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
 ) {
     val context = LocalContext.current
-    val readerState by viewModel.uiState.collectAsStateWithLifecycle()
+    val readerState by viewModel.uiState.collectAsState()
 
     // Immersive mode
     DisposableEffect(Unit) {
