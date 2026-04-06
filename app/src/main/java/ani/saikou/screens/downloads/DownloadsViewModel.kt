@@ -34,6 +34,7 @@ class DownloadsViewModel : ViewModel() {
                 DownloadsUiState(
                     mangaList = grouped,
                     totalStorageUsed = manager.getStorageUsed(),
+                    freeSpace = manager.getAvailableSpace(),
                     isLoading = false,
                 )
             }.collect { _uiState.value = it }
@@ -72,6 +73,7 @@ class DownloadsViewModel : ViewModel() {
 data class DownloadsUiState(
     val mangaList: List<MangaWithDownloads> = emptyList(),
     val totalStorageUsed: Long = 0,
+    val freeSpace: Long = 0,
     val isLoading: Boolean = true,
 )
 
