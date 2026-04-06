@@ -1,5 +1,9 @@
 package ani.saikou.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -29,6 +33,10 @@ fun SaikouNavHost(
         navController = navController,
         startDestination = startDestination,
         modifier = modifier,
+        enterTransition = { fadeIn(animationSpec = tween(300)) },
+        exitTransition = { fadeOut(animationSpec = tween(300)) },
+        popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+        popExitTransition = { fadeOut(animationSpec = tween(300)) },
     ) {
         // ── Login ─────────────────────────────────────────────
         composable(Screen.Login.route) {
@@ -53,14 +61,14 @@ fun SaikouNavHost(
         composable(Screen.Anime.route) {
             AnimeScreen(
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
-                onNavigateToSearch = { navController.navigate(Screen.Search.route) },
+                onNavigateToSearch = { genre -> navController.navigate(Screen.Search.createRoute(genre = genre, type = "ANIME")) },
             )
         }
 
         composable(Screen.Manga.route) {
             MangaScreen(
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
-                onNavigateToSearch = { navController.navigate(Screen.Search.route) },
+                onNavigateToSearch = { genre -> navController.navigate(Screen.Search.createRoute(genre = genre, type = "MANGA")) },
             )
         }
 
@@ -94,10 +102,20 @@ fun SaikouNavHost(
         }
 
         // ── Search ────────────────────────────────────────────
-        composable(Screen.Search.route) {
+        composable(
+            route = Screen.Search.route,
+            arguments = listOf(
+                navArgument("genre") { type = NavType.StringType; defaultValue = "" },
+                navArgument("type") { type = NavType.StringType; defaultValue = "" },
+            ),
+        ) { backStackEntry ->
+            val initialGenre = backStackEntry.arguments?.getString("genre")?.takeIf { it.isNotEmpty() }
+            val initialType = backStackEntry.arguments?.getString("type")?.takeIf { it.isNotEmpty() }
             SearchScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
+                initialGenre = initialGenre,
+                initialType = initialType,
             )
         }
 

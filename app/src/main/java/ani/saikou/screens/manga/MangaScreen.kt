@@ -34,15 +34,13 @@ import ani.saikou.ui.theme.Primary
 @Composable
 fun MangaScreen(
     onNavigateToMedia: (Int) -> Unit,
-    onNavigateToSearch: () -> Unit,
+    onNavigateToSearch: (genre: String?) -> Unit,
     viewModel: MangaViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     if (state.isLoading) {
-        Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
-        }
+        ani.saikou.components.DiscoveryShimmer()
         return
     }
 
@@ -56,7 +54,7 @@ fun MangaScreen(
         // ── Search bar ───────────────────────────────────────
         item {
             SaikouSearchBar(
-                onClick = onNavigateToSearch,
+                onClick = { onNavigateToSearch(null) },
                 placeholder = "Search manga...",
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
@@ -83,9 +81,10 @@ fun MangaScreen(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                GenreChip(text = "ALL MANGA", selected = true)
-                GenreChip(text = "ACTION")
-                GenreChip(text = "SEINEN")
+                GenreChip(text = "ALL MANGA", selected = true, onClick = { onNavigateToSearch(null) })
+                GenreChip(text = "ACTION", onClick = { onNavigateToSearch("Action") })
+                GenreChip(text = "ROMANCE", onClick = { onNavigateToSearch("Romance") })
+                GenreChip(text = "FANTASY", onClick = { onNavigateToSearch("Fantasy") })
             }
         }
 
@@ -96,7 +95,7 @@ fun MangaScreen(
                     SectionHeader(
                         title = "Trending Novels",
                         actionText = "VIEW ALL",
-                        onAction = onNavigateToSearch,
+                        onAction = { onNavigateToSearch(null) },
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     LazyRow(

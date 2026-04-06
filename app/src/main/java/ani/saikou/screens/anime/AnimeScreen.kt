@@ -36,15 +36,13 @@ import ani.saikou.ui.theme.Primary
 @Composable
 fun AnimeScreen(
     onNavigateToMedia: (Int) -> Unit,
-    onNavigateToSearch: () -> Unit,
+    onNavigateToSearch: (genre: String?) -> Unit,
     viewModel: AnimeViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     if (state.isLoading) {
-        Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
-        }
+        ani.saikou.components.DiscoveryShimmer()
         return
     }
 
@@ -58,7 +56,7 @@ fun AnimeScreen(
         // ── Search bar ───────────────────────────────────────
         item {
             SaikouSearchBar(
-                onClick = onNavigateToSearch,
+                onClick = { onNavigateToSearch(null) },
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
@@ -84,9 +82,10 @@ fun AnimeScreen(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                GenreChip(text = "ALL ANIME", selected = true)
-                GenreChip(text = "ACTION")
-                GenreChip(text = "SEINEN")
+                GenreChip(text = "ALL ANIME", selected = true, onClick = { onNavigateToSearch(null) })
+                GenreChip(text = "ACTION", onClick = { onNavigateToSearch("Action") })
+                GenreChip(text = "ROMANCE", onClick = { onNavigateToSearch("Romance") })
+                GenreChip(text = "SCI-FI", onClick = { onNavigateToSearch("Sci-Fi") })
             }
         }
 

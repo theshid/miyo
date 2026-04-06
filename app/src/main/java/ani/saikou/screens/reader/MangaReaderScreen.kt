@@ -362,6 +362,18 @@ fun MangaReaderScreen(
             }
         }
     }
+
+    // Source selector bottom sheet
+    if (readerState.showSourceSelector) {
+        ani.saikou.components.SourceSelectorSheet(
+            title = "Select Manga Source",
+            sources = readerState.availableSources,
+            onSelect = { source ->
+                viewModel.selectSourceById(source.id)
+            },
+            onDismiss = { viewModel.dismissSourceSelector() },
+        )
+    }
 }
 
 @Composable

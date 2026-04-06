@@ -68,9 +68,17 @@ import coil.compose.AsyncImage
 fun SearchScreen(
     onBack: () -> Unit,
     onNavigateToMedia: (Int) -> Unit,
+    initialGenre: String? = null,
+    initialType: String? = null,
     viewModel: SearchViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Apply initial filters once
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (initialGenre != null) viewModel.toggleGenre(initialGenre)
+        if (initialType != null) viewModel.updateType(initialType)
+    }
 
     Column(
         modifier = Modifier

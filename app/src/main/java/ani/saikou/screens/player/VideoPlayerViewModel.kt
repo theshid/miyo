@@ -3,8 +3,10 @@ package ani.saikou.screens.player
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ani.saikou.components.SourceItem
 import ani.saikou.data.remote.parsers.GogoParser
 import ani.saikou.di.AppModule
+import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.StreamLink
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,15 +25,16 @@ class VideoPlayerViewModel(
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState
 
+    private var animeSources: List<AnimeSource> = emptyList()
+
     init {
-        loadStream()
+        loadSources()
     }
 
-    private fun loadStream() {
+    private fun loadSources() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            // 1. Get media info for title
             val media = repository.getMedia(mediaId)
             val title = media?.nameRomaji ?: media?.name ?: "Unknown"
 
@@ -40,15 +43,31 @@ class VideoPlayerViewModel(
                 episodeTitle = "Episode $episodeNum",
             )
 
-            // 2. Search Gogo for this anime
-            val sources = gogoParser.search(title)
-            val source = sources.firstOrNull()
-            if (source == null) {
+            animeSources = gogoParser.search(title)
+            if (animeSources.isEmpty()) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = "Anime not found on source")
                 return@launch
             }
 
-            // 3. Get episodes
+            if (animeSources.size == 1) {
+                // Auto-select if only one result
+                selectSource(animeSources.first())
+            } else {
+                // Show selector
+                _uiState.value = _uiState.value.copy(
+                    showSourceSelector = true,
+                    availableSources = animeSources.map {
+                        SourceItem(id = it.slug, title = it.name, coverUrl = it.cover)
+                    },
+                    isLoading = false,
+                )
+            }
+        }
+    }
+
+    fun selectSource(source: AnimeSource) {
+        _uiState.value = _uiState.value.copy(showSourceSelector = false, isLoading = true)
+        viewModelScope.launch {
             val episodes = gogoParser.getEpisodes(source.slug)
             val episode = episodes.find { it.number == episodeNum.toString() }
             if (episode?.link == null) {
@@ -56,7 +75,6 @@ class VideoPlayerViewModel(
                 return@launch
             }
 
-            // 4. Get stream links
             val links = gogoParser.getStreamLinks(episode.link)
             _uiState.value = _uiState.value.copy(
                 streamLinks = links,
@@ -66,8 +84,19 @@ class VideoPlayerViewModel(
         }
     }
 
+    fun selectSourceById(id: String) {
+        val source = animeSources.find { it.slug == id } ?: return
+        selectSource(source)
+    }
+
     fun selectStream(link: StreamLink) {
         _uiState.value = _uiState.value.copy(selectedLink = link)
+    }
+
+    fun dismissSourceSelector() {
+        _uiState.value = _uiState.value.copy(showSourceSelector = false)
+        // Auto-select first if dismissed
+        animeSources.firstOrNull()?.let { selectSource(it) }
     }
 }
 
@@ -76,6 +105,8 @@ data class PlayerUiState(
     val episodeTitle: String = "",
     val streamLinks: List<StreamLink> = emptyList(),
     val selectedLink: StreamLink? = null,
+    val availableSources: List<SourceItem> = emptyList(),
+    val showSourceSelector: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
 )

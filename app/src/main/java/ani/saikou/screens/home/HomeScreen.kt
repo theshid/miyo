@@ -57,9 +57,7 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     if (state.isLoading) {
-        Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
-        }
+        ani.saikou.components.HomeShimmer()
         return
     }
 

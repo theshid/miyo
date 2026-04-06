@@ -329,6 +329,18 @@ fun VideoPlayerScreen(
             }
         }
     }
+
+    // Source selector bottom sheet
+    if (playerState.showSourceSelector) {
+        ani.saikou.components.SourceSelectorSheet(
+            title = "Select Source",
+            sources = playerState.availableSources,
+            onSelect = { source ->
+                viewModel.selectSourceById(source.id)
+            },
+            onDismiss = { viewModel.dismissSourceSelector() },
+        )
+    }
 }
 
 private fun formatTime(ms: Long): String {
