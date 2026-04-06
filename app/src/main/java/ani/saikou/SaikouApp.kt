@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import ani.saikou.components.SaikouBottomBar
@@ -27,9 +27,10 @@ fun SaikouApp() {
     val isLoggedIn = AppModule.repository().isLoggedIn()
     val startDestination = if (isLoggedIn) Screen.Home.route else Screen.Login.route
 
-    // Observe connectivity
+    // Observe connectivity — use collectAsState here since LocalLifecycleOwner
+    // may not be available at this level of the composition tree
     val isConnected by AppModule.connectivity().isConnected
-        .collectAsStateWithLifecycle(initialValue = true)
+        .collectAsState(initial = true)
 
     LaunchedEffect(isConnected) {
         if (!isConnected && currentRoute != Screen.NoInternet.route && currentRoute != Screen.Login.route) {
