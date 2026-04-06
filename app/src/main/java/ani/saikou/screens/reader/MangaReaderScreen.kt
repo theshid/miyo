@@ -1,11 +1,13 @@
 package ani.saikou.screens.reader
 
 import android.app.Activity
+import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,49 +19,56 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.collectAsState
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.collectAsState
 import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
+import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
@@ -68,12 +77,24 @@ import ani.saikou.ui.theme.SurfaceContainer
 import ani.saikou.ui.theme.SurfaceContainerHigh
 import coil.compose.AsyncImage
 
-enum class ReadingDirection { VERTICAL, LEFT_TO_RIGHT, RIGHT_TO_LEFT }
-enum class CanvasTheme(val bg: Color) {
-    DARK(Color.Black),
-    WHITE(Color.White),
-    SEPIA(Color(0xFFF5E6C8)),
-}
+enum class ReadingMode { WEBTOON, PAGER_LTR, PAGER_RTL }
+
+data class ReaderSettings(
+    val mode: ReadingMode = ReadingMode.WEBTOON,
+    val background: Color = Color.Black,
+    val keepScreenOn: Boolean = true,
+    val showPageNumber: Boolean = true,
+    val doublePage: Boolean = false,
+    val cropBorders: Boolean = false,
+)
+
+private val backgroundOptions = listOf(
+    Color.Black,
+    Color(0xFF2A2A2A),
+    Color.White,
+    Color(0xFFF5E6C8),
+    Color(0xFFFFF8F0),
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +107,15 @@ fun MangaReaderScreen(
     val context = LocalContext.current
     val readerState by viewModel.uiState.collectAsState()
 
+    var showOverlay by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
+    var settings by remember { mutableStateOf(ReaderSettings()) }
+
+    // Zoom state
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
+
     // Immersive mode
     DisposableEffect(Unit) {
         val window = (context as Activity).window
@@ -95,19 +125,30 @@ fun MangaReaderScreen(
         onDispose { controller.show(WindowInsetsCompat.Type.systemBars()) }
     }
 
-    var showOverlay by remember { mutableStateOf(false) }
-    var showSettings by remember { mutableStateOf(false) }
-    var direction by remember { mutableStateOf(ReadingDirection.VERTICAL) }
-    var canvasTheme by remember { mutableStateOf(CanvasTheme.DARK) }
-    var zoomLevel by remember { mutableFloatStateOf(1f) }
+    // Keep screen on
+    DisposableEffect(settings.keepScreenOn) {
+        val window = (context as Activity).window
+        if (settings.keepScreenOn) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose { window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+    }
 
     val totalPages = readerState.totalPages.coerceAtLeast(1)
-    val pagerState = rememberPagerState(pageCount = { totalPages })
 
-    // Loading state
+    // Loading
     if (readerState.isLoading) {
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
+                Text(
+                    readerState.error ?: "Loading chapter...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OnSurface,
+                )
+            }
         }
         return
     }
@@ -115,75 +156,71 @@ fun MangaReaderScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(canvasTheme.bg)
+            .background(settings.background)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
             ) { showOverlay = !showOverlay },
     ) {
-        // ── Page content ─────────────────────────────────────
-        when (direction) {
-            ReadingDirection.VERTICAL -> {
-                VerticalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                ) { page ->
-                    PageContent(
-                        pageNum = page + 1,
+        // ── Page Content with Pinch-to-Zoom ──────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        scale = (scale * zoom).coerceIn(0.5f, 5f)
+                        if (scale > 1f) {
+                            offsetX += pan.x
+                            offsetY += pan.y
+                        } else {
+                            offsetX = 0f
+                            offsetY = 0f
+                        }
+                    }
+                }
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offsetX,
+                    translationY = offsetY,
+                ),
+        ) {
+            when (settings.mode) {
+                ReadingMode.WEBTOON -> {
+                    WebtoonReader(
+                        pages = readerState.pages.map { it.imageUrl },
                         totalPages = totalPages,
-                        zoomLevel = zoomLevel,
-                        canvasTheme = canvasTheme,
-                        imageUrl = readerState.pages.getOrNull(page)?.imageUrl,
+                        background = settings.background,
                     )
                 }
-            }
-            ReadingDirection.LEFT_TO_RIGHT -> {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                ) { page ->
-                    PageContent(
-                        pageNum = page + 1,
+                ReadingMode.PAGER_LTR -> {
+                    PagerReader(
+                        pages = readerState.pages.map { it.imageUrl },
                         totalPages = totalPages,
-                        zoomLevel = zoomLevel,
-                        canvasTheme = canvasTheme,
-                        imageUrl = readerState.pages.getOrNull(page)?.imageUrl,
+                        reverseLayout = false,
                     )
                 }
-            }
-            ReadingDirection.RIGHT_TO_LEFT -> {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    reverseLayout = true,
-                ) { page ->
-                    PageContent(
-                        pageNum = page + 1,
+                ReadingMode.PAGER_RTL -> {
+                    PagerReader(
+                        pages = readerState.pages.map { it.imageUrl },
                         totalPages = totalPages,
-                        zoomLevel = zoomLevel,
-                        canvasTheme = canvasTheme,
-                        imageUrl = readerState.pages.getOrNull(page)?.imageUrl,
+                        reverseLayout = true,
                     )
                 }
             }
         }
 
-        // ── Minimal overlay ──────────────────────────────────
-        AnimatedVisibility(
-            visible = showOverlay,
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
+        // ── Double-tap to reset zoom ─────────────────────────
+        // (Single tap toggles overlay, handled above)
+
+        // ── Overlay ──────────────────────────────────────────
+        AnimatedVisibility(visible = showOverlay, enter = fadeIn(), exit = fadeOut()) {
             Box(Modifier.fillMaxSize()) {
                 // Top bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent)
-                            )
-                        )
+                        .background(Color.Black.copy(alpha = 0.7f))
                         .padding(horizontal = 8.dp, vertical = 12.dp)
                         .align(Alignment.TopCenter),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -200,11 +237,7 @@ fun MangaReaderScreen(
                                 color = OnSurface,
                                 fontWeight = FontWeight.SemiBold,
                             )
-                            Text(
-                                text = readerState.chapterTitle,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Primary,
-                            )
+                            Text(readerState.chapterTitle, style = MaterialTheme.typography.labelSmall, color = Primary)
                         }
                     }
                     IconButton(onClick = { showSettings = true }) {
@@ -212,215 +245,308 @@ fun MangaReaderScreen(
                     }
                 }
 
-                // Page counter at bottom
-                Box(
+                // Bottom bar: page counter + zoom reset
+                Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 24.dp)
-                        .background(SurfaceContainer.copy(alpha = 0.8f), MaterialTheme.shapes.extraSmall)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.7f))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (settings.showPageNumber) {
+                        Text(
+                            "Page — / $totalPages",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = OnSurface,
+                        )
+                    }
+                    if (scale != 1f) {
+                        GenreChip(text = "Reset Zoom", selected = true, onClick = {
+                            scale = 1f; offsetX = 0f; offsetY = 0f
+                        })
+                    }
                     Text(
-                        text = "${pagerState.currentPage + 1} / $totalPages",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = OnSurface,
+                        "${(scale * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Primary,
                     )
                 }
             }
         }
     }
 
-    // ── Settings Bottom Sheet ────────────────────────────────
-    if (showSettings) {
-        ModalBottomSheet(
-            onDismissRequest = { showSettings = false },
-            sheetState = rememberModalBottomSheetState(),
-            containerColor = SurfaceBright,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-            ) {
-                // Reading Direction
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "READING DIRECTION",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = OnSurfaceVariant,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GenreChip(
-                            text = "VERTICAL",
-                            selected = direction == ReadingDirection.VERTICAL,
-                            onClick = { direction = ReadingDirection.VERTICAL },
-                        )
-                        GenreChip(
-                            text = "L TO R",
-                            selected = direction == ReadingDirection.LEFT_TO_RIGHT,
-                            onClick = { direction = ReadingDirection.LEFT_TO_RIGHT },
-                        )
-                        GenreChip(
-                            text = "R TO L",
-                            selected = direction == ReadingDirection.RIGHT_TO_LEFT,
-                            onClick = { direction = ReadingDirection.RIGHT_TO_LEFT },
-                        )
-                    }
-                }
-
-                // Canvas Theme
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "CANVAS THEME",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = OnSurfaceVariant,
-                    )
-                    Text(
-                        text = "Visual comfort settings",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OnSurfaceVariant.copy(alpha = 0.6f),
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        CanvasTheme.entries.forEach { theme ->
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(theme.bg)
-                                    .then(
-                                        if (canvasTheme == theme) Modifier
-                                            .clip(CircleShape)
-                                            .background(theme.bg)
-                                        else Modifier
-                                    )
-                                    .clickable { canvasTheme = theme },
-                            ) {
-                                if (canvasTheme == theme) {
-                                    Box(
-                                        Modifier
-                                            .fillMaxSize()
-                                            .padding(2.dp)
-                                            .clip(CircleShape)
-                                            .background(theme.bg)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Zoom
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(
-                            onClick = { zoomLevel = (zoomLevel - 0.25f).coerceAtLeast(0.5f) },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(SurfaceContainerHigh, CircleShape),
-                        ) {
-                            Icon(Icons.Default.Remove, "Zoom out", tint = OnSurface, modifier = Modifier.size(18.dp))
-                        }
-
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "${(zoomLevel * 100).toInt()}%",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = OnSurface,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                text = "STANDARD",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Primary,
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { zoomLevel = (zoomLevel + 0.25f).coerceAtMost(3f) },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(SurfaceContainerHigh, CircleShape),
-                        ) {
-                            Icon(Icons.Default.Add, "Zoom in", tint = OnSurface, modifier = Modifier.size(18.dp))
-                        }
-                    }
-                }
-
-                // Apply button
-                PillButton(
-                    text = "Apply Changes",
-                    onClick = { showSettings = false },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-    }
-
-    // Source selector bottom sheet
+    // ── Source selector ───────────────────────────────────────
     if (readerState.showSourceSelector) {
         ani.saikou.components.SourceSelectorSheet(
             title = "Select Manga Source",
             sources = readerState.availableSources,
-            onSelect = { source ->
-                viewModel.selectSourceById(source.id)
-            },
+            onSelect = { source -> viewModel.selectSourceById(source.id) },
             onDismiss = { viewModel.dismissSourceSelector() },
+        )
+    }
+
+    // ── Settings Sheet ───────────────────────────────────────
+    if (showSettings) {
+        ReaderSettingsSheet(
+            settings = settings,
+            onSettingsChange = { settings = it },
+            onDismiss = { showSettings = false },
         )
     }
 }
 
+// ── Webtoon (vertical scroll) reader ─────────────────────────
 @Composable
-private fun PageContent(
-    pageNum: Int,
+private fun WebtoonReader(
+    pages: List<String>,
     totalPages: Int,
-    zoomLevel: Float,
-    canvasTheme: CanvasTheme,
-    imageUrl: String? = null,
+    background: Color,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .graphicsLayer(
-                scaleX = zoomLevel,
-                scaleY = zoomLevel,
-            ),
-        contentAlignment = Alignment.Center,
+    val listState = rememberLazyListState()
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
     ) {
-        if (imageUrl != null) {
-            coil.compose.AsyncImage(
-                model = imageUrl,
-                contentDescription = "Page $pageNum",
-                contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+        itemsIndexed(pages) { index, url ->
+            AsyncImage(
+                model = url,
+                contentDescription = "Page ${index + 1}",
+                contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+        // Padding item for when pages haven't loaded
+        if (pages.isEmpty()) {
+            items(totalPages) { index ->
+                Box(
+                    Modifier.fillMaxWidth().height(500.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "Page ${index + 1}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OnSurfaceVariant.copy(alpha = 0.3f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Pager (horizontal) reader ────────────────────────────────
+@Composable
+private fun PagerReader(
+    pages: List<String>,
+    totalPages: Int,
+    reverseLayout: Boolean,
+) {
+    val pagerState = rememberPagerState(pageCount = { if (pages.isNotEmpty()) pages.size else totalPages })
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+        reverseLayout = reverseLayout,
+    ) { page ->
+        val url = pages.getOrNull(page)
+        if (url != null) {
+            AsyncImage(
+                model = url,
+                contentDescription = "Page ${page + 1}",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize(),
+            )
         } else {
-            // Placeholder for when pages haven't loaded
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "$pageNum",
-                    style = MaterialTheme.typography.displayLarge,
-                    color = if (canvasTheme == CanvasTheme.DARK) OnSurfaceVariant.copy(alpha = 0.2f)
-                    else Color.Gray.copy(alpha = 0.3f),
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "Page $pageNum of $totalPages",
+                    "Page ${page + 1}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (canvasTheme == CanvasTheme.DARK) OnSurfaceVariant.copy(alpha = 0.4f)
-                    else Color.Gray.copy(alpha = 0.5f),
-                    textAlign = TextAlign.Center,
+                    color = OnSurfaceVariant.copy(alpha = 0.3f),
                 )
             }
         }
+    }
+}
+
+// ── Settings Bottom Sheet ────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReaderSettingsSheet(
+    settings: ReaderSettings,
+    onSettingsChange: (ReaderSettings) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = SurfaceBright,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            // Header
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, "Close", tint = Primary)
+                }
+                Text(
+                    "READER SETTINGS",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = OnSurface,
+                    fontWeight = FontWeight.Bold,
+                )
+                // Spacer for alignment
+                Spacer(Modifier.size(48.dp))
+            }
+
+            // ── Reading Mode ─────────────────────────────────
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("READING MODE", style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GenreChip(
+                        text = "WEBTOON ↕",
+                        selected = settings.mode == ReadingMode.WEBTOON,
+                        onClick = { onSettingsChange(settings.copy(mode = ReadingMode.WEBTOON)) },
+                    )
+                    GenreChip(
+                        text = "PAGER →",
+                        selected = settings.mode == ReadingMode.PAGER_LTR,
+                        onClick = { onSettingsChange(settings.copy(mode = ReadingMode.PAGER_LTR)) },
+                    )
+                    GenreChip(
+                        text = "PAGER ←",
+                        selected = settings.mode == ReadingMode.PAGER_RTL,
+                        onClick = { onSettingsChange(settings.copy(mode = ReadingMode.PAGER_RTL)) },
+                    )
+                }
+            }
+
+            // ── Background ───────────────────────────────────
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("BACKGROUND", style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    backgroundOptions.forEach { color ->
+                        val isSelected = settings.background == color
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .then(
+                                    if (isSelected) Modifier
+                                        .padding(2.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                    else Modifier
+                                )
+                                .clickable { onSettingsChange(settings.copy(background = color)) },
+                        ) {
+                            if (isSelected) {
+                                Box(
+                                    Modifier
+                                        .align(Alignment.Center)
+                                        .size(12.dp)
+                                        .clip(CircleShape)
+                                        .background(Primary),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Brightness ───────────────────────────────────
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("BRIGHTNESS", style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(Icons.Default.Brightness6, null, tint = OnSurfaceVariant, modifier = Modifier.size(18.dp))
+                    Slider(
+                        value = 0.8f, // Placeholder — would need WindowManager.LayoutParams.screenBrightness
+                        onValueChange = { /* set brightness */ },
+                        modifier = Modifier.weight(1f),
+                        colors = SliderDefaults.colors(
+                            thumbColor = Primary,
+                            activeTrackColor = Primary,
+                            inactiveTrackColor = SurfaceContainerHigh,
+                        ),
+                    )
+                    Icon(Icons.Default.Brightness6, null, tint = OnSurface, modifier = Modifier.size(22.dp))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = true,
+                        onCheckedChange = {},
+                        colors = CheckboxDefaults.colors(checkedColor = Primary),
+                    )
+                    Text("Use system brightness", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+                }
+            }
+
+            // ── Display Toggles ──────────────────────────────
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("DISPLAY", style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant)
+
+                SettingsToggle(
+                    label = "Keep screen on",
+                    checked = settings.keepScreenOn,
+                    onCheckedChange = { onSettingsChange(settings.copy(keepScreenOn = it)) },
+                )
+                SettingsToggle(
+                    label = "Show page number",
+                    checked = settings.showPageNumber,
+                    onCheckedChange = { onSettingsChange(settings.copy(showPageNumber = it)) },
+                )
+                SettingsToggle(
+                    label = "Double-page landscape",
+                    checked = settings.doublePage,
+                    onCheckedChange = { onSettingsChange(settings.copy(doublePage = it)) },
+                )
+                SettingsToggle(
+                    label = "Crop borders",
+                    checked = settings.cropBorders,
+                    onCheckedChange = { onSettingsChange(settings.copy(cropBorders = it)) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsToggle(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = OnSurface)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = OnSurface,
+                checkedTrackColor = Primary,
+                uncheckedThumbColor = OnSurfaceVariant,
+                uncheckedTrackColor = SurfaceContainer,
+            ),
+        )
     }
 }
