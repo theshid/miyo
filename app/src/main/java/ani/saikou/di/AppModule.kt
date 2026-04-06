@@ -3,6 +3,9 @@ package ani.saikou.di
 import android.content.Context
 import ani.saikou.data.local.ConnectivityObserver
 import ani.saikou.data.local.TokenStorage
+import ani.saikou.data.local.db.DownloadDao
+import ani.saikou.data.local.db.SaikouDatabase
+import ani.saikou.data.local.downloads.MangaDownloadManager
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
@@ -17,6 +20,8 @@ object AppModule {
     private var api: AnilistApi? = null
     private var repository: AnilistRepository? = null
     private var connectivityObserver: ConnectivityObserver? = null
+    private var database: SaikouDatabase? = null
+    private var downloadManager: MangaDownloadManager? = null
 
     fun init(context: Context) {
         val appContext = context.applicationContext
@@ -24,6 +29,8 @@ object AppModule {
         api = AnilistApi(tokenProvider = { tokenStorage!!.getToken() })
         repository = AnilistRepositoryImpl(api!!, tokenStorage!!)
         connectivityObserver = ConnectivityObserver(appContext)
+        database = SaikouDatabase.getInstance(appContext)
+        downloadManager = MangaDownloadManager(appContext, database!!.downloadDao())
     }
 
     fun repository(): AnilistRepository =
@@ -34,4 +41,10 @@ object AppModule {
 
     fun connectivity(): ConnectivityObserver =
         connectivityObserver ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun downloadManager(): MangaDownloadManager =
+        downloadManager ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun downloadDao(): DownloadDao =
+        database?.downloadDao() ?: throw IllegalStateException("AppModule not initialized.")
 }

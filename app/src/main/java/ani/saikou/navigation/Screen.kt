@@ -55,6 +55,9 @@ sealed class Screen(
         fun createRoute(mediaId: Int, chapterNum: Int) = "reader/$mediaId/$chapterNum"
     }
 
+    // ── Downloads ─────────────────────────────────────────────
+    data object Downloads : Screen("downloads")
+
     // ── Torrent Search ──────────────────────────────────────────
     data object TorrentSearch : Screen("torrent?query={query}") {
         fun createRoute(query: String? = null): String =
