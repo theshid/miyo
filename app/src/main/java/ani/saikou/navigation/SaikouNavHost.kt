@@ -22,6 +22,7 @@ import ani.saikou.screens.manga.MangaScreen
 import ani.saikou.screens.player.VideoPlayerScreen
 import ani.saikou.screens.reader.MangaReaderScreen
 import ani.saikou.screens.search.SearchScreen
+import ani.saikou.screens.torrent.TorrentSearchScreen
 
 @Composable
 fun SaikouNavHost(
@@ -85,6 +86,7 @@ fun SaikouNavHost(
                 onNavigateToPlayer = { episodeNum -> navController.navigate(Screen.VideoPlayer.createRoute(mediaId, episodeNum)) },
                 onNavigateToReader = { chapterNum -> navController.navigate(Screen.MangaReader.createRoute(mediaId, chapterNum)) },
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
+                onNavigateToTorrent = { query -> navController.navigate(Screen.TorrentSearch.createRoute(query)) },
             )
         }
 
@@ -162,6 +164,18 @@ fun SaikouNavHost(
             MangaReaderScreen(
                 mediaId = mediaId,
                 chapterNum = chapterNum,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Torrent Search ────────────────────────────────────
+        composable(
+            route = Screen.TorrentSearch.route,
+            arguments = listOf(
+                navArgument("query") { type = NavType.StringType; defaultValue = "" },
+            ),
+        ) {
+            TorrentSearchScreen(
                 onBack = { navController.popBackStack() },
             )
         }

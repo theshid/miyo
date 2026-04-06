@@ -52,6 +52,12 @@ sealed class Screen(
         fun createRoute(mediaId: Int, chapterNum: Int) = "reader/$mediaId/$chapterNum"
     }
 
+    // ── Torrent Search ──────────────────────────────────────────
+    data object TorrentSearch : Screen("torrent?query={query}") {
+        fun createRoute(query: String? = null): String =
+            if (query != null) "torrent?query=$query" else "torrent"
+    }
+
     // ── Error ─────────────────────────────────────────────────
     data object NoInternet : Screen("no_internet")
 }

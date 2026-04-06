@@ -29,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
@@ -81,6 +82,7 @@ fun MediaDetailScreen(
     onNavigateToPlayer: (Int) -> Unit,
     onNavigateToReader: (Int) -> Unit,
     onNavigateToMedia: (Int) -> Unit,
+    onNavigateToTorrent: ((String) -> Unit)? = null,
     viewModel: MediaDetailViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -226,6 +228,15 @@ fun MediaDetailScreen(
                     contentDescription = "Share",
                     tint = OnSurfaceVariant,
                 )
+            }
+            if (onNavigateToTorrent != null) {
+                IconButton(onClick = { onNavigateToTorrent(media.displayTitle) }) {
+                    Icon(
+                        Icons.Default.Download,
+                        contentDescription = "Torrent Search",
+                        tint = OnSurfaceVariant,
+                    )
+                }
             }
         }
 
