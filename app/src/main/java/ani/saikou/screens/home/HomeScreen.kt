@@ -57,6 +57,7 @@ fun HomeScreen(
     onNavigateToNews: () -> Unit = {},
     onNavigateToTorrent: () -> Unit = {},
     onNavigateToDownloads: () -> Unit = {},
+    onNavigateToReader: (mediaId: Int, chapterNum: Int) -> Unit = { _, _ -> },
     viewModel: HomeViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -174,6 +175,32 @@ fun HomeScreen(
             )
         }
 
+        // ── Reading History (local, resume-ready) ─────────────
+        if (state.readingHistory.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionHeader(
+                    title = "Continue Reading",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(
+                        items = state.readingHistory,
+                        key = { "history_${it.mangaId}" },
+                    ) { entry ->
+                        MediaPosterCard(
+                            title = entry.mangaTitle,
+                            coverUrl = entry.coverUrl,
+                            subtitle = "Ch. ${entry.chapterNumber} · p.${entry.lastPage + 1}/${entry.totalPages}",
+                            onClick = { onNavigateToReader(entry.mangaId, entry.chapterNumber) },
+                        )
+                    }
+                }
+            }
+        }
+
         // ── Continue Watching ────────────────────────────────
         if (state.continueWatching.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -202,11 +229,11 @@ fun HomeScreen(
             }
         }
 
-        // ── Continue Reading ─────────────────────────────────
+        // ── AniList Reading List ──────────────────────────────
         if (state.continueReading.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionHeader(
-                    title = "Continue Reading",
+                    title = "Reading List",
                     actionText = "SEE ALL",
                     onAction = onNavigateToMangaList,
                     modifier = Modifier.padding(horizontal = 16.dp),

@@ -139,6 +139,11 @@ fun MangaReaderScreen(
     val totalPages = readerState.totalPages.coerceAtLeast(1)
     var currentPage by remember { mutableStateOf(1) }
 
+    // Report page changes to ViewModel for history persistence
+    LaunchedEffect(currentPage) {
+        viewModel.onPageChanged(currentPage - 1) // 0-indexed for storage
+    }
+
     // Loading
     if (readerState.isLoading) {
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
@@ -192,6 +197,7 @@ fun MangaReaderScreen(
                         pages = readerState.pages.map { it.imageUrl },
                         totalPages = totalPages,
                         background = settings.background,
+                        startPage = readerState.startPage,
                         onPageChanged = { currentPage = it },
                     )
                 }
@@ -200,6 +206,7 @@ fun MangaReaderScreen(
                         pages = readerState.pages.map { it.imageUrl },
                         totalPages = totalPages,
                         reverseLayout = false,
+                        startPage = readerState.startPage,
                         onPageChanged = { currentPage = it },
                     )
                 }
@@ -208,6 +215,7 @@ fun MangaReaderScreen(
                         pages = readerState.pages.map { it.imageUrl },
                         totalPages = totalPages,
                         reverseLayout = true,
+                        startPage = readerState.startPage,
                         onPageChanged = { currentPage = it },
                     )
                 }
@@ -307,9 +315,10 @@ private fun WebtoonReader(
     pages: List<String>,
     totalPages: Int,
     background: Color,
+    startPage: Int = 0,
     onPageChanged: (Int) -> Unit,
 ) {
-    val listState = rememberLazyListState()
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = startPage)
 
     // Track current visible page
     LaunchedEffect(listState.firstVisibleItemIndex) {
@@ -351,9 +360,13 @@ private fun PagerReader(
     pages: List<String>,
     totalPages: Int,
     reverseLayout: Boolean,
+    startPage: Int = 0,
     onPageChanged: (Int) -> Unit,
 ) {
-    val pagerState = rememberPagerState(pageCount = { if (pages.isNotEmpty()) pages.size else totalPages })
+    val pagerState = rememberPagerState(
+        initialPage = startPage,
+        pageCount = { if (pages.isNotEmpty()) pages.size else totalPages },
+    )
 
     // Track current page
     LaunchedEffect(pagerState.currentPage) {

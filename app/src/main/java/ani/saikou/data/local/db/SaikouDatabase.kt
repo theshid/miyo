@@ -6,13 +6,18 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [DownloadEntity::class, DownloadedMangaEntity::class],
-    version = 1,
+    entities = [
+        DownloadEntity::class,
+        DownloadedMangaEntity::class,
+        ReadingHistoryEntity::class,
+    ],
+    version = 2,
     exportSchema = false,
 )
 abstract class SaikouDatabase : RoomDatabase() {
 
     abstract fun downloadDao(): DownloadDao
+    abstract fun readingHistoryDao(): ReadingHistoryDao
 
     companion object {
         @Volatile
@@ -24,7 +29,10 @@ abstract class SaikouDatabase : RoomDatabase() {
                     context.applicationContext,
                     SaikouDatabase::class.java,
                     "saikou_v2.db"
-                ).build().also { INSTANCE = it }
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
+                    .also { INSTANCE = it }
             }
         }
     }

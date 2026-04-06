@@ -4,6 +4,7 @@ import android.content.Context
 import ani.saikou.data.local.ConnectivityObserver
 import ani.saikou.data.local.TokenStorage
 import ani.saikou.data.local.db.DownloadDao
+import ani.saikou.data.local.db.ReadingHistoryDao
 import ani.saikou.data.local.db.SaikouDatabase
 import ani.saikou.data.local.downloads.MangaDownloadManager
 import ani.saikou.data.remote.AnilistApi
@@ -47,4 +48,7 @@ object AppModule {
 
     fun downloadDao(): DownloadDao =
         database?.downloadDao() ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun readingHistoryDao(): ReadingHistoryDao =
+        database?.readingHistoryDao() ?: throw IllegalStateException("AppModule not initialized.")
 }
