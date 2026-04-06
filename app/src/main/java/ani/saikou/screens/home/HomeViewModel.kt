@@ -3,19 +3,20 @@ package ani.saikou.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.data.local.db.ReadingHistoryEntity
+import ani.saikou.data.local.db.WatchHistoryEntity
 import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.User
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class HomeViewModel : ViewModel() {
 
     private val repository = AppModule.repository()
-    private val historyDao = AppModule.readingHistoryDao()
+    private val readingHistoryDao = AppModule.readingHistoryDao()
+    private val watchHistoryDao = AppModule.watchHistoryDao()
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
@@ -23,6 +24,7 @@ class HomeViewModel : ViewModel() {
     init {
         loadHomeData()
         observeReadingHistory()
+        observeWatchHistory()
     }
 
     fun loadHomeData() {
@@ -46,8 +48,21 @@ class HomeViewModel : ViewModel() {
 
     private fun observeReadingHistory() {
         viewModelScope.launch {
-            historyDao.getRecent(10).collect { history ->
+            readingHistoryDao.getRecent(10).collect { history ->
                 _uiState.value = _uiState.value.copy(readingHistory = history)
+            }
+        }
+    }
+
+    private fun observeWatchHistory() {
+        viewModelScope.launch {
+            watchHistoryDao.getInProgress(10).collect { inProgress ->
+                _uiState.value = _uiState.value.copy(continueWatchingLocal = inProgress)
+            }
+        }
+        viewModelScope.launch {
+            watchHistoryDao.getRecent(10).collect { recent ->
+                _uiState.value = _uiState.value.copy(watchHistory = recent)
             }
         }
     }
@@ -59,5 +74,7 @@ data class HomeUiState(
     val continueReading: List<Media> = emptyList(),
     val recommendations: List<Media> = emptyList(),
     val readingHistory: List<ReadingHistoryEntity> = emptyList(),
+    val continueWatchingLocal: List<WatchHistoryEntity> = emptyList(),
+    val watchHistory: List<WatchHistoryEntity> = emptyList(),
     val isLoading: Boolean = true,
 )

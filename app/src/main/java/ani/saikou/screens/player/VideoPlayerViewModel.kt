@@ -4,10 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.components.SourceItem
+import ani.saikou.data.local.db.WatchHistoryEntity
 import ani.saikou.data.remote.parsers.GogoParser
 import ani.saikou.di.AppModule
 import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.StreamLink
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -17,6 +20,7 @@ class VideoPlayerViewModel(
 ) : ViewModel() {
 
     private val repository = AppModule.repository()
+    private val watchHistoryDao = AppModule.watchHistoryDao()
     private val gogoParser = GogoParser()
 
     val mediaId: Int = savedStateHandle["mediaId"] ?: 0
@@ -26,6 +30,8 @@ class VideoPlayerViewModel(
     val uiState: StateFlow<PlayerUiState> = _uiState
 
     private var animeSources: List<AnimeSource> = emptyList()
+    private var resolvedSourceSlug: String? = null
+    private var saveJob: Job? = null
 
     init {
         loadSources()
@@ -44,6 +50,17 @@ class VideoPlayerViewModel(
                 coverUrl = media?.banner ?: media?.cover,
             )
 
+            // Check watch history for saved source — skip search if found
+            val history = watchHistoryDao.getForMedia(mediaId)
+            if (history != null && history.sourceSlug.isNotEmpty()) {
+                resolvedSourceSlug = history.sourceSlug
+                val resumePosition = if (history.episodeNumber == episodeNum) history.lastPositionMs else 0L
+                _uiState.value = _uiState.value.copy(resumePositionMs = resumePosition)
+                loadEpisodeFromSource(history.sourceSlug)
+                return@launch
+            }
+
+            // No history — search Gogo
             animeSources = gogoParser.search(title)
             if (animeSources.isEmpty()) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = "Anime not found on source")
@@ -51,10 +68,8 @@ class VideoPlayerViewModel(
             }
 
             if (animeSources.size == 1) {
-                // Auto-select if only one result
                 selectSource(animeSources.first())
             } else {
-                // Show selector
                 _uiState.value = _uiState.value.copy(
                     showSourceSelector = true,
                     availableSources = animeSources.map {
@@ -67,22 +82,27 @@ class VideoPlayerViewModel(
     }
 
     fun selectSource(source: AnimeSource) {
+        resolvedSourceSlug = source.slug
         _uiState.value = _uiState.value.copy(showSourceSelector = false, isLoading = true)
         viewModelScope.launch {
-            val episodes = gogoParser.getEpisodes(source.slug)
-            val episode = episodes.find { it.number == episodeNum.toString() }
-            if (episode?.link == null) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = "Episode $episodeNum not found")
-                return@launch
-            }
-
-            val links = gogoParser.getStreamLinks(episode.link)
-            _uiState.value = _uiState.value.copy(
-                streamLinks = links,
-                selectedLink = links.firstOrNull(),
-                isLoading = false,
-            )
+            loadEpisodeFromSource(source.slug)
         }
+    }
+
+    private suspend fun loadEpisodeFromSource(slug: String) {
+        val episodes = gogoParser.getEpisodes(slug)
+        val episode = episodes.find { it.number == episodeNum.toString() }
+        if (episode?.link == null) {
+            _uiState.value = _uiState.value.copy(isLoading = false, error = "Episode $episodeNum not found")
+            return
+        }
+
+        val links = gogoParser.getStreamLinks(episode.link)
+        _uiState.value = _uiState.value.copy(
+            streamLinks = links,
+            selectedLink = links.firstOrNull(),
+            isLoading = false,
+        )
     }
 
     fun selectSourceById(id: String) {
@@ -96,8 +116,39 @@ class VideoPlayerViewModel(
 
     fun dismissSourceSelector() {
         _uiState.value = _uiState.value.copy(showSourceSelector = false)
-        // Auto-select first if dismissed
         animeSources.firstOrNull()?.let { selectSource(it) }
+    }
+
+    /**
+     * Called from the player screen periodically with current playback position.
+     * Debounced to save once per 5 seconds.
+     */
+    fun onPositionChanged(positionMs: Long, durationMs: Long) {
+        saveJob?.cancel()
+        saveJob = viewModelScope.launch {
+            delay(5000)
+            saveProgress(positionMs, durationMs)
+        }
+    }
+
+    private suspend fun saveProgress(positionMs: Long, durationMs: Long) {
+        val state = _uiState.value
+        val slug = resolvedSourceSlug ?: return
+        if (durationMs <= 0) return
+
+        watchHistoryDao.upsert(
+            WatchHistoryEntity(
+                mediaId = mediaId,
+                mediaTitle = state.title,
+                coverUrl = state.coverUrl,
+                episodeNumber = episodeNum,
+                sourceSlug = slug,
+                sourceName = "Gogo",
+                lastPositionMs = positionMs,
+                durationMs = durationMs,
+                lastWatchedAt = System.currentTimeMillis(),
+            )
+        )
     }
 }
 
@@ -111,4 +162,5 @@ data class PlayerUiState(
     val showSourceSelector: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
+    val resumePositionMs: Long = 0L,
 )

@@ -58,6 +58,7 @@ fun HomeScreen(
     onNavigateToTorrent: () -> Unit = {},
     onNavigateToDownloads: () -> Unit = {},
     onNavigateToReader: (mediaId: Int, chapterNum: Int) -> Unit = { _, _ -> },
+    onNavigateToPlayer: (mediaId: Int, episodeNum: Int) -> Unit = { _, _ -> },
     viewModel: HomeViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -175,6 +176,31 @@ fun HomeScreen(
             )
         }
 
+        // ── Continue Watching (local, resume-ready) ───────────
+        if (state.continueWatchingLocal.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionHeader(
+                    title = "Continue Watching",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(
+                        items = state.continueWatchingLocal,
+                        key = { "watch_${it.mediaId}" },
+                    ) { entry ->
+                        WatchHistoryCard(
+                            entry = entry,
+                            showProgress = true,
+                            onClick = { onNavigateToPlayer(entry.mediaId, entry.episodeNumber) },
+                        )
+                    }
+                }
+            }
+        }
+
         // ── Reading History (local, resume-ready) ─────────────
         if (state.readingHistory.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -257,6 +283,31 @@ fun HomeScreen(
             }
         }
 
+        // ── Watch History (last 10) ──────────────────────────
+        if (state.watchHistory.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionHeader(
+                    title = "History",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(
+                        items = state.watchHistory,
+                        key = { "history_watch_${it.mediaId}_${it.episodeNumber}" },
+                    ) { entry ->
+                        WatchHistoryCard(
+                            entry = entry,
+                            showProgress = true,
+                            onClick = { onNavigateToPlayer(entry.mediaId, entry.episodeNumber) },
+                        )
+                    }
+                }
+            }
+        }
+
         // ── Recommended For You ──────────────────────────────
         if (state.recommendations.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -285,6 +336,64 @@ fun HomeScreen(
         // Bottom spacing for nav bar clearance
         Spacer(modifier = Modifier.height(32.dp))
     }
+}
+
+@Composable
+private fun WatchHistoryCard(
+    entry: ani.saikou.data.local.db.WatchHistoryEntity,
+    showProgress: Boolean,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .width(120.dp)
+            .clickable(onClick = onClick),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 120.dp, height = 170.dp)
+                .clip(MaterialTheme.shapes.medium),
+        ) {
+            coil.compose.AsyncImage(
+                model = entry.coverUrl,
+                contentDescription = entry.mediaTitle,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (showProgress) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth(entry.progressFraction)
+                        .height(3.dp)
+                        .background(ani.saikou.ui.theme.Primary),
+                )
+            }
+        }
+        Text(
+            text = entry.mediaTitle,
+            style = MaterialTheme.typography.titleSmall,
+            color = OnSurface,
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.width(120.dp),
+        )
+        Text(
+            text = "Ep ${entry.episodeNumber} • ${formatTime(entry.lastPositionMs)} / ${formatTime(entry.durationMs)}",
+            style = MaterialTheme.typography.bodySmall,
+            color = OnSurfaceVariant,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
+    }
+}
+
+private fun formatTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
 }
 
 @Composable

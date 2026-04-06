@@ -97,11 +97,14 @@ fun VideoPlayerScreen(
         ExoPlayer.Builder(context).build()
     }
 
-    // Load stream when available
+    // Load stream when available, seek to resume position
     LaunchedEffect(playerState.selectedLink) {
         playerState.selectedLink?.let { link ->
             exoPlayer.setMediaItem(MediaItem.fromUri(link.url))
             exoPlayer.prepare()
+            if (playerState.resumePositionMs > 0) {
+                exoPlayer.seekTo(playerState.resumePositionMs)
+            }
             exoPlayer.play()
         }
     }
@@ -124,11 +127,12 @@ fun VideoPlayerScreen(
         }
     }
 
-    // Update position periodically
+    // Update position periodically + report to ViewModel for history
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
             currentPosition = exoPlayer.currentPosition
             duration = exoPlayer.duration.coerceAtLeast(1L)
+            viewModel.onPositionChanged(currentPosition, duration)
             delay(500)
         }
     }

@@ -10,14 +10,16 @@ import androidx.room.RoomDatabase
         DownloadEntity::class,
         DownloadedMangaEntity::class,
         ReadingHistoryEntity::class,
+        WatchHistoryEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class SaikouDatabase : RoomDatabase() {
 
     abstract fun downloadDao(): DownloadDao
     abstract fun readingHistoryDao(): ReadingHistoryDao
+    abstract fun watchHistoryDao(): WatchHistoryDao
 
     companion object {
         @Volatile

@@ -6,6 +6,7 @@ import ani.saikou.data.local.TokenStorage
 import ani.saikou.data.local.db.DownloadDao
 import ani.saikou.data.local.db.ReadingHistoryDao
 import ani.saikou.data.local.db.SaikouDatabase
+import ani.saikou.data.local.db.WatchHistoryDao
 import ani.saikou.data.local.downloads.MangaDownloadManager
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.repository.AnilistRepositoryImpl
@@ -51,4 +52,7 @@ object AppModule {
 
     fun readingHistoryDao(): ReadingHistoryDao =
         database?.readingHistoryDao() ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun watchHistoryDao(): WatchHistoryDao =
+        database?.watchHistoryDao() ?: throw IllegalStateException("AppModule not initialized.")
 }

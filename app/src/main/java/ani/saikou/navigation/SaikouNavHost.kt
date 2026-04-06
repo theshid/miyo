@@ -62,6 +62,7 @@ fun SaikouNavHost(
                 onNavigateToTorrent = { navController.navigate(Screen.TorrentSearch.createRoute()) },
                 onNavigateToDownloads = { navController.navigate(Screen.Downloads.route) },
                 onNavigateToReader = { mediaId, chapterNum -> navController.navigate(Screen.MangaReader.createRoute(mediaId, chapterNum)) },
+                onNavigateToPlayer = { mediaId, episodeNum -> navController.navigate(Screen.VideoPlayer.createRoute(mediaId, episodeNum)) },
             )
         }
 
