@@ -239,23 +239,39 @@ class AnilistRepositoryImpl(
         fetchPagedMedia(AnilistQueries.seasonal(season, year, page))
 
     override suspend fun getAiringSchedule(weekStart: Long, weekEnd: Long, page: Int): List<AiringEntry> {
-        val response = api.execute(AnilistQueries.airingSchedule(weekStart, weekEnd, page)) ?: return emptyList()
-        val schedules = response["data"]?.jsonObject
-            ?.get("Page")?.jsonObject
-            ?.get("airingSchedules")?.jsonArray ?: return emptyList()
+        // AniList caps at 50 per page — fetch multiple pages to get the full week
+        val all = mutableListOf<AiringEntry>()
         val seen = mutableSetOf<Int>()
-        return schedules.mapNotNull { entry ->
-            try {
-                val obj = entry.jsonObject
-                val airingAt = obj["airingAt"]!!.jsonPrimitive.content.toLong()
-                val episode = obj["episode"]!!.jsonPrimitive.content.toInt()
-                val mediaJson = obj["media"]?.takeIf { it != JsonNull }?.jsonObject ?: return@mapNotNull null
-                val media = MediaParser.parseMedia(mediaJson)
-                if (media.isAdult || media.id in seen) return@mapNotNull null
-                seen.add(media.id)
-                AiringEntry(airingAt = airingAt, episode = episode, media = media)
-            } catch (_: Exception) { null }
+        var currentPage = 1
+        val maxPages = 4 // safety cap
+
+        while (currentPage <= maxPages) {
+            val response = api.execute(AnilistQueries.airingSchedule(weekStart, weekEnd, currentPage))
+                ?: break
+            val schedules = response["data"]?.jsonObject
+                ?.get("Page")?.jsonObject
+                ?.get("airingSchedules")?.jsonArray ?: break
+
+            if (schedules.isEmpty()) break
+
+            for (entry in schedules) {
+                try {
+                    val obj = entry.jsonObject
+                    val airingAt = obj["airingAt"]!!.jsonPrimitive.content.toLong()
+                    val episode = obj["episode"]!!.jsonPrimitive.content.toInt()
+                    val mediaJson = obj["media"]?.takeIf { it != JsonNull }?.jsonObject ?: continue
+                    val media = MediaParser.parseMedia(mediaJson)
+                    if (media.isAdult || media.id in seen) continue
+                    seen.add(media.id)
+                    all.add(AiringEntry(airingAt = airingAt, episode = episode, media = media))
+                } catch (_: Exception) { /* skip */ }
+            }
+
+            // If we got fewer than 50, there are no more pages
+            if (schedules.size < 50) break
+            currentPage++
         }
+        return all
     }
 
     // ── Search ────────────────────────────────────────────────

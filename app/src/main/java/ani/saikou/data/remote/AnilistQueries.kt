@@ -36,7 +36,7 @@ object AnilistQueries {
     fun seasonal(season: String, year: Int, page: Int = 1, perPage: Int = 25) =
         """{ Page(page:$page,perPage:$perPage) { media(type:ANIME,season:$season,seasonYear:$year,sort:POPULARITY_DESC) { id isAdult status episodes nextAiringEpisode{episode airingAt} meanScore isFavourite bannerImage coverImage{large} title{english romaji userPreferred} mediaListEntry{progress score(format:POINT_100)status} format studios(isMain:true){nodes{name}} } } }"""
 
-    fun airingSchedule(weekStart: Long, weekEnd: Long, page: Int = 1, perPage: Int = 50) =
+    fun airingSchedule(weekStart: Long, weekEnd: Long, page: Int = 1, perPage: Int = 100) =
         """{ Page(page:$page,perPage:$perPage) { airingSchedules(airingAt_greater:$weekStart,airingAt_lesser:$weekEnd,sort:TIME) { airingAt episode media { id isAdult status episodes nextAiringEpisode{episode airingAt} meanScore isFavourite coverImage{large} title{english romaji userPreferred} mediaListEntry{progress score(format:POINT_100)status} } } } }"""
 
     fun search(query: String, type: String, page: Int = 1, perPage: Int = 20, genres: String? = null, sort: String? = null) =

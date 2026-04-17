@@ -153,6 +153,7 @@ fun SeasonalCalendarScreen(
                 )
                 CalendarTab.SCHEDULE -> WeeklySchedule(
                     schedule = state.weeklySchedule,
+                    weekDayLabels = state.weekDayLabels,
                     onItemClick = onNavigateToMedia,
                 )
             }
@@ -349,6 +350,7 @@ private fun SeasonalAnimeCard(
 @Composable
 private fun WeeklySchedule(
     schedule: Map<String, List<AiringEntry>>,
+    weekDayLabels: List<String>,
     onItemClick: (Int) -> Unit,
 ) {
     if (schedule.isEmpty()) {
@@ -365,7 +367,7 @@ private fun WeeklySchedule(
         contentPadding = PaddingValues(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        SeasonalCalendarViewModel.ORDERED_DAYS.forEach { day ->
+        weekDayLabels.forEach { day ->
             val entries = schedule[day]
             if (!entries.isNullOrEmpty()) {
                 item(key = day) {
@@ -440,7 +442,7 @@ private fun ScheduleCard(
                 modifier = Modifier.fillMaxSize(),
             )
 
-            // Time badge
+            // Episode + time badge
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -452,7 +454,7 @@ private fun ScheduleCard(
                     .padding(horizontal = 6.dp, vertical = 2.dp),
             ) {
                 Text(
-                    text = timeStr,
+                    text = "Ep ${entry.episode}",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
@@ -470,9 +472,9 @@ private fun ScheduleCard(
             fontWeight = FontWeight.Medium,
         )
 
-        // Episode info
+        // Airing time
         Text(
-            text = "Ep ${entry.episode}",
+            text = "\uD83D\uDD53 Airs at $timeStr",
             style = MaterialTheme.typography.labelSmall,
             color = OnSurfaceVariant,
         )

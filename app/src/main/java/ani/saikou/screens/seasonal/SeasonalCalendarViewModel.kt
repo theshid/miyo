@@ -9,7 +9,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 import java.util.TimeZone
 
 class SeasonalCalendarViewModel : ViewModel() {
@@ -83,7 +85,7 @@ class SeasonalCalendarViewModel : ViewModel() {
                 repository.getSeasonalAnime(state.selectedSeason, state.selectedYear, 1)
             }
             val scheduleDeferred = async {
-                val (start, end) = currentWeekRange()
+                val (start, end) = weekRangeForSeason(state.selectedSeason, state.selectedYear)
                 repository.getAiringSchedule(start, end)
             }
 
@@ -98,6 +100,7 @@ class SeasonalCalendarViewModel : ViewModel() {
             _uiState.value = state.copy(
                 seasonalAnime = seasonal,
                 weeklySchedule = grouped,
+                weekDayLabels = weekDaysForSeason(state.selectedSeason, state.selectedYear),
                 isLoading = false,
             )
         }
@@ -121,8 +124,35 @@ class SeasonalCalendarViewModel : ViewModel() {
             else -> season
         }
 
-        fun currentWeekRange(): Pair<Long, Long> {
-            val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        /**
+         * Returns a Mon–Sun week range (epoch seconds) for the selected season.
+         * - Current season → current week
+         * - Past/future season → first full week of that season
+         */
+        fun weekRangeForSeason(season: String, year: Int): Pair<Long, Long> {
+            val now = Calendar.getInstance()
+            val currentSeason = monthToSeason(now.get(Calendar.MONTH))
+            val currentYear = now.get(Calendar.YEAR)
+
+            val cal = if (season == currentSeason && year == currentYear) {
+                // Current season → use this week
+                Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+            } else {
+                // Different season → use the first Monday of that season
+                val startMonth = when (season) {
+                    "WINTER" -> Calendar.JANUARY
+                    "SPRING" -> Calendar.APRIL
+                    "SUMMER" -> Calendar.JULY
+                    "FALL" -> Calendar.OCTOBER
+                    else -> Calendar.JANUARY
+                }
+                Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, startMonth)
+                    set(Calendar.DAY_OF_MONTH, 1)
+                }
+            }
+
             cal.set(Calendar.HOUR_OF_DAY, 0)
             cal.set(Calendar.MINUTE, 0)
             cal.set(Calendar.SECOND, 0)
@@ -137,13 +167,15 @@ class SeasonalCalendarViewModel : ViewModel() {
             return start to end
         }
 
-        private val DAY_NAMES = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+        private val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
 
+        /**
+         * Returns a key like "Monday, Apr 14" for grouping + display.
+         */
         fun dayOfWeek(epochSeconds: Long): String {
             val cal = Calendar.getInstance()
             cal.timeInMillis = epochSeconds * 1000
-            val dow = cal.get(Calendar.DAY_OF_WEEK)
-            return when (dow) {
+            val dayName = when (cal.get(Calendar.DAY_OF_WEEK)) {
                 Calendar.MONDAY -> "Monday"
                 Calendar.TUESDAY -> "Tuesday"
                 Calendar.WEDNESDAY -> "Wednesday"
@@ -153,9 +185,35 @@ class SeasonalCalendarViewModel : ViewModel() {
                 Calendar.SUNDAY -> "Sunday"
                 else -> "Unknown"
             }
+            val dateStr = dateFormat.format(cal.time)
+            return "$dayName, $dateStr"
         }
 
-        val ORDERED_DAYS = DAY_NAMES
+        /**
+         * Returns ordered day labels (Mon–Sun) with dates for the given season/year.
+         * e.g. ["Monday, Apr 14", "Tuesday, Apr 15", ...]
+         */
+        fun weekDaysForSeason(season: String, year: Int): List<String> {
+            val (startEpoch, _) = weekRangeForSeason(season, year)
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = startEpoch * 1000
+
+            return (0..6).map { offset ->
+                val dayCal = cal.clone() as Calendar
+                dayCal.add(Calendar.DAY_OF_YEAR, offset)
+                val dayName = when (dayCal.get(Calendar.DAY_OF_WEEK)) {
+                    Calendar.MONDAY -> "Monday"
+                    Calendar.TUESDAY -> "Tuesday"
+                    Calendar.WEDNESDAY -> "Wednesday"
+                    Calendar.THURSDAY -> "Thursday"
+                    Calendar.FRIDAY -> "Friday"
+                    Calendar.SATURDAY -> "Saturday"
+                    Calendar.SUNDAY -> "Sunday"
+                    else -> "Unknown"
+                }
+                "$dayName, ${dateFormat.format(dayCal.time)}"
+            }
+        }
     }
 }
 
@@ -167,5 +225,6 @@ data class SeasonalUiState(
     val selectedTab: CalendarTab = CalendarTab.SEASONAL,
     val seasonalAnime: List<Media> = emptyList(),
     val weeklySchedule: Map<String, List<AiringEntry>> = emptyMap(),
+    val weekDayLabels: List<String> = emptyList(),
     val isLoading: Boolean = true,
 )
