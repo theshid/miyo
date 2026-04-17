@@ -19,6 +19,7 @@ data class WatchHistoryEntity(
     val sourceName: String,      // "Gogo"
     val lastPositionMs: Long,    // playback position in millis
     val durationMs: Long,        // total episode duration
+    val completedEpisodes: Int = 0,  // highest episode watched to ≥80% — only goes up
     val lastWatchedAt: Long = System.currentTimeMillis(),
 ) {
     val progressFraction: Float

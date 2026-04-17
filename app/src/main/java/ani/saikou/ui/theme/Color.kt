@@ -14,17 +14,17 @@ val SurfaceContainerHighest = Color(0xFF22262B)
 val SurfaceBright      = Color(0xFF282D31)
 val SurfaceVariant     = Color(0xFF22262B)
 
-// ── Primary (Neon Pink) ───────────────────────────────────────
-val Primary            = Color(0xFFFF89AB)
-val PrimaryContainer   = Color(0xFFFF709E)
-val PrimaryDim         = Color(0xFFE30071)
-val PrimaryFixedDim    = Color(0xFFFF5290)
-val PrimaryFixed       = Color(0xFFFF709E)
-val OnPrimary          = Color(0xFF62002D)
-val OnPrimaryContainer = Color(0xFF4C0021)
+// ── Primary (Purple) ──────────────────────────────────────────
+val Primary            = Color(0xFF9D3BFF)
+val PrimaryContainer   = Color(0xFF8A2BE2)
+val PrimaryDim         = Color(0xFF7B1FA2)
+val PrimaryFixedDim    = Color(0xFFB46EFF)
+val PrimaryFixed       = Color(0xFFC98FFF)
+val OnPrimary          = Color(0xFF1A0033)
+val OnPrimaryContainer = Color(0xFFF3E5FF)
 val OnPrimaryFixed     = Color(0xFF000000)
-val OnPrimaryFixedVariant = Color(0xFF5D002A)
-val InversePrimary     = Color(0xFFBC005C)
+val OnPrimaryFixedVariant = Color(0xFF2D004F)
+val InversePrimary     = Color(0xFF6200EA)
 
 // ── Secondary (Violet/Blue) ───────────────────────────────────
 val Secondary          = Color(0xFF8FA4FD)
@@ -65,7 +65,7 @@ val OnErrorContainer   = Color(0xFFFFB2B9)
 val OnError            = Color(0xFF490013)
 
 // ── Semantic / Special ────────────────────────────────────────
-val SaikouGlow         = Color(0x4DFF89AB) // primary @ 30% for glow effects
+val SaikouGlow         = Color(0x4D9D3BFF) // primary @ 30% for glow effects
 val GhostBorder        = Color(0x3345484C) // outline-variant @ 20%
 val Favorite           = Color(0xFFE63956)
 val FillerBadge        = Color(0x3BFF8400)

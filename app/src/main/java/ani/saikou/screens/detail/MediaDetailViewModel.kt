@@ -65,6 +65,22 @@ class MediaDetailViewModel(
             )
         }
     }
+
+    fun removeFromList() {
+        val media = _uiState.value.media ?: return
+        val listId = media.userListEntryId ?: return
+        viewModelScope.launch {
+            repository.deleteListEntry(listId)
+            _uiState.value = _uiState.value.copy(
+                media = media.copy(
+                    userStatus = null,
+                    userListEntryId = null,
+                    userProgress = null,
+                    userScore = 0,
+                ),
+            )
+        }
+    }
 }
 
 data class MediaDetailUiState(

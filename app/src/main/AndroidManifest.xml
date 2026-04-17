@@ -11,14 +11,15 @@
         android:name=".SaikouApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="Saikou V2"
+        android:label="Miyo"
         android:supportsRtl="true"
         android:theme="@style/Theme.Saikou">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.Saikou">
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density|layoutDirection"
+            android:theme="@style/Theme.Saikou.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -30,13 +31,13 @@
             android:name=".LoginCallbackActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|layoutDirection">
-            <intent-filter android:label="Anilist Login for Saikou">
+            <intent-filter android:label="Anilist Login for Miyo">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:host="anilist"
-                    android:scheme="saikou" />
+                    android:scheme="miyo" />
             </intent-filter>
         </activity>
 
@@ -44,6 +45,16 @@
             android:name=".data.local.downloads.DownloadService"
             android:foregroundServiceType="dataSync"
             android:exported="false" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

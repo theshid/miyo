@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -69,9 +70,21 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(32.dp),
         ) {
+            // Samurai hero image
+            coil.compose.AsyncImage(
+                model = ani.saikou.R.drawable.samurai_login,
+                contentDescription = "Miyo",
+                modifier = Modifier
+                    .fillMaxWidth(0.75f)
+                    .heightIn(max = 360.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // App name — thin weight, large display
             Text(
-                text = "SAIKOU",
+                text = "MIYO",
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontFamily = Epilogue,
                     fontWeight = FontWeight.W300,

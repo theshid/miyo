@@ -1,8 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- Main app theme — black window background prevents white flash -->
     <style name="Theme.Saikou" parent="android:Theme.Material.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@android:color/black</item>
     </style>
+
+    <!--
+        Splash screen theme (used as the activity theme in AndroidManifest).
+        core-splashscreen picks up windowSplashScreen* attrs and dismisses
+        the system splash the moment Compose draws its first frame.
+        postSplashScreenTheme is applied automatically afterward.
+    -->
+    <style name="Theme.Saikou.Splash" parent="Theme.SplashScreen">
+        <!-- Black background — blends seamlessly with our MP4 splash -->
+        <item name="windowSplashScreenBackground">@android:color/black</item>
+        <!-- Empty drawable so no icon appears before the MP4 starts -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_blank</item>
+        <!-- Restore the real theme once the splash is done -->
+        <item name="postSplashScreenTheme">@style/Theme.Saikou</item>
+    </style>
+
 </resources>

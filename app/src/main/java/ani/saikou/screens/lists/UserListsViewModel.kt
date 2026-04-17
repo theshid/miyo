@@ -29,6 +29,11 @@ class UserListsViewModel(
         loadList(tab)
     }
 
+    /** Re-fetch the currently-selected tab (called on screen resume). */
+    fun refresh() {
+        loadList(_uiState.value.selectedTab)
+    }
+
     fun updateEntry(mediaId: Int, progress: Int?, score: Int?, status: String?) {
         viewModelScope.launch {
             repository.editListEntry(mediaId, progress, score, status)
@@ -36,14 +41,18 @@ class UserListsViewModel(
         }
     }
 
-    private fun loadList(status: String) {
+    private fun loadList(tab: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val anilistStatus = statusMap[status] ?: "CURRENT"
-            val items = if (type == "ANIME") {
-                repository.getUserAnimeList(anilistStatus)
+            val items = if (tab == FAVORITES_TAB) {
+                repository.getUserFavorites(type)
             } else {
-                repository.getUserMangaList(anilistStatus)
+                val anilistStatus = statusMap[tab] ?: "CURRENT"
+                if (type == "ANIME") {
+                    repository.getUserAnimeList(anilistStatus)
+                } else {
+                    repository.getUserMangaList(anilistStatus)
+                }
             }
             _uiState.value = _uiState.value.copy(
                 items = items,
@@ -53,7 +62,9 @@ class UserListsViewModel(
     }
 
     companion object {
-        val tabs = listOf("Watching", "Completed", "Paused", "Planning", "Dropped")
+        const val FAVORITES_TAB = "Favorites"
+        val tabs = listOf("Watching", "Completed", "Paused", "Planning", "Dropped", FAVORITES_TAB)
+        // Only the list-status tabs — excludes Favorites, which isn't a MediaListStatus.
         val statusMap = mapOf(
             "Watching" to "CURRENT",
             "Completed" to "COMPLETED",

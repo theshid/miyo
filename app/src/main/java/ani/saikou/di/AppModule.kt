@@ -1,8 +1,12 @@
 package ani.saikou.di
 
 import android.content.Context
+import ani.saikou.BuildConfig
 import ani.saikou.data.local.ConnectivityObserver
 import ani.saikou.data.local.TokenStorage
+import ani.saikou.logging.DefaultLoggingService
+import ani.saikou.logging.LoggingService
+import ani.saikou.logging.PrettyLoggingService
 import ani.saikou.data.local.db.DownloadDao
 import ani.saikou.data.local.db.ReadingHistoryDao
 import ani.saikou.data.local.db.SaikouDatabase
@@ -24,6 +28,7 @@ object AppModule {
     private var connectivityObserver: ConnectivityObserver? = null
     private var database: SaikouDatabase? = null
     private var downloadManager: MangaDownloadManager? = null
+    private var loggingService: LoggingService? = null
 
     fun init(context: Context) {
         val appContext = context.applicationContext
@@ -33,6 +38,7 @@ object AppModule {
         connectivityObserver = ConnectivityObserver(appContext)
         database = SaikouDatabase.getInstance(appContext)
         downloadManager = MangaDownloadManager(appContext, database!!.downloadDao())
+        loggingService = if (BuildConfig.DEBUG) PrettyLoggingService() else DefaultLoggingService()
     }
 
     fun repository(): AnilistRepository =
@@ -46,6 +52,9 @@ object AppModule {
 
     fun downloadManager(): MangaDownloadManager =
         downloadManager ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun loggingService(): LoggingService =
+        loggingService ?: throw IllegalStateException("AppModule not initialized.")
 
     fun downloadDao(): DownloadDao =
         database?.downloadDao() ?: throw IllegalStateException("AppModule not initialized.")

@@ -28,12 +28,12 @@ class MangaViewModel : ViewModel() {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             val trendingDeferred = async { repository.getTrendingManga() }
-            val novelsDeferred = async { repository.getTrendingNovels() }
+            val updatedDeferred = async { repository.getRecentlyUpdatedManga() }
             val popularDeferred = async { repository.getPopularManga() }
 
             _uiState.value = MangaUiState(
                 trending = trendingDeferred.await(),
-                trendingNovels = novelsDeferred.await(),
+                recentlyUpdated = updatedDeferred.await(),
                 popular = popularDeferred.await(),
                 isLoading = false,
             )
@@ -56,7 +56,7 @@ class MangaViewModel : ViewModel() {
 
 data class MangaUiState(
     val trending: List<Media> = emptyList(),
-    val trendingNovels: List<Media> = emptyList(),
+    val recentlyUpdated: List<Media> = emptyList(),
     val popular: List<Media> = emptyList(),
     val isLoading: Boolean = true,
 )

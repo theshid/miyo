@@ -4,9 +4,16 @@ import ani.saikou.data.local.TokenStorage
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.AnilistQueries
 import ani.saikou.data.remote.MediaParser
+import ani.saikou.domain.model.AiringEntry
+import ani.saikou.domain.model.AnimeStats
 import ani.saikou.domain.model.CharacterDetail
+import ani.saikou.domain.model.GenreStat
+import ani.saikou.domain.model.MangaStats
 import ani.saikou.domain.model.Media
+import ani.saikou.domain.model.ScoreStat
+import ani.saikou.domain.model.StatusStat
 import ani.saikou.domain.model.User
+import ani.saikou.domain.model.UserStats
 import ani.saikou.domain.repository.AnilistRepository
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonArray
@@ -20,6 +27,78 @@ class AnilistRepositoryImpl(
 
     private var cachedUser: User? = null
 
+    // ── Stats ─────────────────────────────────────────────────
+
+    override suspend fun getUserStats(): UserStats? {
+        val response = api.execute(AnilistQueries.USER_STATS) ?: return null
+        val viewer = response["data"]?.jsonObject?.get("Viewer") ?: return null
+        if (viewer == JsonNull) return null
+
+        val v = viewer.jsonObject
+        val stats = v["statistics"]?.jsonObject ?: return null
+
+        val animeStats = stats["anime"]?.jsonObject
+        val mangaStats = stats["manga"]?.jsonObject
+
+        return UserStats(
+            userName = v["name"]?.jsonPrimitive?.content ?: "User",
+            avatar = v["avatar"]?.jsonObject?.get("medium")?.jsonPrimitive?.content,
+            anime = animeStats?.let { a ->
+                AnimeStats(
+                    count = a["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                    episodesWatched = a["episodesWatched"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                    minutesWatched = a["minutesWatched"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                    meanScore = a["meanScore"]?.jsonPrimitive?.content?.toFloatOrNull() ?: 0f,
+                    genres = a["genres"]?.jsonArray?.mapNotNull { g ->
+                        val obj = g.jsonObject
+                        val genre = obj["genre"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                        GenreStat(
+                            genre = genre,
+                            count = obj["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                            meanScore = obj["meanScore"]?.jsonPrimitive?.content?.toFloatOrNull() ?: 0f,
+                            minutesWatched = obj["minutesWatched"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                        )
+                    } ?: emptyList(),
+                    statuses = a["statuses"]?.jsonArray?.mapNotNull { s ->
+                        val obj = s.jsonObject
+                        val status = obj["status"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                        StatusStat(status = status, count = obj["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0)
+                    } ?: emptyList(),
+                    scores = a["scores"]?.jsonArray?.mapNotNull { s ->
+                        val obj = s.jsonObject
+                        ScoreStat(
+                            score = obj["score"]?.jsonPrimitive?.content?.toIntOrNull() ?: return@mapNotNull null,
+                            count = obj["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                        )
+                    }?.filter { it.count > 0 } ?: emptyList(),
+                )
+            } ?: AnimeStats(),
+            manga = mangaStats?.let { m ->
+                MangaStats(
+                    count = m["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                    chaptersRead = m["chaptersRead"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                    volumesRead = m["volumesRead"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                    meanScore = m["meanScore"]?.jsonPrimitive?.content?.toFloatOrNull() ?: 0f,
+                    genres = m["genres"]?.jsonArray?.mapNotNull { g ->
+                        val obj = g.jsonObject
+                        val genre = obj["genre"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                        GenreStat(
+                            genre = genre,
+                            count = obj["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                            meanScore = obj["meanScore"]?.jsonPrimitive?.content?.toFloatOrNull() ?: 0f,
+                            chaptersRead = obj["chaptersRead"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                        )
+                    } ?: emptyList(),
+                    statuses = m["statuses"]?.jsonArray?.mapNotNull { s ->
+                        val obj = s.jsonObject
+                        val status = obj["status"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                        StatusStat(status = status, count = obj["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0)
+                    } ?: emptyList(),
+                )
+            } ?: MangaStats(),
+        )
+    }
+
     // ── Auth ──────────────────────────────────────────────────
 
     override fun getToken(): String? = tokenStorage.getToken()
@@ -29,8 +108,8 @@ class AnilistRepositoryImpl(
     // ── User ──────────────────────────────────────────────────
 
     override suspend fun getUserData(): User? {
-        cachedUser?.let { return it }
-        val response = api.execute(AnilistQueries.VIEWER) ?: return null
+        // Always fetch fresh data — stats change after watching episodes
+        val response = api.execute(AnilistQueries.VIEWER) ?: return cachedUser
         val viewer = response["data"]?.jsonObject?.get("Viewer") ?: return null
         if (viewer == JsonNull) return null
 
@@ -52,10 +131,10 @@ class AnilistRepositoryImpl(
     // ── Single Media ──────────────────────────────────────────
 
     override suspend fun getMedia(id: Int): Media? {
-        val response = api.execute(AnilistQueries.media(id)) ?: return null
+        val response = api.execute(AnilistQueries.mediaDetails(id)) ?: return null
         val media = response["data"]?.jsonObject?.get("Media") ?: return null
         if (media == JsonNull) return null
-        return MediaParser.parseMedia(media.jsonObject)
+        return MediaParser.parseMediaDetail(media.jsonObject)
     }
 
     override suspend fun getCharacter(id: Int): CharacterDetail? {
@@ -106,6 +185,9 @@ class AnilistRepositoryImpl(
     override suspend fun getPopularManga(page: Int): List<Media> =
         fetchPagedMedia(AnilistQueries.popular("MANGA", page))
 
+    override suspend fun getRecentlyUpdatedManga(page: Int): List<Media> =
+        fetchPagedMedia(AnilistQueries.recentlyUpdated("MANGA", page))
+
     override suspend fun getTrendingNovels(page: Int): List<Media> =
         fetchPagedMedia(AnilistQueries.trendingNovels(page))
 
@@ -116,6 +198,25 @@ class AnilistRepositoryImpl(
 
     override suspend fun getUserMangaList(status: String): List<Media> =
         fetchContinueMedia("MANGA", status)
+
+    override suspend fun getUserFavorites(type: String): List<Media> {
+        val userId = tokenStorage.getUserId()
+        if (userId == -1) return emptyList()
+        val response = api.execute(AnilistQueries.userFavorites(userId, type)) ?: return emptyList()
+        val field = if (type == "ANIME") "anime" else "manga"
+        val nodes = response["data"]?.jsonObject
+            ?.get("User")?.takeIf { it != JsonNull }
+            ?.jsonObject?.get("favourites")?.takeIf { it != JsonNull }
+            ?.jsonObject?.get(field)?.takeIf { it != JsonNull }
+            ?.jsonObject?.get("nodes")?.jsonArray ?: return emptyList()
+        return nodes.mapNotNull { node ->
+            try {
+                MediaParser.parseMedia(node.jsonObject)
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
 
     override suspend fun getRecommendations(): List<Media> {
         val response = api.execute(AnilistQueries.recommendations()) ?: return emptyList()
@@ -129,6 +230,31 @@ class AnilistRepositoryImpl(
             if (json == null || json == JsonNull) return@mapNotNull null
             val media = MediaParser.parseMedia(json.jsonObject)
             if (media.id in seen) null else { seen.add(media.id); media }
+        }
+    }
+
+    // ── Seasonal ──────────────────────────────────────────────
+
+    override suspend fun getSeasonalAnime(season: String, year: Int, page: Int): List<Media> =
+        fetchPagedMedia(AnilistQueries.seasonal(season, year, page))
+
+    override suspend fun getAiringSchedule(weekStart: Long, weekEnd: Long, page: Int): List<AiringEntry> {
+        val response = api.execute(AnilistQueries.airingSchedule(weekStart, weekEnd, page)) ?: return emptyList()
+        val schedules = response["data"]?.jsonObject
+            ?.get("Page")?.jsonObject
+            ?.get("airingSchedules")?.jsonArray ?: return emptyList()
+        val seen = mutableSetOf<Int>()
+        return schedules.mapNotNull { entry ->
+            try {
+                val obj = entry.jsonObject
+                val airingAt = obj["airingAt"]!!.jsonPrimitive.content.toLong()
+                val episode = obj["episode"]!!.jsonPrimitive.content.toInt()
+                val mediaJson = obj["media"]?.takeIf { it != JsonNull }?.jsonObject ?: return@mapNotNull null
+                val media = MediaParser.parseMedia(mediaJson)
+                if (media.isAdult || media.id in seen) return@mapNotNull null
+                seen.add(media.id)
+                AiringEntry(airingAt = airingAt, episode = episode, media = media)
+            } catch (_: Exception) { null }
         }
     }
 

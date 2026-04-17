@@ -19,6 +19,9 @@ sealed class Screen(
     // ── News ──────────────────────────────────────────────────
     data object News : Screen("news")
 
+    // ── Splash ────────────────────────────────────────────────
+    data object Splash : Screen("splash")
+
     // ── Auth ──────────────────────────────────────────────────
     data object Login : Screen("login")
 
@@ -47,8 +50,11 @@ sealed class Screen(
     }
 
     // ── Players / Readers ─────────────────────────────────────
-    data object VideoPlayer : Screen("player/{mediaId}/{episodeNum}") {
-        fun createRoute(mediaId: Int, episodeNum: Int) = "player/$mediaId/$episodeNum"
+    data object VideoPlayer : Screen("player/{mediaId}/{episodeNum}?sourceSlug={sourceSlug}") {
+        fun createRoute(mediaId: Int, episodeNum: Int, sourceSlug: String? = null): String {
+            val base = "player/$mediaId/$episodeNum"
+            return if (sourceSlug != null) "$base?sourceSlug=$sourceSlug" else base
+        }
     }
 
     data object MangaReader : Screen("reader/{mediaId}/{chapterNum}") {
@@ -63,6 +69,12 @@ sealed class Screen(
         fun createRoute(query: String? = null): String =
             if (query != null) "torrent?query=$query" else "torrent"
     }
+
+    // ── Seasonal Calendar ─────────────────────────────────────
+    data object SeasonalCalendar : Screen("seasonal")
+
+    // ── Stats Dashboard ──────────────────────────────────────
+    data object Stats : Screen("stats")
 
     // ── Error ─────────────────────────────────────────────────
     data object NoInternet : Screen("no_internet")

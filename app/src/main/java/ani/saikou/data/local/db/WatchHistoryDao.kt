@@ -28,4 +28,11 @@ interface WatchHistoryDao {
 
     @Query("DELETE FROM watch_history")
     suspend fun deleteAll()
+
+    /**
+     * Total episodes watched across all anime. Uses the `completedEpisodes` field
+     * which only ever increases (not affected by starting a new episode).
+     */
+    @Query("SELECT COALESCE(SUM(completedEpisodes), 0) FROM watch_history")
+    fun getEpisodesWatchedCount(): Flow<Int>
 }

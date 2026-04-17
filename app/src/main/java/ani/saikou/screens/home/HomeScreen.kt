@@ -19,6 +19,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Notifications
@@ -31,6 +36,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,11 +65,52 @@ fun HomeScreen(
     onNavigateToNews: () -> Unit = {},
     onNavigateToTorrent: () -> Unit = {},
     onNavigateToDownloads: () -> Unit = {},
+    onNavigateToCalendar: () -> Unit = {},
+    onNavigateToStats: () -> Unit = {},
+    onLogout: () -> Unit = {},
     onNavigateToReader: (mediaId: Int, chapterNum: Int) -> Unit = { _, _ -> },
     onNavigateToPlayer: (mediaId: Int, episodeNum: Int) -> Unit = { _, _ -> },
     viewModel: HomeViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+
+    // Refresh the list every time the screen comes back into view so changes
+    // made in MediaDetail (add/remove/change status) appear immediately.
+    @Suppress("DEPRECATION")
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.loadHomeData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Log out", color = OnSurface) },
+            text = { Text("Are you sure you want to log out of AniList?", color = OnSurfaceVariant) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    onLogout()
+                }) {
+                    Text("Log out", color = Primary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel", color = OnSurfaceVariant)
+                }
+            },
+            containerColor = ani.saikou.ui.theme.SurfaceContainerHigh,
+        )
+    }
 
     if (state.isLoading) {
         ani.saikou.components.HomeShimmer()
@@ -98,12 +147,28 @@ fun HomeScreen(
                     )
                 }
             }
-            IconButton(onClick = onNavigateToNews) {
-                Icon(
-                    Icons.Default.Notifications,
-                    contentDescription = "News",
-                    tint = OnSurfaceVariant,
-                )
+            Row {
+                IconButton(onClick = onNavigateToStats) {
+                    Icon(
+                        Icons.Default.BarChart,
+                        contentDescription = "Stats",
+                        tint = OnSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onNavigateToNews) {
+                    Icon(
+                        Icons.Default.Notifications,
+                        contentDescription = "News",
+                        tint = OnSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = { showLogoutDialog = true }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = "Log out",
+                        tint = OnSurfaceVariant,
+                    )
+                }
             }
         }
 
@@ -115,13 +180,13 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             StatCard(
-                value = "${state.user?.episodesWatched ?: 0}",
+                value = "${state.localEpisodesWatched}",
                 label = "Episodes Watched",
                 accentColor = Secondary,
                 modifier = Modifier.weight(1f),
             )
             StatCard(
-                value = "${state.user?.chaptersRead ?: 0}",
+                value = "${state.localChaptersRead}",
                 label = "Chapters Read",
                 accentColor = Primary,
                 modifier = Modifier.weight(1f),
@@ -149,12 +214,12 @@ fun HomeScreen(
             )
         }
 
-        // ── News, Torrent & Downloads Cards ─────────────────────
+        // ── News & Torrents ──────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ActionCard(
                 title = "News",
@@ -168,19 +233,34 @@ fun HomeScreen(
                 onClick = onNavigateToTorrent,
                 modifier = Modifier.weight(1f),
             )
+        }
+
+        // ── Offline & Calendar ───────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             ActionCard(
                 title = "Offline",
                 icon = Icons.Default.DownloadDone,
                 onClick = onNavigateToDownloads,
                 modifier = Modifier.weight(1f),
             )
+            ActionCard(
+                title = "Calendar",
+                icon = Icons.Default.CalendarMonth,
+                onClick = onNavigateToCalendar,
+                modifier = Modifier.weight(1f),
+            )
         }
 
-        // ── Continue Watching (local, resume-ready) ───────────
-        if (state.continueWatchingLocal.isNotEmpty()) {
+        // ── Airing Soon ─────────────────────────────────────
+        if (state.airingSchedule.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionHeader(
-                    title = "Continue Watching",
+                    title = "Airing Soon",
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
                 LazyRow(
@@ -188,66 +268,14 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(
-                        items = state.continueWatchingLocal,
-                        key = { "watch_${it.mediaId}" },
-                    ) { entry ->
-                        WatchHistoryCard(
-                            entry = entry,
-                            showProgress = true,
-                            onClick = { onNavigateToPlayer(entry.mediaId, entry.episodeNumber) },
-                        )
-                    }
-                }
-            }
-        }
-
-        // ── Reading History (local, resume-ready) ─────────────
-        if (state.readingHistory.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionHeader(
-                    title = "Continue Reading",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(
-                        items = state.readingHistory,
-                        key = { "history_${it.mangaId}" },
-                    ) { entry ->
-                        MediaPosterCard(
-                            title = entry.mangaTitle,
-                            coverUrl = entry.coverUrl,
-                            subtitle = "Ch. ${entry.chapterNumber} · p.${entry.lastPage + 1}/${entry.totalPages}",
-                            onClick = { onNavigateToReader(entry.mangaId, entry.chapterNumber) },
-                        )
-                    }
-                }
-            }
-        }
-
-        // ── Continue Watching ────────────────────────────────
-        if (state.continueWatching.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionHeader(
-                    title = "Continue Watching",
-                    actionText = "SEE ALL",
-                    onAction = onNavigateToAnimeList,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(
-                        items = state.continueWatching,
-                        key = { it.id },
+                        items = state.airingSchedule,
+                        key = { "airing_${it.id}" },
                     ) { media ->
-                        MediaPosterCard(
+                        AiringCard(
                             title = media.displayTitle,
                             coverUrl = media.cover,
-                            subtitle = media.episodeProgress,
+                            episodeNumber = (media.nextAiringEpisode ?: 0) + 1,
+                            airingAtMs = media.nextAiringEpisodeTime ?: 0L,
                             onClick = { onNavigateToMedia(media.id) },
                         )
                     }
@@ -255,29 +283,94 @@ fun HomeScreen(
             }
         }
 
-        // ── AniList Reading List ──────────────────────────────
-        if (state.continueReading.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionHeader(
-                    title = "Reading List",
-                    actionText = "SEE ALL",
-                    onAction = onNavigateToMangaList,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(
-                        items = state.continueReading,
-                        key = { it.id },
-                    ) { media ->
-                        MediaPosterCard(
-                            title = media.displayTitle,
-                            coverUrl = media.cover,
-                            subtitle = media.episodeProgress,
-                            onClick = { onNavigateToMedia(media.id) },
-                        )
+        // ── Continue Watching (merged: local resume + AniList CURRENT) ──
+        run {
+            // Local entries with resume position take priority
+            val localIds = state.continueWatchingLocal.map { it.mediaId }.toSet()
+            // AniList entries that aren't already in local history
+            val anilistOnly = state.continueWatching.filter { it.id !in localIds }
+
+            if (state.continueWatchingLocal.isNotEmpty() || anilistOnly.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SectionHeader(
+                        title = "Continue Watching",
+                        actionText = "SEE ALL",
+                        onAction = onNavigateToAnimeList,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        // Local entries first (have resume position bar)
+                        items(
+                            items = state.continueWatchingLocal,
+                            key = { "watch_${it.mediaId}" },
+                        ) { entry ->
+                            WatchHistoryCard(
+                                entry = entry,
+                                showProgress = true,
+                                onClick = { onNavigateToPlayer(entry.mediaId, entry.episodeNumber) },
+                            )
+                        }
+                        // AniList entries that aren't in local history
+                        items(
+                            items = anilistOnly,
+                            key = { "anilist_${it.id}" },
+                        ) { media ->
+                            MediaPosterCard(
+                                title = media.displayTitle,
+                                coverUrl = media.cover,
+                                subtitle = media.episodeProgress,
+                                onClick = { onNavigateToMedia(media.id) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Continue Reading (merged: local resume + AniList CURRENT) ──
+        run {
+            val localMangaIds = state.readingHistory.map { it.mangaId }.toSet()
+            val anilistOnlyManga = state.continueReading.filter { it.id !in localMangaIds }
+
+            if (state.readingHistory.isNotEmpty() || anilistOnlyManga.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SectionHeader(
+                        title = "Continue Reading",
+                        actionText = "SEE ALL",
+                        onAction = onNavigateToMangaList,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        // Local entries first (have page progress)
+                        items(
+                            items = state.readingHistory,
+                            key = { "history_${it.mangaId}" },
+                        ) { entry ->
+                            MediaPosterCard(
+                                title = entry.mangaTitle,
+                                coverUrl = entry.coverUrl,
+                                subtitle = "Ch. ${entry.chapterNumber} · p.${entry.lastPage + 1}/${entry.totalPages}",
+                                onClick = { onNavigateToReader(entry.mangaId, entry.chapterNumber) },
+                            )
+                        }
+                        // AniList entries that aren't in local history
+                        items(
+                            items = anilistOnlyManga,
+                            key = { "anilist_manga_${it.id}" },
+                        ) { media ->
+                            MediaPosterCard(
+                                title = media.displayTitle,
+                                coverUrl = media.cover,
+                                subtitle = media.episodeProgress,
+                                onClick = { onNavigateToMedia(media.id) },
+                            )
+                        }
                     }
                 }
             }
@@ -448,7 +541,83 @@ private fun ActionCard(
                 style = MaterialTheme.typography.titleSmall,
                 color = OnSurface,
                 fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
         }
+    }
+}
+
+@Composable
+private fun AiringCard(
+    title: String,
+    coverUrl: String?,
+    episodeNumber: Int,
+    airingAtMs: Long,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .width(130.dp)
+            .clickable(onClick = onClick),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 130.dp, height = 180.dp)
+                .clip(MaterialTheme.shapes.medium),
+        ) {
+            coil.compose.AsyncImage(
+                model = coverUrl,
+                contentDescription = title,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            // Episode badge
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .background(Primary, MaterialTheme.shapes.extraSmall)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = "Ep $episodeNumber",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = androidx.compose.ui.graphics.Color.Black,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = OnSurface,
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.width(130.dp),
+        )
+        Text(
+            text = formatTimeUntil(airingAtMs),
+            style = MaterialTheme.typography.bodySmall,
+            color = Secondary,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
+    }
+}
+
+private fun formatTimeUntil(airingAtMs: Long): String {
+    val diff = airingAtMs - System.currentTimeMillis()
+    if (diff <= 0) return "Airing now"
+
+    val minutes = diff / 60_000
+    val hours = minutes / 60
+    val days = hours / 24
+
+    return when {
+        days > 0 -> "${days}d ${hours % 24}h"
+        hours > 0 -> "${hours}h ${minutes % 60}m"
+        else -> "${minutes}m"
     }
 }

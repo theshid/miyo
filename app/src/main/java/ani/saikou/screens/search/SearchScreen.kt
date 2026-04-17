@@ -185,9 +185,18 @@ fun SearchScreen(
         }
 
         // ── Results ──────────────────────────────────────────
+        val queryLen = state.query.trim().length
         if (state.isLoading && state.results.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
+            }
+        } else if (queryLen >= 1 && state.results.isEmpty() && !state.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "No results for \"${state.query}\"",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceVariant,
+                )
             }
         } else if (state.isGridView) {
             LazyVerticalGrid(

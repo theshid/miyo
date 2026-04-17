@@ -26,4 +26,12 @@ interface ReadingHistoryDao {
 
     @Query("DELETE FROM reading_history")
     suspend fun deleteAll()
+
+    /**
+     * Total chapters read: sum of the highest completed chapter across all manga.
+     * Counts chapters that reached ≥80% progress (last page near the end).
+     * Emits a new value whenever reading_history changes.
+     */
+    @Query("SELECT COALESCE(SUM(chapterNumber), 0) FROM reading_history WHERE totalPages > 0 AND ((lastPage + 1) * 1.0 / totalPages) >= 0.8")
+    fun getChaptersReadCount(): Flow<Int>
 }

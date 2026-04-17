@@ -61,19 +61,12 @@ fun AnimeScreen(
             )
         }
 
-        // ── Trending Carousel ────────────────────────────────
+        // ── Trending Carousel (full-bleed hero) ──────────────
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionHeader(
-                    title = "Trending Now",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                TrendingCarousel(
-                    items = state.trending,
-                    onItemClick = onNavigateToMedia,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
+            TrendingCarousel(
+                items = state.trending,
+                onItemClick = onNavigateToMedia,
+            )
         }
 
         // ── Quick chips ──────────────────────────────────────

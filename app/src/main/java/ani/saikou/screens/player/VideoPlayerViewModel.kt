@@ -5,10 +5,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.components.SourceItem
 import ani.saikou.data.local.db.WatchHistoryEntity
+import ani.saikou.data.remote.AniSkipApi
+import ani.saikou.data.remote.SkipTimes
 import ani.saikou.data.remote.parsers.GogoParser
 import ani.saikou.di.AppModule
 import ani.saikou.domain.model.AnimeSource
+import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.StreamLink
+import ani.saikou.logging.Log
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,9 +28,11 @@ class VideoPlayerViewModel(
     private val repository = AppModule.repository()
     private val watchHistoryDao = AppModule.watchHistoryDao()
     private val gogoParser = GogoParser()
+    private val aniSkipApi = AniSkipApi()
 
     val mediaId: Int = savedStateHandle["mediaId"] ?: 0
     val episodeNum: Int = savedStateHandle["episodeNum"] ?: 1
+    private val navSourceSlug: String? = savedStateHandle.get<String>("sourceSlug")?.takeIf { it.isNotEmpty() }
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState
@@ -32,12 +40,15 @@ class VideoPlayerViewModel(
     private var animeSources: List<AnimeSource> = emptyList()
     private var resolvedSourceSlug: String? = null
     private var saveJob: Job? = null
+    private var anilistProgressSynced = false
 
     init {
         loadSources()
     }
 
     private fun loadSources() {
+        // Reset error state on retry
+        _uiState.value = _uiState.value.copy(error = null)
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
@@ -48,7 +59,27 @@ class VideoPlayerViewModel(
                 title = title,
                 episodeTitle = "Episode $episodeNum",
                 coverUrl = media?.banner ?: media?.cover,
+                totalEpisodes = media?.totalEpisodes ?: 0,
+                recommendations = media?.recommendations.orEmpty().take(10),
             )
+
+            // Fetch skip times from AniSkip (non-blocking — runs concurrently)
+            media?.malId?.let { malId ->
+                viewModelScope.launch {
+                    val skipTimes = aniSkipApi.getSkipTimes(malId, episodeNum)
+                    _uiState.value = _uiState.value.copy(skipTimes = skipTimes)
+                }
+            }
+
+            // If source slug was passed via navigation (user already picked), use it directly
+            if (navSourceSlug != null) {
+                resolvedSourceSlug = navSourceSlug
+                val history = watchHistoryDao.getForMedia(mediaId)
+                val resumePosition = if (history != null && history.episodeNumber == episodeNum) history.lastPositionMs else 0L
+                _uiState.value = _uiState.value.copy(resumePositionMs = resumePosition)
+                loadEpisodeFromSource(navSourceSlug)
+                return@launch
+            }
 
             // Check watch history for saved source — skip search if found
             val history = watchHistoryDao.getForMedia(mediaId)
@@ -119,22 +150,66 @@ class VideoPlayerViewModel(
         animeSources.firstOrNull()?.let { selectSource(it) }
     }
 
+    fun retry() {
+        _uiState.value = _uiState.value.copy(error = null, isLoading = true)
+        loadSources()
+    }
+
+    private var lastPositionMs = 0L
+    private var lastDurationMs = 0L
+
     /**
      * Called from the player screen periodically with current playback position.
-     * Debounced to save once per 5 seconds.
+     * Local history save is debounced (5s). AniList sync fires immediately at 80%.
      */
     fun onPositionChanged(positionMs: Long, durationMs: Long) {
+        lastPositionMs = positionMs
+        lastDurationMs = durationMs
+
+        // Sync to AniList immediately when 80% threshold is crossed (not debounced)
+        if (durationMs > 0 && !anilistProgressSynced) {
+            val fraction = positionMs.toFloat() / durationMs
+            if (fraction >= 0.80f) {
+                anilistProgressSynced = true
+                viewModelScope.launch {
+                    try {
+                        repository.editListEntry(
+                            mediaId = mediaId,
+                            progress = episodeNum,
+                            status = "CURRENT",
+                        )
+                        Log.i(tag = "AniSync", message = "Synced progress to AniList: $mediaId ep $episodeNum")
+                    } catch (e: Exception) {
+                        Log.e(tag = "AniSync", message = "Failed to sync progress", throwable = e)
+                        anilistProgressSynced = false
+                    }
+                }
+            }
+        }
+
+        // Debounce local history save
         saveJob?.cancel()
         saveJob = viewModelScope.launch {
             delay(5000)
-            saveProgress(positionMs, durationMs)
+            saveLocalProgress(positionMs, durationMs)
         }
     }
 
-    private suspend fun saveProgress(positionMs: Long, durationMs: Long) {
+    private suspend fun saveLocalProgress(positionMs: Long, durationMs: Long) {
         val state = _uiState.value
         val slug = resolvedSourceSlug ?: return
         if (durationMs <= 0) return
+
+        // Read current stored value so completedEpisodes only ever goes UP
+        val existing = watchHistoryDao.getForMedia(mediaId)
+        val prevCompleted = existing?.completedEpisodes ?: 0
+
+        val fraction = positionMs.toFloat() / durationMs
+        val completed = if (fraction >= 0.80f) {
+            maxOf(prevCompleted, episodeNum)
+        } else {
+            prevCompleted
+        }
 
         watchHistoryDao.upsert(
             WatchHistoryEntity(
@@ -146,9 +221,28 @@ class VideoPlayerViewModel(
                 sourceName = "Gogo",
                 lastPositionMs = positionMs,
                 durationMs = durationMs,
+                completedEpisodes = completed,
                 lastWatchedAt = System.currentTimeMillis(),
             )
         )
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun onCleared() {
+        // Best-effort final save — fire-and-forget on a global IO scope so we
+        // don't block the main thread or risk ANR. The viewModelScope is already
+        // cancelled at this point, so we use a one-shot launch.
+        val pos = lastPositionMs
+        val dur = lastDurationMs
+        if (dur > 0) {
+            GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    saveLocalProgress(pos, dur)
+                } catch (_: Exception) { /* best-effort */ }
+            }
+        }
+        saveJob?.cancel()
+        super.onCleared()
     }
 }
 
@@ -156,6 +250,8 @@ data class PlayerUiState(
     val title: String = "",
     val episodeTitle: String = "",
     val coverUrl: String? = null,
+    val totalEpisodes: Int = 0,
+    val recommendations: List<Media> = emptyList(),
     val streamLinks: List<StreamLink> = emptyList(),
     val selectedLink: StreamLink? = null,
     val availableSources: List<SourceItem> = emptyList(),
@@ -163,4 +259,5 @@ data class PlayerUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val resumePositionMs: Long = 0L,
+    val skipTimes: SkipTimes = SkipTimes.EMPTY,
 )

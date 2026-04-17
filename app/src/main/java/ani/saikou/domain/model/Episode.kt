@@ -13,6 +13,13 @@ data class StreamLink(
     val url: String,
     val quality: String? = null,
     val headers: Map<String, String> = emptyMap(),
+    val subtitles: List<SubtitleTrack> = emptyList(),
+)
+
+data class SubtitleTrack(
+    val url: String,
+    val label: String = "English",
+    val language: String = "en",
 )
 
 data class AnimeSource(

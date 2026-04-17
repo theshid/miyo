@@ -68,14 +68,14 @@ fun SaikouBottomBar(
                         Icon(
                             imageVector = icon,
                             contentDescription = screen.label,
-                            tint = if (selected) Color.Black else Color.Black.copy(alpha = 0.4f),
+                            tint = if (selected) Color.White else Color.White.copy(alpha = 0.4f),
                             modifier = Modifier.size(24.dp),
                         )
                     }
                     Text(
                         text = screen.label,
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (selected) Color.Black else Color.Black.copy(alpha = 0.4f),
+                        color = if (selected) Color.White else Color.White.copy(alpha = 0.4f),
                     )
                 }
             }

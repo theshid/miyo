@@ -25,6 +25,20 @@ class HomeViewModel : ViewModel() {
         loadHomeData()
         observeReadingHistory()
         observeWatchHistory()
+        observeLocalStats()
+    }
+
+    private fun observeLocalStats() {
+        viewModelScope.launch {
+            watchHistoryDao.getEpisodesWatchedCount().collect { count ->
+                _uiState.value = _uiState.value.copy(localEpisodesWatched = count)
+            }
+        }
+        viewModelScope.launch {
+            readingHistoryDao.getChaptersReadCount().collect { count ->
+                _uiState.value = _uiState.value.copy(localChaptersRead = count)
+            }
+        }
     }
 
     fun loadHomeData() {
@@ -36,11 +50,21 @@ class HomeViewModel : ViewModel() {
             val readingDeferred = async { repository.getUserMangaList("CURRENT") + repository.getUserMangaList("REPEATING") }
             val recommendationsDeferred = async { repository.getRecommendations() }
 
+            val watching = watchingDeferred.await()
+
+            // Derive airing schedule: shows on user's CURRENT list that have a
+            // future airing time, sorted soonest-first.
+            val now = System.currentTimeMillis()
+            val airing = watching
+                .filter { it.nextAiringEpisodeTime != null && it.nextAiringEpisodeTime > now }
+                .sortedBy { it.nextAiringEpisodeTime }
+
             _uiState.value = _uiState.value.copy(
                 user = userDeferred.await(),
-                continueWatching = watchingDeferred.await(),
+                continueWatching = watching,
                 continueReading = readingDeferred.await(),
                 recommendations = recommendationsDeferred.await(),
+                airingSchedule = airing,
                 isLoading = false,
             )
         }
@@ -73,8 +97,11 @@ data class HomeUiState(
     val continueWatching: List<Media> = emptyList(),
     val continueReading: List<Media> = emptyList(),
     val recommendations: List<Media> = emptyList(),
+    val airingSchedule: List<Media> = emptyList(),
     val readingHistory: List<ReadingHistoryEntity> = emptyList(),
     val continueWatchingLocal: List<WatchHistoryEntity> = emptyList(),
     val watchHistory: List<WatchHistoryEntity> = emptyList(),
+    val localEpisodesWatched: Int = 0,
+    val localChaptersRead: Int = 0,
     val isLoading: Boolean = true,
 )

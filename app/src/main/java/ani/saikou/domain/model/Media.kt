@@ -4,6 +4,7 @@ import java.io.Serializable
 
 data class Media(
     val id: Int,
+    val malId: Int? = null,
     val name: String?,
     val nameRomaji: String?,
     val userPreferredName: String? = null,
@@ -18,6 +19,7 @@ data class Media(
     val userProgress: Int? = null,
     val userScore: Int = 0,
     val userStatus: String? = null,
+    val userListEntryId: Int? = null,
     val description: String? = null,
     val genres: List<String>? = null,
     val totalEpisodes: Int? = null,

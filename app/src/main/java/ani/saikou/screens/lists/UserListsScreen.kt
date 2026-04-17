@@ -69,6 +69,19 @@ fun UserListsScreen(
     val state by viewModel.uiState.collectAsState()
     var editingMedia by remember { mutableStateOf<Media?>(null) }
 
+    // Refresh when the screen resumes (e.g. after changing status in MediaDetail)
+    @Suppress("DEPRECATION")
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -309,11 +322,11 @@ private fun EditBottomSheet(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            // Status selector
+            // Status selector — only real MediaListStatus values, not Favorites
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Status", style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(UserListsViewModel.tabs) { tab ->
+                    items(UserListsViewModel.statusMap.keys.toList()) { tab ->
                         val status = UserListsViewModel.statusMap[tab] ?: "CURRENT"
                         GenreChip(
                             text = tab,

@@ -46,6 +46,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -62,6 +64,10 @@ import ani.saikou.components.GlassCard
 import ani.saikou.components.GenreChip
 import ani.saikou.components.MediaPosterCard
 import ani.saikou.components.PillButton
+import ani.saikou.components.SourceItem
+import ani.saikou.components.SourceSelectorSheet
+import ani.saikou.data.remote.parsers.GogoParser
+import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.Media
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.Favorite
@@ -70,6 +76,8 @@ import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
 import ani.saikou.ui.theme.SurfaceContainer
+import ani.saikou.di.AppModule
+import ani.saikou.util.ShareCardGenerator
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 
@@ -79,7 +87,7 @@ fun MediaDetailScreen(
     mediaId: Int,
     onBack: () -> Unit,
     onNavigateToCharacter: (Int) -> Unit,
-    onNavigateToPlayer: (Int) -> Unit,
+    onNavigateToPlayer: (Int, String?) -> Unit,
     onNavigateToReader: (Int) -> Unit,
     onNavigateToMedia: (Int) -> Unit,
     onNavigateToTorrent: ((String) -> Unit)? = null,
@@ -95,6 +103,82 @@ fun MediaDetailScreen(
     }
 
     val media = state.media ?: return
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // ── Source picker state (shown before navigating to player) ──
+    var pendingEpisode by remember { mutableStateOf<Int?>(null) }
+    var sourceSearching by remember { mutableStateOf(false) }
+    var foundSources by remember { mutableStateOf<List<AnimeSource>>(emptyList()) }
+    var showSourcePicker by remember { mutableStateOf(false) }
+
+    fun onEpisodeSelected(episodeNum: Int) {
+        // Check watch history first — if source is saved, go directly
+        scope.launch {
+            val historyDao = AppModule.watchHistoryDao()
+            val history = historyDao.getForMedia(mediaId)
+            if (history != null && history.sourceSlug.isNotEmpty()) {
+                onNavigateToPlayer(episodeNum, history.sourceSlug)
+                return@launch
+            }
+
+            // Search for sources
+            sourceSearching = true
+            pendingEpisode = episodeNum
+            val parser = GogoParser()
+            val title = media.nameRomaji ?: media.name ?: media.displayTitle
+            val sources = parser.search(title)
+            sourceSearching = false
+
+            when {
+                sources.isEmpty() -> {
+                    // No sources — navigate anyway, let the player show the error
+                    onNavigateToPlayer(episodeNum, null)
+                }
+                sources.size == 1 -> {
+                    onNavigateToPlayer(episodeNum, sources.first().slug)
+                }
+                else -> {
+                    foundSources = sources
+                    showSourcePicker = true
+                }
+            }
+        }
+    }
+
+    // Source picker bottom sheet
+    if (showSourcePicker) {
+        SourceSelectorSheet(
+            title = "Select Source",
+            sources = foundSources.map { SourceItem(id = it.slug, title = it.name, coverUrl = it.cover) },
+            onSelect = { source ->
+                showSourcePicker = false
+                val ep = pendingEpisode ?: return@SourceSelectorSheet
+                onNavigateToPlayer(ep, source.id)
+            },
+            onDismiss = {
+                showSourcePicker = false
+                pendingEpisode = null
+            },
+        )
+    }
+
+    // Loading overlay while searching for sources
+    if (sourceSearching) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .background(SurfaceContainer, MaterialTheme.shapes.large),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(color = Primary, strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
+                    Text("Finding sources...", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -210,11 +294,63 @@ fun MediaDetailScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PillButton(
-                text = media.userStatus ?: "ADD TO LIST",
-                onClick = { viewModel.updateStatus("CURRENT") },
-                modifier = Modifier.weight(1f),
-            )
+            // Status picker with dropdown (shows current status or "ADD TO LIST")
+            Box(modifier = Modifier.weight(1f)) {
+                var statusMenuOpen by remember { mutableStateOf(false) }
+                PillButton(
+                    text = displayStatusLabel(media.userStatus, media.type),
+                    onClick = {
+                        if (media.userStatus == null) {
+                            viewModel.updateStatus("CURRENT")
+                        } else {
+                            statusMenuOpen = true
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                androidx.compose.material3.DropdownMenu(
+                    expanded = statusMenuOpen,
+                    onDismissRequest = { statusMenuOpen = false },
+                    modifier = Modifier.background(ani.saikou.ui.theme.SurfaceContainerHigh),
+                ) {
+                    listOf(
+                        "CURRENT" to (if (media.type == "MANGA") "Reading" else "Watching"),
+                        "PLANNING" to "Planning",
+                        "COMPLETED" to "Completed",
+                        "PAUSED" to "Paused",
+                        "DROPPED" to "Dropped",
+                        "REPEATING" to (if (media.type == "MANGA") "Rereading" else "Rewatching"),
+                    ).forEach { (value, label) ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = label,
+                                    color = if (media.userStatus == value) Primary else OnSurface,
+                                    fontWeight = if (media.userStatus == value) FontWeight.Bold else FontWeight.Normal,
+                                )
+                            },
+                            onClick = {
+                                statusMenuOpen = false
+                                viewModel.updateStatus(value)
+                            },
+                        )
+                    }
+                    androidx.compose.material3.HorizontalDivider(color = ani.saikou.ui.theme.OutlineVariant)
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "Remove from list",
+                                color = ani.saikou.ui.theme.Error,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        },
+                        onClick = {
+                            statusMenuOpen = false
+                            viewModel.removeFromList()
+                        },
+                    )
+                }
+            }
             IconButton(onClick = { viewModel.toggleFavorite() }) {
                 Icon(
                     imageVector = if (media.isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -222,7 +358,26 @@ fun MediaDetailScreen(
                     tint = if (media.isFav) Favorite else OnSurfaceVariant,
                 )
             }
-            IconButton(onClick = { /* share */ }) {
+            IconButton(onClick = {
+                scope.launch {
+                    val user = AppModule.repository().getUserData()
+                    val bitmap = ShareCardGenerator.generateWatchingCard(
+                        context = context,
+                        title = media.displayTitle,
+                        coverUrl = media.cover,
+                        episodeProgress = media.userProgress,
+                        totalEpisodes = media.totalEpisodes,
+                        userScore = if (media.userScore > 0) media.userScore else null,
+                        userName = user?.name,
+                    )
+                    val uri = ShareCardGenerator.saveToCacheAndGetUri(context, bitmap)
+                    ShareCardGenerator.shareImage(
+                        context = context,
+                        uri = uri,
+                        text = "${media.displayTitle} — tracked on Miyo",
+                    )
+                }
+            }) {
                 Icon(
                     Icons.Default.Share,
                     contentDescription = "Share",
@@ -300,7 +455,7 @@ fun MediaDetailScreen(
             "Episodes" -> EpisodesTab(
                 totalEpisodes = media.totalEpisodes,
                 userProgress = media.userProgress,
-                onEpisodeClick = onNavigateToPlayer,
+                onEpisodeClick = ::onEpisodeSelected,
             )
             "Chapters" -> ChaptersTab(
                 totalChapters = media.totalChapters,
@@ -319,6 +474,21 @@ fun MediaDetailScreen(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun displayStatusLabel(status: String?, type: String?): String {
+    val isManga = type == "MANGA"
+    return when (status) {
+        null -> "ADD TO LIST"
+        "CURRENT" -> if (isManga) "READING" else "WATCHING"
+        "PLANNING" -> "PLANNING"
+        "COMPLETED" -> "COMPLETED"
+        "PAUSED" -> "PAUSED"
+        "DROPPED" -> "DROPPED"
+        "REPEATING" -> if (isManga) "REREADING" else "REWATCHING"
+        else -> status
     }
 }
 
@@ -424,11 +594,67 @@ private fun EpisodesTab(
         return
     }
 
+    // Partition episodes into 100-range buckets — keeps long series (One Piece, Conan) performant
+    // by rendering only ~100 GlassCards at a time instead of 1000+.
+    val bucketSize = 100
+    val buckets = remember(count) {
+        (1..count step bucketSize).map { start ->
+            start..minOf(start + bucketSize - 1, count)
+        }
+    }
+
+    // Bucket containing the next episode to watch — used as the default selection
+    // and as a secondary highlight so users can jump back to "where they left off".
+    val nextEpisode = ((userProgress ?: 0) + 1).coerceIn(1, count)
+    val progressBucketIndex = buckets.indexOfFirst { nextEpisode in it }.coerceAtLeast(0)
+
+    var selectedBucketIndex by rememberSaveable(count) { mutableIntStateOf(progressBucketIndex) }
+
     Column(
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        for (ep in 1..count) {
+        // Range chips — only when there's more than one bucket (skip for normal 12/24-ep shows).
+        if (buckets.size > 1) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp),
+            ) {
+                items(buckets.size) { index ->
+                    val range = buckets[index]
+                    val isSelected = index == selectedBucketIndex
+                    val isCurrent = index == progressBucketIndex
+                    Box(
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.small)
+                            .background(
+                                when {
+                                    isSelected -> Primary
+                                    isCurrent -> Primary.copy(alpha = 0.15f)
+                                    else -> SurfaceContainer
+                                },
+                            )
+                            .clickable { selectedBucketIndex = index }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                    ) {
+                        Text(
+                            text = "${range.first}-${range.last}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = when {
+                                isSelected -> Color.Black
+                                isCurrent -> Primary
+                                else -> OnSurface
+                            },
+                            fontWeight = if (isSelected || isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+
+        val visibleRange = buckets.getOrNull(selectedBucketIndex) ?: (1..count)
+        for (ep in visibleRange) {
             val watched = userProgress != null && ep <= userProgress
             GlassCard(
                 modifier = Modifier

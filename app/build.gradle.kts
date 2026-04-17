@@ -1,13 +1,13 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.24"
-    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.25"
+    id("com.google.devtools.ksp") version "1.9.25-1.0.20"
 }
 
 android {
     namespace = "ani.saikou"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "ani.saikou.v2"
@@ -46,10 +46,11 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 
     packaging {
@@ -60,8 +61,8 @@ android {
 }
 
 dependencies {
-    // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
+    // Compose BOM — Dec 2024
+    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
 
     // Compose UI
@@ -72,36 +73,37 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     // Activity & Lifecycle
-    implementation("androidx.activity:activity-compose:1.9.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
     // Navigation
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.navigation:navigation-compose:2.8.5")
 
     // Image loading
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
     // ExoPlayer (video playback)
-    implementation("androidx.media3:media3-exoplayer:1.3.1")
-    implementation("androidx.media3:media3-exoplayer-hls:1.3.1")
-    implementation("androidx.media3:media3-exoplayer-dash:1.3.1")
-    implementation("androidx.media3:media3-ui:1.3.1")
-    implementation("androidx.media3:media3-common:1.3.1")
+    val media3Version = "1.5.1"
+    implementation("androidx.media3:media3-exoplayer:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
+    implementation("androidx.media3:media3-exoplayer-dash:$media3Version")
+    implementation("androidx.media3:media3-ui:$media3Version")
+    implementation("androidx.media3:media3-common:$media3Version")
 
     // Network (Ktor — CMP-ready)
-    val ktorVersion = "2.3.11"
+    val ktorVersion = "2.3.13"
     implementation("io.ktor:ktor-client-core:$ktorVersion")
     implementation("io.ktor:ktor-client-okhttp:$ktorVersion")          // Android engine (swap to darwin for iOS)
     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
     implementation("io.ktor:ktor-client-logging:$ktorVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     // Accompanist (system UI, pager)
-    implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")
-    implementation("com.google.accompanist:accompanist-pager:0.34.0")
-    implementation("com.google.accompanist:accompanist-pager-indicators:0.34.0")
+    implementation("com.google.accompanist:accompanist-systemuicontroller:0.36.0")
+    implementation("com.google.accompanist:accompanist-pager:0.36.0")
+    implementation("com.google.accompanist:accompanist-pager-indicators:0.36.0")
 
     // Room (offline downloads DB)
     val roomVersion = "2.6.1"
@@ -110,10 +112,13 @@ dependencies {
     ksp("androidx.room:room-compiler:$roomVersion")
 
     // HTML parsing (for anime/manga source parsers)
-    implementation("org.jsoup:jsoup:1.17.2")
+    implementation("org.jsoup:jsoup:1.18.3")
+
+    // WorkManager (background episode checks)
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     // Core
-    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.browser:browser:1.8.0")
 

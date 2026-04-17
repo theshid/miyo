@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Solid black circle used as the system splash screen icon.
+     On a black splash background this is invisible, hiding the logo entirely. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#000000" />
+</shape>

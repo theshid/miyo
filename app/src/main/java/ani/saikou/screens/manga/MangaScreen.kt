@@ -88,14 +88,12 @@ fun MangaScreen(
             }
         }
 
-        // ── Trending Novels ──────────────────────────────────
-        if (state.trendingNovels.isNotEmpty()) {
+        // ── Recently Updated ─────────────────────────────────
+        if (state.recentlyUpdated.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionHeader(
-                        title = "Trending Novels",
-                        actionText = "VIEW ALL",
-                        onAction = { onNavigateToSearch(null) },
+                        title = "Recently Updated",
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     LazyRow(
@@ -103,13 +101,13 @@ fun MangaScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         items(
-                            items = state.trendingNovels,
+                            items = state.recentlyUpdated,
                             key = { it.id },
                         ) { media ->
                             MediaPosterCard(
                                 title = media.displayTitle,
                                 coverUrl = media.cover,
-                                subtitle = if (media.totalChapters != null) "${media.totalChapters} Chapters" else null,
+                                subtitle = if (media.totalChapters != null) "${media.totalChapters} Ch" else "Ongoing",
                                 onClick = { onNavigateToMedia(media.id) },
                             )
                         }

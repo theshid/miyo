@@ -20,6 +20,10 @@ class SearchViewModel : ViewModel() {
     private var searchJob: Job? = null
     private var currentPage = 1
 
+    // Per-session cache: avoids repeat API calls for the same query
+    // (e.g. "one pie" → "one piec" → back to "one pie" reuses cached result)
+    private val searchCache = mutableMapOf<String, List<Media>>()
+
     fun updateQuery(query: String) {
         _uiState.value = _uiState.value.copy(query = query)
         debounceSearch()
@@ -56,6 +60,12 @@ class SearchViewModel : ViewModel() {
 
     private fun debounceSearch() {
         searchJob?.cancel()
+        val query = _uiState.value.query.trim()
+        // Don't fire API calls for very short queries — noise + wasted bandwidth
+        if (query.length < MIN_QUERY_LENGTH) {
+            _uiState.value = _uiState.value.copy(results = emptyList(), totalFound = 0, isLoading = false)
+            return
+        }
         searchJob = viewModelScope.launch {
             delay(400)
             search()
@@ -64,20 +74,41 @@ class SearchViewModel : ViewModel() {
 
     fun search() {
         val state = _uiState.value
-        if (state.query.isBlank()) {
-            _uiState.value = state.copy(results = emptyList(), totalFound = 0)
+        val query = state.query.trim()
+        if (query.length < MIN_QUERY_LENGTH) {
+            _uiState.value = state.copy(results = emptyList(), totalFound = 0, isLoading = false)
             return
         }
+
+        // Cache key accounts for filters too
+        val cacheKey = "${state.type}|$query|${state.selectedGenres.sorted()}|${state.sort}"
+
         currentPage = 1
+
+        // Serve from cache immediately if hit
+        searchCache[cacheKey]?.let { cached ->
+            _uiState.value = state.copy(
+                results = cached,
+                totalFound = cached.size,
+                isLoading = false,
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = state.copy(isLoading = true)
             val results = repository.search(
-                query = state.query,
+                query = query,
                 type = state.type,
                 genres = state.selectedGenres.ifEmpty { null },
                 sort = state.sort,
                 page = currentPage,
             )
+            searchCache[cacheKey] = results
+            // Keep cache bounded
+            if (searchCache.size > MAX_CACHE_ENTRIES) {
+                searchCache.remove(searchCache.keys.first())
+            }
             _uiState.value = _uiState.value.copy(
                 results = results,
                 totalFound = results.size,
@@ -106,6 +137,9 @@ class SearchViewModel : ViewModel() {
     }
 
     companion object {
+        private const val MIN_QUERY_LENGTH = 1
+        private const val MAX_CACHE_ENTRIES = 50
+
         val GENRES = listOf(
             "Action", "Adventure", "Comedy", "Drama", "Fantasy",
             "Horror", "Mecha", "Music", "Mystery", "Psychological",

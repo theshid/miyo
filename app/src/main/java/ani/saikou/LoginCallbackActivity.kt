@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import ani.saikou.di.AppModule
 
 /**
- * Receives the AniList OAuth callback (`saikou://anilist#access_token=...`),
+ * Receives the AniList OAuth callback (`miyo://anilist#access_token=...`),
  * extracts and saves the token, then relaunches MainActivity.
  *
  * This is a separate activity because Custom Tabs redirect needs to close
@@ -18,7 +18,7 @@ class LoginCallbackActivity : ComponentActivity() {
 
         val data = intent?.data
         if (data != null) {
-            // AniList returns: saikou://anilist#access_token=TOKEN&token_type=Bearer&expires_in=...
+            // AniList returns: miyo://anilist#access_token=TOKEN&token_type=Bearer&expires_in=...
             // The fragment (#...) is in data.toString(), not data.fragment on all devices
             val fullUri = data.toString()
             val token = Regex("""(?<=access_token=).+(?=&token_type)""").find(fullUri)?.value

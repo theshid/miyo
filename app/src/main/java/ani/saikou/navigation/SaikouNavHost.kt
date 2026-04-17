@@ -24,6 +24,9 @@ import ani.saikou.screens.reader.MangaReaderScreen
 import ani.saikou.screens.search.SearchScreen
 import ani.saikou.screens.downloads.DownloadsScreen
 import ani.saikou.screens.news.NewsFeedScreen
+import ani.saikou.screens.seasonal.SeasonalCalendarScreen
+import ani.saikou.screens.stats.StatsScreen
+import ani.saikou.screens.splash.SplashScreen
 import ani.saikou.screens.torrent.TorrentSearchScreen
 
 @Composable
@@ -41,6 +44,22 @@ fun SaikouNavHost(
         popEnterTransition = { fadeIn(animationSpec = tween(300)) },
         popExitTransition = { fadeOut(animationSpec = tween(300)) },
     ) {
+        // ── Splash ────────────────────────────────────────────
+        composable(
+            Screen.Splash.route,
+            exitTransition = { fadeOut(animationSpec = tween(800)) },
+        ) {
+            val isLoggedIn = ani.saikou.di.AppModule.repository().isLoggedIn()
+            SplashScreen(
+                onSplashComplete = {
+                    val dest = if (isLoggedIn) Screen.Home.route else Screen.Login.route
+                    navController.navigate(dest) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
+            )
+        }
+
         // ── Login ─────────────────────────────────────────────
         composable(Screen.Login.route) {
             LoginScreen(
@@ -63,6 +82,14 @@ fun SaikouNavHost(
                 onNavigateToDownloads = { navController.navigate(Screen.Downloads.route) },
                 onNavigateToReader = { mediaId, chapterNum -> navController.navigate(Screen.MangaReader.createRoute(mediaId, chapterNum)) },
                 onNavigateToPlayer = { mediaId, episodeNum -> navController.navigate(Screen.VideoPlayer.createRoute(mediaId, episodeNum)) },
+                onNavigateToCalendar = { navController.navigate(Screen.SeasonalCalendar.route) },
+                onNavigateToStats = { navController.navigate(Screen.Stats.route) },
+                onLogout = {
+                    ani.saikou.di.AppModule.tokenStorage().clear()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
             )
         }
 
@@ -90,7 +117,7 @@ fun SaikouNavHost(
                 mediaId = mediaId,
                 onBack = { navController.popBackStack() },
                 onNavigateToCharacter = { id -> navController.navigate(Screen.CharacterDetail.createRoute(id)) },
-                onNavigateToPlayer = { episodeNum -> navController.navigate(Screen.VideoPlayer.createRoute(mediaId, episodeNum)) },
+                onNavigateToPlayer = { episodeNum, sourceSlug -> navController.navigate(Screen.VideoPlayer.createRoute(mediaId, episodeNum, sourceSlug)) },
                 onNavigateToReader = { chapterNum -> navController.navigate(Screen.MangaReader.createRoute(mediaId, chapterNum)) },
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
                 onNavigateToTorrent = { query -> navController.navigate(Screen.TorrentSearch.createRoute(query)) },
@@ -147,6 +174,7 @@ fun SaikouNavHost(
             arguments = listOf(
                 navArgument("mediaId") { type = NavType.IntType },
                 navArgument("episodeNum") { type = NavType.IntType },
+                navArgument("sourceSlug") { type = NavType.StringType; defaultValue = "" },
             ),
         ) { backStackEntry ->
             val mediaId = backStackEntry.arguments?.getInt("mediaId") ?: return@composable
@@ -155,6 +183,16 @@ fun SaikouNavHost(
                 mediaId = mediaId,
                 episodeNum = episodeNum,
                 onBack = { navController.popBackStack() },
+                onNextEpisode = { nextEp ->
+                    navController.navigate(Screen.VideoPlayer.createRoute(mediaId, nextEp)) {
+                        popUpTo(Screen.VideoPlayer.route) { inclusive = true }
+                    }
+                },
+                onNavigateToMedia = { id ->
+                    navController.navigate(Screen.MediaDetail.createRoute(id)) {
+                        popUpTo(Screen.VideoPlayer.route) { inclusive = true }
+                    }
+                },
             )
         }
 
@@ -185,6 +223,21 @@ fun SaikouNavHost(
         // ── Downloads ────────────────────────────────────────
         composable(Screen.Downloads.route) {
             DownloadsScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Stats Dashboard ──────────────────────────────────
+        composable(Screen.Stats.route) {
+            StatsScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Seasonal Calendar ─────────────────────────────────
+        composable(Screen.SeasonalCalendar.route) {
+            SeasonalCalendarScreen(
+                onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
                 onBack = { navController.popBackStack() },
             )
         }
