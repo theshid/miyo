@@ -3,6 +3,8 @@ package ani.saikou.screens.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ani.saikou.data.local.ListEvent
+import ani.saikou.data.local.ListEventBus
 import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Character
 import ani.saikou.domain.model.Media
@@ -43,6 +45,7 @@ class MediaDetailViewModel(
             _uiState.value = _uiState.value.copy(
                 media = media.copy(isFav = !media.isFav),
             )
+            ListEventBus.emit(ListEvent.FavoriteToggled(media.id))
         }
     }
 
@@ -53,6 +56,7 @@ class MediaDetailViewModel(
             _uiState.value = _uiState.value.copy(
                 media = media.copy(userProgress = progress),
             )
+            ListEventBus.emit(ListEvent.ProgressUpdated(media.id, progress))
         }
     }
 
@@ -63,6 +67,7 @@ class MediaDetailViewModel(
             _uiState.value = _uiState.value.copy(
                 media = media.copy(userStatus = status),
             )
+            ListEventBus.emit(ListEvent.ListEntryChanged(media.id, status))
         }
     }
 
@@ -79,6 +84,7 @@ class MediaDetailViewModel(
                     userScore = 0,
                 ),
             )
+            ListEventBus.emit(ListEvent.ListEntryChanged(media.id, null))
         }
     }
 }

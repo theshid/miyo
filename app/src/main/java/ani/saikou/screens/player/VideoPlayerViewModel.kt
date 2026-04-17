@@ -9,6 +9,8 @@ import ani.saikou.data.remote.AniSkipApi
 import ani.saikou.data.remote.SkipTimes
 import ani.saikou.data.remote.parsers.GogoParser
 import ani.saikou.di.AppModule
+import ani.saikou.data.local.ListEvent
+import ani.saikou.data.local.ListEventBus
 import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.StreamLink
@@ -41,6 +43,7 @@ class VideoPlayerViewModel(
     private var resolvedSourceSlug: String? = null
     private var saveJob: Job? = null
     private var anilistProgressSynced = false
+    private var firstSaveDone = false
 
     init {
         loadSources()
@@ -179,6 +182,7 @@ class VideoPlayerViewModel(
                             status = "CURRENT",
                         )
                         Log.i(tag = "AniSync", message = "Synced progress to AniList: $mediaId ep $episodeNum")
+                        ListEventBus.emit(ListEvent.ProgressUpdated(mediaId, episodeNum))
                     } catch (e: Exception) {
                         Log.e(tag = "AniSync", message = "Failed to sync progress", throwable = e)
                         anilistProgressSynced = false
@@ -187,11 +191,16 @@ class VideoPlayerViewModel(
             }
         }
 
-        // Debounce local history save
+        // Save local history: immediate on first update, debounced after
         saveJob?.cancel()
-        saveJob = viewModelScope.launch {
-            delay(5000)
-            saveLocalProgress(positionMs, durationMs)
+        if (!firstSaveDone) {
+            firstSaveDone = true
+            viewModelScope.launch { saveLocalProgress(positionMs, durationMs) }
+        } else {
+            saveJob = viewModelScope.launch {
+                delay(5000)
+                saveLocalProgress(positionMs, durationMs)
+            }
         }
     }
 

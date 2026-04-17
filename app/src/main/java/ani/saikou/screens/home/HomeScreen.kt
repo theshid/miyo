@@ -74,19 +74,6 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    // Refresh the list every time the screen comes back into view so changes
-    // made in MediaDetail (add/remove/change status) appear immediately.
-    @Suppress("DEPRECATION")
-    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
-    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                viewModel.loadHomeData()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
 
     var showLogoutDialog by remember { mutableStateOf(false) }
 

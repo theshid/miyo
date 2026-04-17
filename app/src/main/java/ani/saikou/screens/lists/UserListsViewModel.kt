@@ -3,6 +3,8 @@ package ani.saikou.screens.lists
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ani.saikou.data.local.ListEvent
+import ani.saikou.data.local.ListEventBus
 import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Media
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +23,22 @@ class UserListsViewModel(
 
     init {
         loadList(tabs.first())
+        observeListEvents()
+    }
+
+    private fun observeListEvents() {
+        viewModelScope.launch {
+            ListEventBus.events.collect { event ->
+                when (event) {
+                    is ListEvent.ListEntryChanged,
+                    is ListEvent.ProgressUpdated,
+                    is ListEvent.ReadingProgressUpdated -> refresh()
+                    is ListEvent.FavoriteToggled -> {
+                        if (_uiState.value.selectedTab == FAVORITES_TAB) refresh()
+                    }
+                }
+            }
+        }
     }
 
     fun selectTab(tab: String) {
@@ -37,6 +55,7 @@ class UserListsViewModel(
     fun updateEntry(mediaId: Int, progress: Int?, score: Int?, status: String?) {
         viewModelScope.launch {
             repository.editListEntry(mediaId, progress, score, status)
+            ListEventBus.emit(ListEvent.ListEntryChanged(mediaId, status))
             loadList(_uiState.value.selectedTab) // refresh
         }
     }

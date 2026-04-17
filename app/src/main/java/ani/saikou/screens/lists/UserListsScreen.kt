@@ -69,18 +69,6 @@ fun UserListsScreen(
     val state by viewModel.uiState.collectAsState()
     var editingMedia by remember { mutableStateOf<Media?>(null) }
 
-    // Refresh when the screen resumes (e.g. after changing status in MediaDetail)
-    @Suppress("DEPRECATION")
-    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
-    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                viewModel.refresh()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
 
     Column(
         modifier = Modifier

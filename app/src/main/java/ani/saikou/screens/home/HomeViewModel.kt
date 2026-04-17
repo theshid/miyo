@@ -2,6 +2,8 @@ package ani.saikou.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ani.saikou.data.local.ListEvent
+import ani.saikou.data.local.ListEventBus
 import ani.saikou.data.local.db.ReadingHistoryEntity
 import ani.saikou.data.local.db.WatchHistoryEntity
 import ani.saikou.di.AppModule
@@ -26,17 +28,35 @@ class HomeViewModel : ViewModel() {
         observeReadingHistory()
         observeWatchHistory()
         observeLocalStats()
+        observeListEvents()
     }
 
-    private fun observeLocalStats() {
+    /**
+     * Listens for mutation events from other ViewModels and refreshes only the
+     * relevant sections. No refresh happens if no events are emitted — so
+     * navigating to Search and back without changing anything costs zero API calls.
+     */
+    private fun observeListEvents() {
         viewModelScope.launch {
-            watchHistoryDao.getEpisodesWatchedCount().collect { count ->
-                _uiState.value = _uiState.value.copy(localEpisodesWatched = count)
-            }
-        }
-        viewModelScope.launch {
-            readingHistoryDao.getChaptersReadCount().collect { count ->
-                _uiState.value = _uiState.value.copy(localChaptersRead = count)
+            ListEventBus.events.collect { event ->
+                when (event) {
+                    is ListEvent.ListEntryChanged -> {
+                        // Status changed or removed → refresh watch/read lists + user stats
+                        refreshAniListSections()
+                    }
+                    is ListEvent.ProgressUpdated -> {
+                        // Episode progress synced → refresh watching list + user stats
+                        refreshAniListSections()
+                    }
+                    is ListEvent.ReadingProgressUpdated -> {
+                        // Chapter progress synced → refresh reading list + user stats
+                        refreshAniListSections()
+                    }
+                    is ListEvent.FavoriteToggled -> {
+                        // Favorites changed — no need to refresh the full list
+                        // (favorites are only shown in UserLists, not Home)
+                    }
+                }
             }
         }
     }
@@ -67,6 +87,44 @@ class HomeViewModel : ViewModel() {
                 airingSchedule = airing,
                 isLoading = false,
             )
+        }
+    }
+
+    /**
+     * Lightweight refresh — only re-fetches AniList lists + user stats.
+     * Skips recommendations (they don't change often).
+     */
+    private fun refreshAniListSections() {
+        viewModelScope.launch {
+            val userDeferred = async { repository.getUserData() }
+            val watchingDeferred = async { repository.getUserAnimeList("CURRENT") + repository.getUserAnimeList("REPEATING") }
+            val readingDeferred = async { repository.getUserMangaList("CURRENT") + repository.getUserMangaList("REPEATING") }
+
+            val watching = watchingDeferred.await()
+            val now = System.currentTimeMillis()
+            val airing = watching
+                .filter { it.nextAiringEpisodeTime != null && it.nextAiringEpisodeTime > now }
+                .sortedBy { it.nextAiringEpisodeTime }
+
+            _uiState.value = _uiState.value.copy(
+                user = userDeferred.await(),
+                continueWatching = watching,
+                continueReading = readingDeferred.await(),
+                airingSchedule = airing,
+            )
+        }
+    }
+
+    private fun observeLocalStats() {
+        viewModelScope.launch {
+            watchHistoryDao.getEpisodesWatchedCount().collect { count ->
+                _uiState.value = _uiState.value.copy(localEpisodesWatched = count)
+            }
+        }
+        viewModelScope.launch {
+            readingHistoryDao.getChaptersReadCount().collect { count ->
+                _uiState.value = _uiState.value.copy(localChaptersRead = count)
+            }
         }
     }
 

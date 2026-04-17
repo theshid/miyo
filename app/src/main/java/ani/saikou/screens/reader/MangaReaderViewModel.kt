@@ -7,6 +7,8 @@ import ani.saikou.components.SourceItem
 import ani.saikou.data.local.db.ReadingHistoryEntity
 import ani.saikou.data.remote.parsers.MangaDexParser
 import ani.saikou.di.AppModule
+import ani.saikou.data.local.ListEvent
+import ani.saikou.data.local.ListEventBus
 import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSource
 import ani.saikou.logging.Log
@@ -169,6 +171,7 @@ class MangaReaderViewModel(
                         status = "CURRENT",
                     )
                     Log.i(tag = "AniSync", message = "Synced reading progress to AniList: $mediaId ch $chapterNum")
+                    ListEventBus.emit(ListEvent.ReadingProgressUpdated(mediaId, chapterNum))
                 } catch (e: Exception) {
                     Log.e(tag = "AniSync", message = "Failed to sync reading progress", throwable = e)
                     anilistProgressSynced = false
