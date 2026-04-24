@@ -6,7 +6,7 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import ani.saikou.di.AppModule
-import ani.saikou.logging.Log
+import io.github.theshid.prettylog.Log
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
@@ -34,7 +34,10 @@ class EpisodeCheckWorker(
         try {
             val repository = AppModule.repository()
             if (!repository.isLoggedIn()) {
-                Log.d(tag = TAG, message = "Not logged in — skipping check")
+                // Cancel any alarms left over from a previous logged-in session
+                // and flip the boot receiver off.
+                EpisodeAlarmScheduler(applicationContext).rescheduleAll(emptyList())
+                Log.d(tag = TAG, message = "Not logged in — cleared alarms, skipping check")
                 return@withContext Result.success()
             }
 
@@ -92,6 +95,21 @@ class EpisodeCheckWorker(
 
             editor.apply()
             Log.i(tag = TAG, message = "Check complete — $notified notifications sent")
+
+            // Schedule per-airing alarms so notifications fire at airing time
+            // without requiring the app to be opened.
+            val airings = watching.mapNotNull { media ->
+                val airingTime = media.nextAiringEpisodeTime ?: return@mapNotNull null
+                val nextEp = (media.nextAiringEpisode ?: 0) + 1
+                EpisodeAlarmScheduler.Airing(
+                    mediaId = media.id,
+                    title = media.displayTitle,
+                    coverUrl = media.cover,
+                    episode = nextEp,
+                    airingTimeMs = airingTime,
+                )
+            }
+            EpisodeAlarmScheduler(applicationContext).rescheduleAll(airings)
 
             Result.success()
         } catch (e: Exception) {

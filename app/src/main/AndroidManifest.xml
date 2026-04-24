@@ -6,9 +6,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
-        android:name=".SaikouApplication"
+        android:name=".MiyoApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="Miyo"
@@ -55,6 +56,25 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Fires the episode-available notification when an AlarmManager alarm goes off -->
+        <receiver
+            android:name=".notifications.EpisodeAiringReceiver"
+            android:exported="false" />
+
+        <!-- Re-enqueues the episode check worker after device reboot so alarms get re-set.
+             Default-disabled: toggled on via PackageManager only when the user actually has
+             airing alarms scheduled. Keeps Android from launching the app on every boot
+             for users who don't use notifications. -->
+        <receiver
+            android:name=".notifications.BootCompletedReceiver"
+            android:enabled="false"
+            android:exported="true"
+            android:directBootAware="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 
