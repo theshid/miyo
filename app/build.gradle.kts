@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -19,6 +21,16 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // OpenAI API key from local.properties
+        val localProps = rootProject.file("local.properties")
+        val props = Properties()
+        if (localProps.exists()) {
+            localProps.inputStream().use { props.load(it) }
+        }
+        val openAiKey = (props.getProperty("OPENAI_API_KEY") ?: "")
+            .trim().removeSurrounding("\"")
+        buildConfigField("String", "OPENAI_API_KEY", "\"$openAiKey\"")
     }
 
     buildTypes {
@@ -61,6 +73,9 @@ android {
 }
 
 dependencies {
+    // PrettyLog — our extracted logging library (via JitPack)
+    implementation("com.github.theshid:Pretty-Log:0.1.0")
+
     // Compose BOM — Dec 2024
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
@@ -113,6 +128,9 @@ dependencies {
 
     // HTML parsing (for anime/manga source parsers)
     implementation("org.jsoup:jsoup:1.18.3")
+
+    // Lottie animations
+    implementation("com.airbnb.android:lottie-compose:6.6.2")
 
     // WorkManager (background episode checks)
     implementation("androidx.work:work-runtime-ktx:2.10.0")
