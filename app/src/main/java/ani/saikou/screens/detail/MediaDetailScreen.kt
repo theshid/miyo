@@ -29,17 +29,24 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -60,6 +67,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import ani.saikou.components.ChapterDownloadState
+import ani.saikou.components.ChapterRow
 import ani.saikou.components.GlassCard
 import ani.saikou.components.GenreChip
 import ani.saikou.components.MediaPosterCard
@@ -67,7 +76,10 @@ import ani.saikou.components.PillButton
 import ani.saikou.components.SourceItem
 import ani.saikou.components.SourceSelectorSheet
 import ani.saikou.data.remote.parsers.GogoParser
+import ani.saikou.data.remote.parsers.MangaDexParser
+import ani.saikou.data.remote.parsers.MangaPillParser
 import ani.saikou.domain.model.AnimeSource
+import ani.saikou.domain.model.MangaSource
 import ani.saikou.domain.model.Media
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.Favorite
@@ -88,7 +100,7 @@ fun MediaDetailScreen(
     onBack: () -> Unit,
     onNavigateToCharacter: (Int) -> Unit,
     onNavigateToPlayer: (Int, String?) -> Unit,
-    onNavigateToReader: (Int) -> Unit,
+    onNavigateToReader: (Int, String?) -> Unit,
     onNavigateToMedia: (Int) -> Unit,
     onNavigateToTorrent: ((String) -> Unit)? = null,
     viewModel: MediaDetailViewModel = viewModel(),
@@ -105,6 +117,9 @@ fun MediaDetailScreen(
     val media = state.media ?: return
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // ── Catch Me Up state ──
+    var showCatchMeUp by remember { mutableStateOf(false) }
 
     // ── Source picker state (shown before navigating to player) ──
     var pendingEpisode by remember { mutableStateOf<Int?>(null) }
@@ -163,8 +178,75 @@ fun MediaDetailScreen(
         )
     }
 
+    // ── Manga source picker state ──
+    var pendingChapter by remember { mutableStateOf<Int?>(null) }
+    var mangaSourceSearching by remember { mutableStateOf(false) }
+    var foundMangaSources by remember { mutableStateOf<List<MangaSource>>(emptyList()) }
+    var showMangaSourcePicker by remember { mutableStateOf(false) }
+
+    fun onChapterSelected(chapterNum: Int) {
+        scope.launch {
+            val historyDao = AppModule.readingHistoryDao()
+            val history = historyDao.getForManga(mediaId)
+            if (history != null && history.sourceId.isNotEmpty()) {
+                onNavigateToReader(chapterNum, history.sourceId)
+                return@launch
+            }
+
+            mangaSourceSearching = true
+            pendingChapter = chapterNum
+            val title = media.nameRomaji ?: media.name ?: media.displayTitle
+
+            // Try MangaDex first, then MangaPill as fallback
+            var sources = MangaDexParser().search(title)
+            if (sources.isEmpty()) {
+                sources = MangaPillParser().search(title)
+            }
+            mangaSourceSearching = false
+
+            when {
+                sources.isEmpty() -> onNavigateToReader(chapterNum, null)
+                sources.size == 1 -> onNavigateToReader(chapterNum, sources.first().id)
+                else -> {
+                    foundMangaSources = sources
+                    showMangaSourcePicker = true
+                }
+            }
+        }
+    }
+
+    if (showMangaSourcePicker) {
+        SourceSelectorSheet(
+            title = "Select Manga Source",
+            sources = foundMangaSources.map { SourceItem(id = it.id, title = it.title, coverUrl = it.coverUrl) },
+            onSelect = { source ->
+                showMangaSourcePicker = false
+                val ch = pendingChapter ?: return@SourceSelectorSheet
+                onNavigateToReader(ch, source.id)
+            },
+            onDismiss = {
+                showMangaSourcePicker = false
+                pendingChapter = null
+            },
+        )
+    }
+
+    // Catch Me Up bottom sheet
+    if (showCatchMeUp) {
+        ModalBottomSheet(
+            onDismissRequest = { showCatchMeUp = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Background,
+        ) {
+            CatchMeUpSheet(
+                media = media,
+                onDismiss = { showCatchMeUp = false },
+            )
+        }
+    }
+
     // Loading overlay while searching for sources
-    if (sourceSearching) {
+    if (sourceSearching || mangaSourceSearching) {
         androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
             Box(
                 modifier = Modifier
@@ -393,6 +475,16 @@ fun MediaDetailScreen(
                     )
                 }
             }
+            // Catch Me Up — only shown when user has progress on this series
+            if (media.userProgress != null && media.userProgress > 0) {
+                IconButton(onClick = { showCatchMeUp = true }) {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        contentDescription = "Catch Me Up",
+                        tint = Primary,
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -460,7 +552,15 @@ fun MediaDetailScreen(
             "Chapters" -> ChaptersTab(
                 totalChapters = media.totalChapters,
                 userProgress = media.userProgress,
-                onChapterClick = onNavigateToReader,
+                mediaTitle = media.nameRomaji ?: media.name ?: media.displayTitle,
+                onChapterClick = ::onChapterSelected,
+                downloadStates = viewModel.chapterDownloads.collectAsState().value,
+                onDownloadClick = { chapterNum ->
+                    viewModel.queueChapterDownload(chapterNum) {
+                        ani.saikou.data.local.downloads.DownloadService.start(context)
+                    }
+                },
+                onCancelDownloadClick = viewModel::cancelChapterDownload,
             )
             "Characters" -> CharactersTab(
                 characters = media.characters.orEmpty(),
@@ -711,12 +811,65 @@ private fun EpisodesTab(
 private fun ChaptersTab(
     totalChapters: Int?,
     userProgress: Int?,
+    mediaTitle: String?,
     onChapterClick: (Int) -> Unit,
+    downloadStates: Map<Int, ChapterDownloadState> = emptyMap(),
+    onDownloadClick: (Int) -> Unit = {},
+    onCancelDownloadClick: (Int) -> Unit = {},
 ) {
-    val count = totalChapters ?: 0
+    // For ongoing manga, AniList often returns null/0 for totalChapters.
+    // Fetch actual chapter count from sources in the background.
+    var sourceChapterCount by remember { mutableStateOf<Int?>(null) }
+    var loadingCount by remember { mutableStateOf(false) }
+
+    if (totalChapters == null || totalChapters == 0) {
+        androidx.compose.runtime.LaunchedEffect(mediaTitle) {
+            if (mediaTitle != null && !loadingCount) {
+                loadingCount = true
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    // Try MangaDex first, then MangaPill
+                    val title = mediaTitle
+                    val dexSources = MangaDexParser().search(title)
+                    if (dexSources.isNotEmpty()) {
+                        val chapters = MangaDexParser().getChapters(dexSources.first().id)
+                        if (chapters.isNotEmpty()) {
+                            sourceChapterCount = chapters.last().number.toInt()
+                        }
+                    }
+                    if (sourceChapterCount == null || sourceChapterCount == 0) {
+                        val pillSources = MangaPillParser().search(title)
+                        if (pillSources.isNotEmpty()) {
+                            val chapters = MangaPillParser().getChapters(pillSources.first().id)
+                            if (chapters.isNotEmpty()) {
+                                sourceChapterCount = chapters.last().number.toInt()
+                            }
+                        }
+                    }
+                }
+                loadingCount = false
+            }
+        }
+    }
+
+    val count = when {
+        totalChapters != null && totalChapters > 0 -> totalChapters
+        sourceChapterCount != null && sourceChapterCount!! > 0 -> sourceChapterCount!!
+        else -> 0
+    }
+
+    if (count == 0 && loadingCount) {
+        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                CircularProgressIndicator(color = Primary, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                Text("Fetching chapters from source...", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+            }
+        }
+        return
+    }
+
     if (count == 0) {
         Text(
-            "No chapter data available",
+            "No chapters found",
             style = MaterialTheme.typography.bodyMedium,
             color = OnSurfaceVariant,
             modifier = Modifier.padding(16.dp),
@@ -724,46 +877,44 @@ private fun ChaptersTab(
         return
     }
 
+    val bucketSize = 100
+    val totalBuckets = (count + bucketSize - 1) / bucketSize
+    var selectedBucket by remember { mutableIntStateOf(0) }
+
     Column(
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        for (ch in 1..minOf(count, 50)) { // Cap at 50 to avoid perf issues in scroll
-            val read = userProgress != null && ch <= userProgress
-            GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable { onChapterClick(ch) },
-                contentPadding = 12.dp,
+        // Bucket selector for large chapter counts
+        if (totalBuckets > 1) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 8.dp),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                if (read) Secondary.copy(alpha = 0.2f) else SurfaceContainer,
-                                MaterialTheme.shapes.small,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "$ch",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = if (read) Secondary else OnSurface,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Text(
-                        text = "Chapter $ch",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = OnSurface,
+                items(count = totalBuckets, key = { it }) { bucket ->
+                    val start = bucket * bucketSize + 1
+                    val end = minOf((bucket + 1) * bucketSize, count)
+                    GenreChip(
+                        text = "$start–$end",
+                        selected = bucket == selectedBucket,
+                        onClick = { selectedBucket = bucket },
                     )
                 }
             }
+        }
+
+        val rangeStart = selectedBucket * bucketSize + 1
+        val rangeEnd = minOf((selectedBucket + 1) * bucketSize, count)
+
+        for (ch in rangeStart..rangeEnd) {
+            ChapterRow(
+                chapterNumber = ch,
+                read = userProgress != null && ch <= userProgress,
+                downloadState = downloadStates[ch],
+                onClick = { onChapterClick(ch) },
+                onDownloadClick = { onDownloadClick(ch) },
+                onCancelDownloadClick = { onCancelDownloadClick(ch) },
+            )
         }
     }
 }

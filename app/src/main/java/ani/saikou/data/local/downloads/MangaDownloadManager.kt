@@ -36,6 +36,7 @@ class MangaDownloadManager(
         mangaTitle: String,
         coverUrl: String?,
         chapterKey: String,
+        chapterNumber: Int,
         chapterName: String,
         sourceId: String,
         totalPages: Int,
@@ -54,6 +55,7 @@ class MangaDownloadManager(
                 mangaId = mangaId,
                 mangaTitle = mangaTitle,
                 chapterKey = chapterKey,
+                chapterNumber = chapterNumber,
                 chapterName = chapterName,
                 sourceId = sourceId,
                 status = "QUEUED",
@@ -99,7 +101,7 @@ class MangaDownloadManager(
 
             try {
                 concurrencySemaphore.withPermit {
-                    downloadPage(page.imageUrl, pageFile)
+                    downloadPage(page.imageUrl, pageFile, page.headers)
                 }
                 downloadedCount++
                 dao.updateProgress(downloadId, downloadedCount, "DOWNLOADING")
@@ -113,6 +115,12 @@ class MangaDownloadManager(
 
         if (success) {
             dao.updateProgress(downloadId, pages.size, "COMPLETED")
+            // Measure the actual bytes written so the reader's "Download next N"
+            // estimate is based on real data instead of a fixed guess.
+            val totalBytes = chapterDir.walkBottomUp()
+                .filter { it.isFile }
+                .sumOf { it.length() }
+            dao.updateFileSize(downloadId, totalBytes)
         }
 
         _activeDownloadId.value = null
@@ -176,9 +184,14 @@ class MangaDownloadManager(
         return downloadDir.freeSpace
     }
 
-    private fun downloadPage(url: String, destination: File) {
+    private fun downloadPage(url: String, destination: File, headers: Map<String, String> = emptyMap()) {
         val connection = URL(url).openConnection()
-        connection.setRequestProperty("User-Agent", "Saikou/2.0")
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Android) Miyo/2.0")
+        // MangaPill's CDN refuses requests without a Referer header; passing
+        // page.headers from the parser handles this generically.
+        for ((k, v) in headers) {
+            connection.setRequestProperty(k, v)
+        }
         connection.connectTimeout = 15000
         connection.readTimeout = 15000
         connection.getInputStream().use { input ->

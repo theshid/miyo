@@ -14,6 +14,8 @@ import ani.saikou.MainActivity
 import ani.saikou.R
 import ani.saikou.data.local.db.SaikouDatabase
 import ani.saikou.data.remote.parsers.MangaDexParser
+import ani.saikou.data.remote.parsers.MangaPillParser
+import ani.saikou.domain.model.MangaPage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,6 +30,7 @@ class DownloadService : Service() {
 
     private lateinit var downloadManager: MangaDownloadManager
     private lateinit var mangaDex: MangaDexParser
+    private lateinit var mangaPill: MangaPillParser
 
     companion object {
         const val CHANNEL_ID = "saikou_downloads"
@@ -51,6 +54,7 @@ class DownloadService : Service() {
         val dao = SaikouDatabase.getInstance(this).downloadDao()
         downloadManager = MangaDownloadManager(this, dao)
         mangaDex = MangaDexParser()
+        mangaPill = MangaPillParser()
         startForeground(NOTIFICATION_ID, buildNotification("Preparing download..."))
     }
 
@@ -85,16 +89,8 @@ class DownloadService : Service() {
             }
 
             for (download in pending) {
-                // Resolve pages from MangaDex
-                val sources = mangaDex.search(download.mangaTitle)
-                val source = sources.firstOrNull() ?: continue
-                val chapters = mangaDex.getChapters(source.id)
-                val chapter = chapters.find {
-                    it.number.toInt().toString() == download.chapterKey ||
-                    it.name.contains(download.chapterKey)
-                } ?: continue
-
-                val pages = mangaDex.getPages(chapter.id)
+                // Try MangaDex first, fall back to MangaPill — same order as the reader.
+                val pages = resolvePages(download.mangaTitle, download.chapterNumber)
                 if (pages.isEmpty()) {
                     dao.updateStatus(download.id, "ERROR")
                     continue
@@ -119,6 +115,46 @@ class DownloadService : Service() {
             showCompletionNotification()
             stopSelf()
         }
+    }
+
+    /**
+     * Resolves the page list for a chapter. Tries MangaDex first; falls back
+     * to MangaPill (the parser the reader uses for licensed/unavailable
+     * titles). Page objects keep their `headers` so the downloader can apply
+     * the Referer that MangaPill's CDN requires.
+     */
+    private suspend fun resolvePages(mangaTitle: String, chapterNumber: Int): List<MangaPage> {
+        if (chapterNumber < 0) return emptyList()
+
+        // MangaDex
+        runCatching {
+            val sources = mangaDex.search(mangaTitle)
+            val source = sources.firstOrNull()
+            if (source != null) {
+                val chapters = mangaDex.getChapters(source.id)
+                val chapter = chapters.find { it.number.toInt() == chapterNumber }
+                if (chapter != null) {
+                    val pages = mangaDex.getPages(chapter.id)
+                    if (pages.isNotEmpty()) return pages
+                }
+            }
+        }
+
+        // MangaPill fallback
+        runCatching {
+            val sources = mangaPill.search(mangaTitle)
+            val source = sources.firstOrNull()
+            if (source != null) {
+                val chapters = mangaPill.getChapters(source.id)
+                val chapter = chapters.find { it.number.toInt() == chapterNumber }
+                if (chapter != null) {
+                    val pages = mangaPill.getPages(chapter.id)
+                    if (pages.isNotEmpty()) return pages
+                }
+            }
+        }
+
+        return emptyList()
     }
 
     private fun createNotificationChannel() {

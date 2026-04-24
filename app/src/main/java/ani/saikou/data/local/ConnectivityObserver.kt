@@ -21,6 +21,17 @@ class ConnectivityObserver(context: Context) {
      * race where onLost for a transient network incorrectly reports offline
      * while another network (e.g. cellular) is still connected.
      */
+    /**
+     * True when the active internet connection is unmetered (Wi-Fi, Ethernet).
+     * False on cellular or when no network is available. Drives the Wi-Fi vs
+     * cellular fork in the reader's "Download next N" prompt.
+     */
+    fun isUnmetered(): Boolean {
+        val active = connectivityManager.activeNetwork ?: return false
+        val caps = connectivityManager.getNetworkCapabilities(active) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    }
+
     val isConnected: Flow<Boolean> = callbackFlow {
         val activeNetworks = mutableSetOf<Network>()
 

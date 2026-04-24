@@ -33,7 +33,7 @@ class MangaDexParser {
                 parameter("title", query)
                 parameter("order[relevance]", "desc")
                 parameter("includes[]", "cover_art")
-                header("User-Agent", "Saikou/2.0")
+                header("User-Agent", "Miyo/2.0")
             }
             val root = json.parseToJsonElement(response.bodyAsText()).jsonObject
             val data = root["data"]?.jsonArray ?: return@withContext emptyList()
@@ -41,8 +41,9 @@ class MangaDexParser {
             data.mapNotNull { item ->
                 try {
                     val obj = item.jsonObject
+                    val attrs = obj["attributes"]?.jsonObject
                     val id = obj["id"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                    val titleObj = obj["attributes"]?.jsonObject?.get("title")?.jsonObject
+                    val titleObj = attrs?.get("title")?.jsonObject
                     val title = titleObj?.get("en")?.jsonPrimitive?.content
                         ?: titleObj?.values?.firstOrNull()?.jsonPrimitive?.content
                         ?: "Unknown"
@@ -51,7 +52,20 @@ class MangaDexParser {
                     val coverUrl = if (coverFileName != null)
                         "https://uploads.mangadex.org/covers/$id/$coverFileName.256.jpg" else null
 
-                    MangaSource(id = id, title = title, coverUrl = coverUrl)
+                    // `lastChapter` is the final chapter the series is known
+                    // to have. For licensed titles MangaDex still reports it
+                    // (e.g. "220") while actually hosting only a few chapters
+                    // — the mismatch lets us detect partial catalogs upstream.
+                    val totalChapterHint = attrs?.get("lastChapter")?.let {
+                        if (it is JsonNull) null else it.jsonPrimitive.content.toFloatOrNull()?.toInt()
+                    }
+
+                    MangaSource(
+                        id = id,
+                        title = title,
+                        coverUrl = coverUrl,
+                        totalChapterHint = totalChapterHint,
+                    )
                 } catch (e: Exception) {
                     null
                 }
@@ -63,15 +77,30 @@ class MangaDexParser {
 
     suspend fun getChapters(mangaId: String): List<Chapter> = withContext(Dispatchers.IO) {
         try {
-            val response = client.get("$API/manga/$mangaId/feed") {
+            // Try English first, then fall back to any language
+            var response = client.get("$API/manga/$mangaId/feed") {
                 parameter("limit", "500")
                 parameter("order[chapter]", "asc")
                 parameter("translatedLanguage[]", "en")
                 parameter("includes[]", "scanlation_group")
-                header("User-Agent", "Saikou/2.0")
+                header("User-Agent", "Miyo/2.0")
             }
-            val root = json.parseToJsonElement(response.bodyAsText()).jsonObject
-            val data = root["data"]?.jsonArray ?: return@withContext emptyList()
+            var root = json.parseToJsonElement(response.bodyAsText()).jsonObject
+            var data = root["data"]?.jsonArray
+
+            // Fallback: no English chapters — try without language filter
+            if (data == null || data.isEmpty()) {
+                response = client.get("$API/manga/$mangaId/feed") {
+                    parameter("limit", "500")
+                    parameter("order[chapter]", "asc")
+                    parameter("includes[]", "scanlation_group")
+                    header("User-Agent", "Miyo/2.0")
+                }
+                root = json.parseToJsonElement(response.bodyAsText()).jsonObject
+                data = root["data"]?.jsonArray
+            }
+
+            if (data == null || data.isEmpty()) return@withContext emptyList()
 
             data.mapNotNull { item ->
                 try {
@@ -105,7 +134,7 @@ class MangaDexParser {
     suspend fun getPages(chapterId: String): List<MangaPage> = withContext(Dispatchers.IO) {
         try {
             val response = client.get("$API/at-home/server/$chapterId") {
-                header("User-Agent", "Saikou/2.0")
+                header("User-Agent", "Miyo/2.0")
             }
             val root = json.parseToJsonElement(response.bodyAsText()).jsonObject
             val baseUrl = root["baseUrl"]?.jsonPrimitive?.content ?: return@withContext emptyList()

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -66,6 +68,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
 import ani.saikou.ui.theme.Background
@@ -81,11 +84,12 @@ enum class ReadingMode { WEBTOON, PAGER_LTR, PAGER_RTL }
 
 data class ReaderSettings(
     val mode: ReadingMode = ReadingMode.WEBTOON,
-    val background: Color = Color.Black,
+    val background: Color = Color.White,
     val keepScreenOn: Boolean = true,
     val showPageNumber: Boolean = true,
     val doublePage: Boolean = false,
     val cropBorders: Boolean = false,
+    val suggestDownloads: Boolean = true,
 )
 
 private val backgroundOptions = listOf(
@@ -102,14 +106,20 @@ fun MangaReaderScreen(
     mediaId: Int,
     chapterNum: Int,
     onBack: () -> Unit,
+    onNextChapter: ((Int) -> Unit)? = null,
     viewModel: MangaReaderViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
 ) {
     val context = LocalContext.current
     val readerState by viewModel.uiState.collectAsState()
 
+    val settingsStorage = remember { ReaderSettingsStorage(context) }
     var showOverlay by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
-    var settings by remember { mutableStateOf(ReaderSettings()) }
+    var settings by remember { mutableStateOf(settingsStorage.load()) }
+
+    LaunchedEffect(settings) {
+        settingsStorage.save(settings)
+    }
 
     // Zoom state
     var scale by remember { mutableFloatStateOf(1f) }
@@ -144,16 +154,106 @@ fun MangaReaderScreen(
         viewModel.onPageChanged(currentPage - 1) // 0-indexed for storage
     }
 
+    // End-of-chapter download suggestion state
+    val batchSize = 5
+    var nextChapterMissing by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf<Boolean?>(null) }
+    var suggestionDismissed by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
+    var showCellularConfirm by remember { mutableStateOf(false) }
+    var estimatedBytes by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    var downloadQueued by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
+
+    val showSuggestionBanner = settings.suggestDownloads &&
+        !readerState.isLoading &&
+        readerState.error == null &&
+        totalPages > 1 &&
+        currentPage == totalPages &&
+        nextChapterMissing == true &&
+        !suggestionDismissed &&
+        !downloadQueued
+
+    // Kick off the cache check once the user hits the last page.
+    LaunchedEffect(currentPage, totalPages, settings.suggestDownloads) {
+        if (!settings.suggestDownloads) return@LaunchedEffect
+        if (nextChapterMissing != null) return@LaunchedEffect
+        if (totalPages <= 1 || currentPage != totalPages) return@LaunchedEffect
+        val missing = viewModel.isNextChapterMissing()
+        nextChapterMissing = missing
+        if (missing) {
+            estimatedBytes = viewModel.estimateBytesForNext(batchSize)
+        }
+    }
+
+    fun startBatchDownload() {
+        viewModel.queueNextChapters(batchSize) {
+            ani.saikou.data.local.downloads.DownloadService.start(context)
+        }
+        downloadQueued = true
+    }
+
+    // Chapter list sheet
+    var showChapterList by remember { mutableStateOf(false) }
+    val allChapters by viewModel.allChapters.collectAsState()
+    val chapterListLoading by viewModel.chapterListLoading.collectAsState()
+    val chapterDownloadStates by viewModel.chapterDownloads.collectAsState()
+    LaunchedEffect(showChapterList) {
+        if (showChapterList) viewModel.ensureChapterListLoaded()
+    }
+
     // Loading
-    if (readerState.isLoading) {
-        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
-                Text(
-                    readerState.error ?: "Loading chapter...",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = OnSurface,
+    if (readerState.isLoading && readerState.error == null) {
+        Box(Modifier.fillMaxSize().background(Color.White), contentAlignment = Alignment.Center) {
+            ani.saikou.components.CatLoader(message = "Loading chapter...")
+        }
+        return
+    }
+
+    // Error screen
+    if (readerState.error != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(32.dp),
+            ) {
+                coil.compose.AsyncImage(
+                    model = ani.saikou.R.drawable.error_samurai,
+                    contentDescription = "Error",
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)
+                        .heightIn(max = 320.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 )
+                Text(
+                    text = readerState.error!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.small)
+                            .background(SurfaceContainer)
+                            .clickable(onClick = onBack)
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                    ) {
+                        Text("Go Back", color = OnSurface, fontWeight = FontWeight.Medium)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.small)
+                            .background(Primary)
+                            .clickable { viewModel.retry() }
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                    ) {
+                        Text("Retry", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
         return
@@ -194,29 +294,35 @@ fun MangaReaderScreen(
             when (settings.mode) {
                 ReadingMode.WEBTOON -> {
                     WebtoonReader(
-                        pages = readerState.pages.map { it.imageUrl },
+                        pages = readerState.pages,
                         totalPages = totalPages,
                         background = settings.background,
                         startPage = readerState.startPage,
                         onPageChanged = { currentPage = it },
+                        onNextChapter = onNextChapter,
+                        chapterNum = chapterNum,
                     )
                 }
                 ReadingMode.PAGER_LTR -> {
                     PagerReader(
-                        pages = readerState.pages.map { it.imageUrl },
+                        pages = readerState.pages,
                         totalPages = totalPages,
                         reverseLayout = false,
                         startPage = readerState.startPage,
                         onPageChanged = { currentPage = it },
+                        onNextChapter = onNextChapter,
+                        chapterNum = chapterNum,
                     )
                 }
                 ReadingMode.PAGER_RTL -> {
                     PagerReader(
-                        pages = readerState.pages.map { it.imageUrl },
+                        pages = readerState.pages,
                         totalPages = totalPages,
                         reverseLayout = true,
                         startPage = readerState.startPage,
                         onPageChanged = { currentPage = it },
+                        onNextChapter = onNextChapter,
+                        chapterNum = chapterNum,
                     )
                 }
             }
@@ -252,8 +358,17 @@ fun MangaReaderScreen(
                             Text(readerState.chapterTitle, style = MaterialTheme.typography.labelSmall, color = Primary)
                         }
                     }
-                    IconButton(onClick = { showSettings = true }) {
-                        Icon(Icons.Default.Settings, "Settings", tint = OnSurface)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { showChapterList = true }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.MenuBook,
+                                "Chapters",
+                                tint = OnSurface,
+                            )
+                        }
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(Icons.Default.Settings, "Settings", tint = OnSurface)
+                        }
                     }
                 }
 
@@ -287,6 +402,57 @@ fun MangaReaderScreen(
                 }
             }
         }
+
+        // ── End-of-chapter download suggestion ───────────────
+        AnimatedVisibility(
+            visible = showSuggestionBanner,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            DownloadNextChaptersBanner(
+                count = batchSize,
+                estimateLabel = if (estimatedBytes > 0) viewModel.formatBytes(estimatedBytes) else null,
+                onDownload = {
+                    val unmetered = ani.saikou.di.AppModule.connectivity().isUnmetered()
+                    if (unmetered) {
+                        startBatchDownload()
+                    } else {
+                        showCellularConfirm = true
+                    }
+                },
+                onDismiss = { suggestionDismissed = true },
+            )
+        }
+    }
+
+    // ── Cellular download confirmation ────────────────────────
+    if (showCellularConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showCellularConfirm = false },
+            title = { Text("Download on cellular?", color = OnSurface) },
+            text = {
+                Text(
+                    "You're not on Wi-Fi. Downloading $batchSize chapters will use about " +
+                        "${viewModel.formatBytes(estimatedBytes)} of data.",
+                    color = OnSurfaceVariant,
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showCellularConfirm = false
+                    startBatchDownload()
+                }) {
+                    Text("Download", color = Primary)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showCellularConfirm = false }) {
+                    Text("Cancel", color = OnSurfaceVariant)
+                }
+            },
+            containerColor = SurfaceContainerHigh,
+        )
     }
 
     // ── Source selector ───────────────────────────────────────
@@ -296,6 +462,35 @@ fun MangaReaderScreen(
             sources = readerState.availableSources,
             onSelect = { source -> viewModel.selectSourceById(source.id) },
             onDismiss = { viewModel.dismissSourceSelector() },
+        )
+    }
+
+    // ── Chapter list sheet ───────────────────────────────────
+    if (showChapterList) {
+        val localOnlyNumbers = chapterDownloadStates.keys
+        val parserNumbers = allChapters.map { it.number.toInt() }
+        val mergedNumbers = (parserNumbers + localOnlyNumbers)
+            .toSortedSet()
+            .toList()
+        ReaderChapterListSheet(
+            currentChapterNumber = chapterNum,
+            userProgress = null, // the reader doesn't track AniList progress directly here
+            chapterNumbers = mergedNumbers,
+            downloadStates = chapterDownloadStates,
+            isLoading = chapterListLoading,
+            onDismiss = { showChapterList = false },
+            onJumpToChapter = { target ->
+                showChapterList = false
+                onNextChapter?.invoke(target)
+            },
+            onDownloadClick = { ch ->
+                viewModel.queueSingleChapterDownload(ch) {
+                    ani.saikou.data.local.downloads.DownloadService.start(context)
+                }
+            },
+            onCancelDownloadClick = { ch ->
+                viewModel.cancelDownload(ch)
+            },
         )
     }
 
@@ -312,29 +507,61 @@ fun MangaReaderScreen(
 // ── Webtoon (vertical scroll) reader ─────────────────────────
 @Composable
 private fun WebtoonReader(
-    pages: List<String>,
+    pages: List<ani.saikou.domain.model.MangaPage>,
     totalPages: Int,
     background: Color,
     startPage: Int = 0,
     onPageChanged: (Int) -> Unit,
+    onNextChapter: ((Int) -> Unit)? = null,
+    chapterNum: Int = 0,
 ) {
+    val context = LocalContext.current
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = startPage)
 
-    // Track current visible page
-    LaunchedEffect(listState.firstVisibleItemIndex) {
-        onPageChanged(listState.firstVisibleItemIndex + 1)
+    // Track the furthest-visible page so the reader can detect "end of chapter"
+    // reliably even when several short webtoon panels share the viewport.
+    val currentPageIndex by androidx.compose.runtime.remember {
+        androidx.compose.runtime.derivedStateOf {
+            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+                ?: listState.firstVisibleItemIndex
+        }
+    }
+    LaunchedEffect(currentPageIndex) {
+        onPageChanged(currentPageIndex + 1)
     }
 
     LazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
     ) {
-        itemsIndexed(pages) { index, url ->
-            AsyncImage(
-                model = url,
+        itemsIndexed(pages) { index, page ->
+            val model = if (page.headers.isNotEmpty()) {
+                coil.request.ImageRequest.Builder(context)
+                    .data(page.imageUrl)
+                    .apply { page.headers.forEach { (k, v) -> addHeader(k, v) } }
+                    .crossfade(true)
+                    .build()
+            } else {
+                page.imageUrl
+            }
+            coil.compose.SubcomposeAsyncImage(
+                model = model,
                 contentDescription = "Page ${index + 1}",
                 contentScale = ContentScale.FillWidth,
                 modifier = Modifier.fillMaxWidth(),
+                loading = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(500.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ani.saikou.components.CatLoader(
+                            message = "Page ${index + 1}",
+                            size = 80.dp,
+                        )
+                    }
+                },
             )
         }
         if (pages.isEmpty()) {
@@ -351,26 +578,42 @@ private fun WebtoonReader(
                 }
             }
         }
+        // Next Chapter card at the end
+        if (pages.isNotEmpty() && onNextChapter != null) {
+            item(key = "next_chapter") {
+                NextChapterCard(
+                    nextChapterNum = chapterNum + 1,
+                    onClick = { onNextChapter(chapterNum + 1) },
+                )
+            }
+        }
     }
 }
 
 // ── Pager (horizontal) reader ────────────────────────────────
 @Composable
 private fun PagerReader(
-    pages: List<String>,
+    pages: List<ani.saikou.domain.model.MangaPage>,
     totalPages: Int,
     reverseLayout: Boolean,
     startPage: Int = 0,
     onPageChanged: (Int) -> Unit,
+    onNextChapter: ((Int) -> Unit)? = null,
+    chapterNum: Int = 0,
 ) {
+    val context = LocalContext.current
+    val hasNextPage = pages.isNotEmpty() && onNextChapter != null
+    val pageCount = (if (pages.isNotEmpty()) pages.size else totalPages) + if (hasNextPage) 1 else 0
+
     val pagerState = rememberPagerState(
         initialPage = startPage,
-        pageCount = { if (pages.isNotEmpty()) pages.size else totalPages },
+        pageCount = { pageCount },
     )
 
-    // Track current page
+    // Track current page (don't count the bonus "next chapter" page)
     LaunchedEffect(pagerState.currentPage) {
-        onPageChanged(pagerState.currentPage + 1)
+        val displayPage = (pagerState.currentPage + 1).coerceAtMost(if (pages.isNotEmpty()) pages.size else totalPages)
+        onPageChanged(displayPage)
     }
 
     HorizontalPager(
@@ -378,22 +621,158 @@ private fun PagerReader(
         modifier = Modifier.fillMaxSize(),
         reverseLayout = reverseLayout,
     ) { page ->
-        val url = pages.getOrNull(page)
-        if (url != null) {
-            AsyncImage(
-                model = url,
-                contentDescription = "Page ${page + 1}",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize(),
+        // Last page is the "Next Chapter" card
+        if (hasNextPage && page == pageCount - 1) {
+            NextChapterCard(
+                nextChapterNum = chapterNum + 1,
+                onClick = { onNextChapter!!(chapterNum + 1) },
             )
         } else {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            val mangaPage = pages.getOrNull(page)
+            if (mangaPage != null) {
+                val model = if (mangaPage.headers.isNotEmpty()) {
+                    coil.request.ImageRequest.Builder(context)
+                        .data(mangaPage.imageUrl)
+                        .apply { mangaPage.headers.forEach { (k, v) -> addHeader(k, v) } }
+                        .crossfade(true)
+                        .build()
+                } else {
+                    mangaPage.imageUrl
+                }
+                coil.compose.SubcomposeAsyncImage(
+                    model = model,
+                    contentDescription = "Page ${page + 1}",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                    loading = {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ani.saikou.components.CatLoader(
+                                message = "Page ${page + 1}",
+                                size = 80.dp,
+                            )
+                        }
+                    },
+                )
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "Page ${page + 1}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OnSurfaceVariant.copy(alpha = 0.3f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Download Next N Banner ──────────────────────────────────
+@Composable
+private fun DownloadNextChaptersBanner(
+    count: Int,
+    estimateLabel: String?,
+    onDownload: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .background(SurfaceContainerHigh)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            Icons.Default.Download,
+            contentDescription = null,
+            tint = Primary,
+            modifier = Modifier.size(20.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Save the next $count chapters?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = OnSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (estimateLabel != null) {
                 Text(
-                    "Page ${page + 1}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = OnSurfaceVariant.copy(alpha = 0.3f),
+                    text = "About $estimateLabel",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OnSurfaceVariant,
                 )
             }
+        }
+        Box(
+            modifier = Modifier
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                .background(Primary)
+                .clickable(onClick = onDownload)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = "Download",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Dismiss",
+                tint = OnSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+// ── Next Chapter Card ────────────────────────────────────────
+@Composable
+private fun NextChapterCard(
+    nextChapterNum: Int,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(32.dp),
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.MenuBook,
+                contentDescription = null,
+                tint = Primary,
+                modifier = Modifier.size(48.dp),
+            )
+            Text(
+                text = "End of chapter",
+                style = MaterialTheme.typography.titleMedium,
+                color = OnSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "Continue to the next chapter?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = OnSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            PillButton(
+                text = "CHAPTER $nextChapterNum",
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth(0.6f),
+            )
         }
     }
 }
@@ -546,6 +925,11 @@ private fun ReaderSettingsSheet(
                     label = "Crop borders",
                     checked = settings.cropBorders,
                     onCheckedChange = { onSettingsChange(settings.copy(cropBorders = it)) },
+                )
+                SettingsToggle(
+                    label = "Suggest downloads at end of chapter",
+                    checked = settings.suggestDownloads,
+                    onCheckedChange = { onSettingsChange(settings.copy(suggestDownloads = it)) },
                 )
             }
         }
