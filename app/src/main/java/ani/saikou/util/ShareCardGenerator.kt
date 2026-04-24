@@ -19,6 +19,8 @@ import coil.request.SuccessResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 
 /**
  * Generates Spotify-style share cards as bitmaps and shares them via Android's share sheet.
@@ -48,7 +50,7 @@ object ShareCardGenerator {
         userScore: Int?,
         userName: String?,
     ): Bitmap = withContext(Dispatchers.Default) {
-        val bitmap = Bitmap.createBitmap(CARD_W, CARD_H, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(CARD_W, CARD_H)
         val canvas = Canvas(bitmap)
 
         // ── Background gradient ──────────────────────────────
@@ -72,7 +74,7 @@ object ShareCardGenerator {
 
             // Rounded poster
             val posterRect = RectF(posterX, posterY, posterX + posterW, posterY + posterH)
-            val scaled = Bitmap.createScaledBitmap(coverBitmap, posterW.toInt(), posterH.toInt(), true)
+            val scaled = coverBitmap.scale(posterW.toInt(), posterH.toInt())
             canvas.drawBitmap(scaled, posterX, posterY, null)
 
             // Subtle vignette overlay on the poster

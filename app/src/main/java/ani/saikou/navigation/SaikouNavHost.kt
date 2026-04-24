@@ -26,6 +26,7 @@ import ani.saikou.screens.downloads.DownloadsScreen
 import ani.saikou.screens.news.NewsFeedScreen
 import ani.saikou.screens.seasonal.SeasonalCalendarScreen
 import ani.saikou.screens.stats.StatsScreen
+import ani.saikou.screens.ai.AiChatScreen
 import ani.saikou.screens.splash.SplashScreen
 import ani.saikou.screens.torrent.TorrentSearchScreen
 
@@ -47,7 +48,7 @@ fun SaikouNavHost(
         // ── Splash ────────────────────────────────────────────
         composable(
             Screen.Splash.route,
-            exitTransition = { fadeOut(animationSpec = tween(800)) },
+            exitTransition = { fadeOut(animationSpec = tween(1000)) },
         ) {
             val isLoggedIn = ani.saikou.di.AppModule.repository().isLoggedIn()
             SplashScreen(
@@ -84,6 +85,7 @@ fun SaikouNavHost(
                 onNavigateToPlayer = { mediaId, episodeNum -> navController.navigate(Screen.VideoPlayer.createRoute(mediaId, episodeNum)) },
                 onNavigateToCalendar = { navController.navigate(Screen.SeasonalCalendar.route) },
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
+                onNavigateToAiChat = { navController.navigate(Screen.AiChat.route) },
                 onLogout = {
                     ani.saikou.di.AppModule.tokenStorage().clear()
                     navController.navigate(Screen.Login.route) {
@@ -118,7 +120,7 @@ fun SaikouNavHost(
                 onBack = { navController.popBackStack() },
                 onNavigateToCharacter = { id -> navController.navigate(Screen.CharacterDetail.createRoute(id)) },
                 onNavigateToPlayer = { episodeNum, sourceSlug -> navController.navigate(Screen.VideoPlayer.createRoute(mediaId, episodeNum, sourceSlug)) },
-                onNavigateToReader = { chapterNum -> navController.navigate(Screen.MangaReader.createRoute(mediaId, chapterNum)) },
+                onNavigateToReader = { chapterNum, sourceId -> navController.navigate(Screen.MangaReader.createRoute(mediaId, chapterNum, sourceId)) },
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
                 onNavigateToTorrent = { query -> navController.navigate(Screen.TorrentSearch.createRoute(query)) },
             )
@@ -202,6 +204,7 @@ fun SaikouNavHost(
             arguments = listOf(
                 navArgument("mediaId") { type = NavType.IntType },
                 navArgument("chapterNum") { type = NavType.IntType },
+                navArgument("sourceId") { type = NavType.StringType; defaultValue = "" },
             ),
         ) { backStackEntry ->
             val mediaId = backStackEntry.arguments?.getInt("mediaId") ?: return@composable
@@ -210,6 +213,11 @@ fun SaikouNavHost(
                 mediaId = mediaId,
                 chapterNum = chapterNum,
                 onBack = { navController.popBackStack() },
+                onNextChapter = { nextChap ->
+                    navController.navigate(Screen.MangaReader.createRoute(mediaId, nextChap)) {
+                        popUpTo(Screen.MangaReader.route) { inclusive = true }
+                    }
+                },
             )
         }
 
@@ -250,6 +258,13 @@ fun SaikouNavHost(
             ),
         ) {
             TorrentSearchScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── AI Chat ───────────────────────────────────────────
+        composable(Screen.AiChat.route) {
+            AiChatScreen(
                 onBack = { navController.popBackStack() },
             )
         }

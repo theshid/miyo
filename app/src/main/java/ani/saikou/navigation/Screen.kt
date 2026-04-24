@@ -57,8 +57,11 @@ sealed class Screen(
         }
     }
 
-    data object MangaReader : Screen("reader/{mediaId}/{chapterNum}") {
-        fun createRoute(mediaId: Int, chapterNum: Int) = "reader/$mediaId/$chapterNum"
+    data object MangaReader : Screen("reader/{mediaId}/{chapterNum}?sourceId={sourceId}") {
+        fun createRoute(mediaId: Int, chapterNum: Int, sourceId: String? = null): String {
+            val base = "reader/$mediaId/$chapterNum"
+            return if (sourceId != null) "$base?sourceId=$sourceId" else base
+        }
     }
 
     // ── Downloads ─────────────────────────────────────────────
@@ -75,6 +78,9 @@ sealed class Screen(
 
     // ── Stats Dashboard ──────────────────────────────────────
     data object Stats : Screen("stats")
+
+    // ── AI Chat ──────────────────────────────────────────────
+    data object AiChat : Screen("ai_chat")
 
     // ── Error ─────────────────────────────────────────────────
     data object NoInternet : Screen("no_internet")

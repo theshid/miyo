@@ -2,6 +2,7 @@ package ani.saikou.screens.login
 
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Send
@@ -28,10 +31,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import ani.saikou.R
 import ani.saikou.components.PillButton
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.ui.theme.Background
@@ -71,13 +79,13 @@ fun LoginScreen(
             modifier = Modifier.padding(32.dp),
         ) {
             // Samurai hero image
-            coil.compose.AsyncImage(
-                model = ani.saikou.R.drawable.samurai_login,
+            Image(
+                painter = painterResource(R.drawable.samurai_login),
                 contentDescription = "Miyo",
                 modifier = Modifier
                     .fillMaxWidth(0.75f)
                     .heightIn(max = 360.dp),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                contentScale = ContentScale.Fit,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -96,9 +104,16 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Your anime & manga companion",
+                text = "Every anime. Every manga.",
                 style = MaterialTheme.typography.bodyLarge,
-                color = OnSurfaceVariant,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+            )
+
+            Text(
+                text = "One Library.",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Primary,
                 textAlign = TextAlign.Center,
             )
 
@@ -123,7 +138,7 @@ fun LoginScreen(
             ) {
                 IconButton(onClick = { /* Discord */ }) {
                     Icon(
-                        imageVector = Icons.Default.Chat,
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
                         contentDescription = "Discord",
                         tint = OnSurfaceVariant.copy(alpha = 0.4f),
                         modifier = Modifier.size(24.dp),
@@ -139,7 +154,7 @@ fun LoginScreen(
                 }
                 IconButton(onClick = { /* Telegram */ }) {
                     Icon(
-                        imageVector = Icons.Default.Send,
+                        imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Telegram",
                         tint = OnSurfaceVariant.copy(alpha = 0.4f),
                         modifier = Modifier.size(24.dp),
@@ -152,3 +167,9 @@ fun LoginScreen(
 
 // Helper to use dp value as sp for letter spacing
 private inline val Float.sp get() = androidx.compose.ui.unit.TextUnit(this, androidx.compose.ui.unit.TextUnitType.Sp)
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun LoginScreenPreview() {
+    LoginScreen(onLoginSuccess = {})
+}
