@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.components.SourceItem
+import ani.saikou.data.local.db.ActivityEventEntity
 import ani.saikou.data.local.db.WatchHistoryEntity
 import ani.saikou.data.remote.AniSkipApi
 import ani.saikou.data.remote.SkipTimes
@@ -14,7 +15,7 @@ import ani.saikou.data.local.ListEventBus
 import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.StreamLink
-import ani.saikou.logging.Log
+import io.github.theshid.prettylog.Log
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -29,6 +30,7 @@ class VideoPlayerViewModel(
 
     private val repository = AppModule.repository()
     private val watchHistoryDao = AppModule.watchHistoryDao()
+    private val activityDao = AppModule.activityEventDao()
     private val gogoParser = GogoParser()
     private val aniSkipApi = AniSkipApi()
 
@@ -195,7 +197,12 @@ class VideoPlayerViewModel(
         saveJob?.cancel()
         if (!firstSaveDone) {
             firstSaveDone = true
-            viewModelScope.launch { saveLocalProgress(positionMs, durationMs) }
+            viewModelScope.launch {
+                activityDao.insert(
+                    ActivityEventEntity(timestampMs = System.currentTimeMillis(), type = "watch")
+                )
+                saveLocalProgress(positionMs, durationMs)
+            }
         } else {
             saveJob = viewModelScope.launch {
                 delay(5000)

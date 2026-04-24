@@ -121,24 +121,28 @@ fun VideoPlayerScreen(
     DisposableEffect(Unit) {
         val activity = context as Activity
         val window = activity.window
-
-        // Allow content to draw behind system bars
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
         val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.hide(WindowInsetsCompat.Type.systemBars())
-        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
-        // Fallback for older devices / OEMs that ignore the insets controller
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility = (
-            android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
-                or android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-        )
+        fun hideBars() {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
+                    or android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            )
+        }
+
+        hideBars()
+        // Re-apply on the next handler cycle: when navigating between episodes
+        // the new screen's setup runs BEFORE the old screen's onDispose, so
+        // its controller.show() would otherwise win and leave bars visible.
+        window.decorView.post { hideBars() }
 
         onDispose {
             controller.show(WindowInsetsCompat.Type.systemBars())
@@ -295,6 +299,7 @@ fun VideoPlayerScreen(
     // Player state
     var isPlaying by remember { mutableStateOf(false) }
     var isBuffering by remember { mutableStateOf(false) }
+    var playWhenReady by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(1L) }
     var showControls by remember { mutableStateOf(true) }
@@ -343,6 +348,10 @@ fun VideoPlayerScreen(
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 isBuffering = playbackState == Player.STATE_BUFFERING
+            }
+
+            override fun onPlayWhenReadyChanged(value: Boolean, reason: Int) {
+                playWhenReady = value
             }
 
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
@@ -448,17 +457,10 @@ fun VideoPlayerScreen(
             }
         }
 
-        // Loading spinner while resolving stream (only show when intro is done)
+        // Loading animation while resolving stream (only show when intro is done)
         if (playerState.isLoading && !introActive && playerState.error == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(color = Primary, strokeWidth = 3.dp)
-                    Text(
-                        "Loading stream...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OnSurface,
-                    )
-                }
+                ani.saikou.components.VideoLoader()
             }
         }
 
@@ -598,7 +600,7 @@ fun VideoPlayerScreen(
                     // Play/Pause/Buffering
                     IconButton(
                         onClick = {
-                            if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                            if (exoPlayer.playWhenReady) exoPlayer.pause() else exoPlayer.play()
                         },
                         modifier = Modifier
                             .size(64.dp)
@@ -612,8 +614,8 @@ fun VideoPlayerScreen(
                             )
                         } else {
                             Icon(
-                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                if (playWhenReady) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (playWhenReady) "Pause" else "Play",
                                 tint = Color.White,
                                 modifier = Modifier.size(36.dp),
                             )
@@ -757,7 +759,7 @@ fun VideoPlayerScreen(
                 skipProgress.snapTo(1f)
                 skipProgress.animateTo(
                     targetValue = 0f,
-                    animationSpec = tween(durationMillis = 6000, easing = LinearEasing),
+                    animationSpec = tween(durationMillis = 15000, easing = LinearEasing),
                 )
                 // Auto-hide after countdown
                 skipVisible = false
