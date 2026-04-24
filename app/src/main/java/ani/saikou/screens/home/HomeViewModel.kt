@@ -13,12 +13,16 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 class HomeViewModel : ViewModel() {
 
     private val repository = AppModule.repository()
     private val readingHistoryDao = AppModule.readingHistoryDao()
     private val watchHistoryDao = AppModule.watchHistoryDao()
+    private val activityDao = AppModule.activityEventDao()
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
@@ -28,7 +32,25 @@ class HomeViewModel : ViewModel() {
         observeReadingHistory()
         observeWatchHistory()
         observeLocalStats()
+        observeActivity()
         observeListEvents()
+    }
+
+    private fun observeActivity() {
+        viewModelScope.launch {
+            val zone = ZoneId.systemDefault()
+            val sinceMs = LocalDate.now()
+                .withDayOfMonth(1)
+                .atStartOfDay(zone)
+                .toInstant()
+                .toEpochMilli()
+            activityDao.getSince(sinceMs).collect { events ->
+                val counts = events.groupingBy { event ->
+                    Instant.ofEpochMilli(event.timestampMs).atZone(zone).toLocalDate()
+                }.eachCount()
+                _uiState.value = _uiState.value.copy(activityByDay = counts)
+            }
+        }
     }
 
     /**
@@ -161,5 +183,6 @@ data class HomeUiState(
     val watchHistory: List<WatchHistoryEntity> = emptyList(),
     val localEpisodesWatched: Int = 0,
     val localChaptersRead: Int = 0,
+    val activityByDay: Map<LocalDate, Int> = emptyMap(),
     val isLoading: Boolean = true,
 )

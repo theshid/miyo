@@ -3,16 +3,16 @@ package ani.saikou.di
 import android.content.Context
 import ani.saikou.BuildConfig
 import ani.saikou.data.local.ConnectivityObserver
+import ani.saikou.data.local.OnboardingPrefs
 import ani.saikou.data.local.TokenStorage
-import ani.saikou.logging.DefaultLoggingService
-import ani.saikou.logging.LoggingService
-import ani.saikou.logging.PrettyLoggingService
+import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.DownloadDao
 import ani.saikou.data.local.db.ReadingHistoryDao
 import ani.saikou.data.local.db.SaikouDatabase
 import ani.saikou.data.local.db.WatchHistoryDao
 import ani.saikou.data.local.downloads.MangaDownloadManager
 import ani.saikou.data.remote.AnilistApi
+import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
 
@@ -28,7 +28,8 @@ object AppModule {
     private var connectivityObserver: ConnectivityObserver? = null
     private var database: SaikouDatabase? = null
     private var downloadManager: MangaDownloadManager? = null
-    private var loggingService: LoggingService? = null
+    private var openAiService: OpenAiService? = null
+    private var onboardingPrefs: OnboardingPrefs? = null
 
     fun init(context: Context) {
         val appContext = context.applicationContext
@@ -38,7 +39,8 @@ object AppModule {
         connectivityObserver = ConnectivityObserver(appContext)
         database = SaikouDatabase.getInstance(appContext)
         downloadManager = MangaDownloadManager(appContext, database!!.downloadDao())
-        loggingService = if (BuildConfig.DEBUG) PrettyLoggingService() else DefaultLoggingService()
+        openAiService = OpenAiService(BuildConfig.OPENAI_API_KEY)
+        onboardingPrefs = OnboardingPrefs(appContext)
     }
 
     fun repository(): AnilistRepository =
@@ -53,9 +55,6 @@ object AppModule {
     fun downloadManager(): MangaDownloadManager =
         downloadManager ?: throw IllegalStateException("AppModule not initialized.")
 
-    fun loggingService(): LoggingService =
-        loggingService ?: throw IllegalStateException("AppModule not initialized.")
-
     fun downloadDao(): DownloadDao =
         database?.downloadDao() ?: throw IllegalStateException("AppModule not initialized.")
 
@@ -64,4 +63,13 @@ object AppModule {
 
     fun watchHistoryDao(): WatchHistoryDao =
         database?.watchHistoryDao() ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun activityEventDao(): ActivityEventDao =
+        database?.activityEventDao() ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun onboardingPrefs(): OnboardingPrefs =
+        onboardingPrefs ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun openAiService(): OpenAiService =
+        openAiService ?: throw IllegalStateException("AppModule not initialized.")
 }

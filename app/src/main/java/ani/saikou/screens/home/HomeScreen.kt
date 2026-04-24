@@ -2,6 +2,7 @@ package ani.saikou.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Notifications
@@ -47,10 +49,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import ani.saikou.components.ActivityHeatmap
+import ani.saikou.components.DefaultHomeTourSteps
 import ani.saikou.components.GlassCard
 import ani.saikou.components.MediaPosterCard
 import ani.saikou.components.PulseAvatar
 import ani.saikou.components.SectionHeader
+import ani.saikou.components.TourOverlay
+import ani.saikou.components.TourTarget
+import ani.saikou.components.rememberTourState
+import ani.saikou.components.tourTarget
+import ani.saikou.di.AppModule
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -67,6 +76,7 @@ fun HomeScreen(
     onNavigateToDownloads: () -> Unit = {},
     onNavigateToCalendar: () -> Unit = {},
     onNavigateToStats: () -> Unit = {},
+    onNavigateToAiChat: () -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToReader: (mediaId: Int, chapterNum: Int) -> Unit = { _, _ -> },
     onNavigateToPlayer: (mediaId: Int, episodeNum: Int) -> Unit = { _, _ -> },
@@ -74,6 +84,62 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    val scrollState = rememberScrollState()
+    val tourState = rememberTourState()
+    val onboardingPrefs = remember { AppModule.onboardingPrefs() }
+    var tourStep by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var showTour by remember { mutableStateOf(false) }
+
+    // Filter the tour to only the sections that will actually render for THIS user.
+    // First-time users won't have airing-list anime or in-progress watching/reading.
+    val activeTourSteps = remember(
+        state.airingSchedule.size,
+        state.continueWatchingLocal.size,
+        state.continueWatching.size,
+        state.readingHistory.size,
+        state.continueReading.size,
+    ) {
+        DefaultHomeTourSteps.filter { step ->
+            when (step.target) {
+                TourTarget.AIRING -> state.airingSchedule.isNotEmpty()
+                TourTarget.CONTINUE_WATCHING ->
+                    state.continueWatchingLocal.isNotEmpty() ||
+                        state.continueWatching.isNotEmpty() ||
+                        state.readingHistory.isNotEmpty() ||
+                        state.continueReading.isNotEmpty()
+                else -> true
+            }
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(state.isLoading) {
+        if (!state.isLoading && !onboardingPrefs.hasSeenHomeTour()) {
+            // small delay so first layout pass settles bounds before we read them
+            kotlinx.coroutines.delay(300)
+            tourStep = 0
+            showTour = true
+        }
+    }
+
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    androidx.compose.runtime.LaunchedEffect(tourStep, showTour, activeTourSteps) {
+        if (!showTour) return@LaunchedEffect
+        val target = activeTourSteps.getOrNull(tourStep)?.target ?: return@LaunchedEffect
+        // Wait for layout to populate bounds for this target.
+        var attempts = 0
+        while (tourState.bounds[target] == null && attempts < 20) {
+            kotlinx.coroutines.delay(50)
+            attempts++
+        }
+        val rootRect = tourState.bounds[target] ?: return@LaunchedEffect
+        val desiredTopPx = with(density) { 120.dp.toPx() }
+        // bounds are root-relative; deltas between scroll positions are correct
+        // regardless of the root's offset.
+        val deltaPx = rootRect.top - desiredTopPx
+        if (kotlin.math.abs(deltaPx) > 4f) {
+            scrollState.animateScrollBy(deltaPx)
+        }
+    }
 
     var showLogoutDialog by remember { mutableStateOf(false) }
 
@@ -104,11 +170,12 @@ fun HomeScreen(
         return
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
@@ -163,7 +230,8 @@ fun HomeScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .tourTarget(tourState, TourTarget.STATS),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             StatCard(
@@ -180,72 +248,122 @@ fun HomeScreen(
             )
         }
 
-        // ── Quick Action Cards ───────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            ActionCard(
-                title = "Anime List",
-                icon = Icons.Outlined.PlayCircle,
-                onClick = onNavigateToAnimeList,
-                modifier = Modifier.weight(1f),
-            )
-            ActionCard(
-                title = "Manga List",
-                icon = Icons.Outlined.MenuBook,
-                onClick = onNavigateToMangaList,
-                modifier = Modifier.weight(1f),
-            )
+        // ── Activity Heatmap ─────────────────────────────────
+        val airingsThisMonth = remember(state.airingSchedule) {
+            val zone = java.time.ZoneId.systemDefault()
+            val thisMonth = java.time.LocalDate.now().month
+            val thisYear = java.time.LocalDate.now().year
+            state.airingSchedule
+                .mapNotNull { media ->
+                    val time = media.nextAiringEpisodeTime ?: return@mapNotNull null
+                    val date = java.time.Instant.ofEpochMilli(time).atZone(zone).toLocalDate()
+                    if (date.month != thisMonth || date.year != thisYear) return@mapNotNull null
+                    date to ani.saikou.components.AiringInfo(
+                        mediaId = media.id,
+                        title = media.displayTitle,
+                        coverUrl = media.cover,
+                        episodeNumber = (media.nextAiringEpisode ?: 0) + 1,
+                        airingTimeMs = time,
+                    )
+                }
+                .groupBy({ it.first }, { it.second })
+                .mapValues { (_, list) -> list.sortedBy { it.airingTimeMs } }
         }
-
-        // ── News & Torrents ──────────────────────────────────
-        Row(
+        ActivityHeatmap(
+            countsByDay = state.activityByDay,
+            airingsByDay = airingsThisMonth,
+            onAiringClick = onNavigateToMedia,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            ActionCard(
-                title = "News",
-                icon = Icons.Default.Notifications,
-                onClick = onNavigateToNews,
-                modifier = Modifier.weight(1f),
-            )
-            ActionCard(
-                title = "Torrents",
-                icon = Icons.Default.Download,
-                onClick = onNavigateToTorrent,
-                modifier = Modifier.weight(1f),
-            )
-        }
+                .padding(horizontal = 16.dp)
+                .tourTarget(tourState, TourTarget.ACTIVITY),
+        )
 
-        // ── Offline & Calendar ───────────────────────────────
-        Row(
+        // ── Quick Action Cards (grouped: Anime/Manga, News/Torrents, Offline/Calendar, Miyo AI) ──
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .tourTarget(tourState, TourTarget.ACTIONS),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            ActionCard(
-                title = "Offline",
-                icon = Icons.Default.DownloadDone,
-                onClick = onNavigateToDownloads,
-                modifier = Modifier.weight(1f),
-            )
-            ActionCard(
-                title = "Calendar",
-                icon = Icons.Default.CalendarMonth,
-                onClick = onNavigateToCalendar,
-                modifier = Modifier.weight(1f),
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                ActionCard(
+                    title = "Anime List",
+                    icon = Icons.Outlined.PlayCircle,
+                    onClick = onNavigateToAnimeList,
+                    modifier = Modifier.weight(1f),
+                )
+                ActionCard(
+                    title = "Manga List",
+                    icon = Icons.Outlined.MenuBook,
+                    onClick = onNavigateToMangaList,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                ActionCard(
+                    title = "News",
+                    icon = Icons.Default.Notifications,
+                    onClick = onNavigateToNews,
+                    modifier = Modifier.weight(1f),
+                )
+                ActionCard(
+                    title = "Torrents",
+                    icon = Icons.Default.Download,
+                    onClick = onNavigateToTorrent,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                ActionCard(
+                    title = "Offline",
+                    icon = Icons.Default.DownloadDone,
+                    onClick = onNavigateToDownloads,
+                    modifier = Modifier.weight(1f),
+                )
+                ActionCard(
+                    title = "Calendar",
+                    icon = Icons.Default.CalendarMonth,
+                    onClick = onNavigateToCalendar,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                ActionCard(
+                    title = "Miyo AI",
+                    icon = Icons.Default.AutoAwesome,
+                    onClick = onNavigateToAiChat,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
 
         // ── Airing Soon ─────────────────────────────────────
         if (state.airingSchedule.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.tourTarget(tourState, TourTarget.AIRING),
+            ) {
                 SectionHeader(
                     title = "Airing Soon",
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -278,7 +396,10 @@ fun HomeScreen(
             val anilistOnly = state.continueWatching.filter { it.id !in localIds }
 
             if (state.continueWatchingLocal.isNotEmpty() || anilistOnly.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.tourTarget(tourState, TourTarget.CONTINUE_WATCHING),
+                ) {
                     SectionHeader(
                         title = "Continue Watching",
                         actionText = "SEE ALL",
@@ -415,6 +536,20 @@ fun HomeScreen(
 
         // Bottom spacing for nav bar clearance
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+        if (showTour && activeTourSteps.isNotEmpty()) {
+            TourOverlay(
+                steps = activeTourSteps,
+                state = tourState,
+                currentStep = tourStep.coerceAtMost(activeTourSteps.lastIndex),
+                onStepChanged = { tourStep = it },
+                onComplete = {
+                    showTour = false
+                    onboardingPrefs.markHomeTourSeen()
+                },
+            )
+        }
     }
 }
 

@@ -13,8 +13,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         DownloadedMangaEntity::class,
         ReadingHistoryEntity::class,
         WatchHistoryEntity::class,
+        ActivityEventEntity::class,
     ],
-    version = 4,
+    version = 7,
     exportSchema = false,
 )
 abstract class SaikouDatabase : RoomDatabase() {
@@ -22,6 +23,7 @@ abstract class SaikouDatabase : RoomDatabase() {
     abstract fun downloadDao(): DownloadDao
     abstract fun readingHistoryDao(): ReadingHistoryDao
     abstract fun watchHistoryDao(): WatchHistoryDao
+    abstract fun activityEventDao(): ActivityEventDao
 
     companion object {
         @Volatile
@@ -37,6 +39,38 @@ abstract class SaikouDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS activity_events (
+                        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        timestampMs INTEGER NOT NULL,
+                        type TEXT NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_activity_events_timestampMs ON activity_events(timestampMs)")
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add chapterNumber so the reader can find downloaded chapters
+                // by number alone (no parser round-trip required).
+                // -1 = unknown for any rows that pre-date this column.
+                db.execSQL("ALTER TABLE downloads ADD COLUMN chapterNumber INTEGER NOT NULL DEFAULT -1")
+            }
+        }
+
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Size in bytes, measured at completion time. Powers the
+                // "Download next N — uses about X MB" estimate in the reader.
+                db.execSQL("ALTER TABLE downloads ADD COLUMN fileSizeBytes INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getInstance(context: Context): SaikouDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -44,7 +78,7 @@ abstract class SaikouDatabase : RoomDatabase() {
                     SaikouDatabase::class.java,
                     "saikou_v2.db"
                 )
-                    .addMigrations(MIGRATION_3_4)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     // Fallback only as a last resort — prefers migrations above
                     .fallbackToDestructiveMigration()
                     .build()
