@@ -83,6 +83,9 @@ sealed class Screen(
     // ── AI Chat ──────────────────────────────────────────────
     data object AiChat : Screen("ai_chat")
 
+    // ── Feedback ─────────────────────────────────────────────
+    data object Feedback : Screen("feedback")
+
     // ── Error ─────────────────────────────────────────────────
     data object NoInternet : Screen("no_internet")
 }

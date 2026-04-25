@@ -27,6 +27,7 @@ import ani.saikou.screens.news.NewsFeedScreen
 import ani.saikou.screens.seasonal.SeasonalCalendarScreen
 import ani.saikou.screens.stats.StatsScreen
 import ani.saikou.screens.ai.AiChatScreen
+import ani.saikou.screens.feedback.FeedbackScreen
 import ani.saikou.screens.splash.SplashScreen
 import ani.saikou.screens.torrent.TorrentSearchScreen
 
@@ -86,6 +87,7 @@ fun SaikouNavHost(
                 onNavigateToCalendar = { navController.navigate(Screen.SeasonalCalendar.route) },
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
                 onNavigateToAiChat = { navController.navigate(Screen.AiChat.route) },
+                onNavigateToFeedback = { navController.navigate(Screen.Feedback.route) },
                 onLogout = {
                     ani.saikou.di.AppModule.tokenStorage().clear()
                     navController.navigate(Screen.Login.route) {
@@ -268,6 +270,13 @@ fun SaikouNavHost(
         // ── AI Chat ───────────────────────────────────────────
         composable(Screen.AiChat.route) {
             AiChatScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        // ── Feedback ─────────────────────────────────────────
+        composable(Screen.Feedback.route) {
+            FeedbackScreen(
                 onBack = { navController.popBackStack() },
             )
         }

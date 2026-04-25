@@ -33,6 +33,9 @@ android {
         val openAiKey = (props.getProperty("OPENAI_API_KEY") ?: "")
             .trim().removeSurrounding("\"")
         buildConfigField("String", "OPENAI_API_KEY", "\"$openAiKey\"")
+        val discordFeedback = (props.getProperty("DISCORD_FEEDBACK_WEBHOOK") ?: "")
+            .trim().removeSurrounding("\"")
+        buildConfigField("String", "DISCORD_FEEDBACK_WEBHOOK", "\"$discordFeedback\"")
     }
 
     buildTypes {

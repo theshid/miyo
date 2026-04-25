@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -77,6 +78,7 @@ fun HomeScreen(
     onNavigateToCalendar: () -> Unit = {},
     onNavigateToStats: () -> Unit = {},
     onNavigateToAiChat: () -> Unit = {},
+    onNavigateToFeedback: () -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToReader: (mediaId: Int, chapterNum: Int) -> Unit = { _, _ -> },
     onNavigateToPlayer: (mediaId: Int, episodeNum: Int) -> Unit = { _, _ -> },
@@ -213,6 +215,13 @@ fun HomeScreen(
                     Icon(
                         Icons.Default.Notifications,
                         contentDescription = "News",
+                        tint = OnSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onNavigateToFeedback) {
+                    Icon(
+                        Icons.Default.Feedback,
+                        contentDescription = "Send feedback",
                         tint = OnSurfaceVariant,
                     )
                 }

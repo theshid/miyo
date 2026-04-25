@@ -12,6 +12,7 @@ import ani.saikou.data.local.db.SaikouDatabase
 import ani.saikou.data.local.db.WatchHistoryDao
 import ani.saikou.data.local.downloads.MangaDownloadManager
 import ani.saikou.data.remote.AnilistApi
+import ani.saikou.data.remote.FeedbackService
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
@@ -30,6 +31,7 @@ object AppModule {
     private var downloadManager: MangaDownloadManager? = null
     private var openAiService: OpenAiService? = null
     private var onboardingPrefs: OnboardingPrefs? = null
+    private var feedbackService: FeedbackService? = null
 
     fun init(context: Context) {
         val appContext = context.applicationContext
@@ -41,6 +43,7 @@ object AppModule {
         downloadManager = MangaDownloadManager(appContext, database!!.downloadDao())
         openAiService = OpenAiService(BuildConfig.OPENAI_API_KEY)
         onboardingPrefs = OnboardingPrefs(appContext)
+        feedbackService = FeedbackService()
     }
 
     fun repository(): AnilistRepository =
@@ -75,4 +78,7 @@ object AppModule {
 
     fun openAiService(): OpenAiService =
         openAiService ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun feedbackService(): FeedbackService =
+        feedbackService ?: throw IllegalStateException("AppModule not initialized.")
 }
