@@ -90,15 +90,26 @@ class DownloadService : Service() {
 
             for (download in pending) {
                 // Try MangaDex first, fall back to MangaPill — same order as the reader.
-                val pages = resolvePages(download.mangaTitle, download.chapterNumber)
-                if (pages.isEmpty()) {
+                val resolved = resolvePages(download.mangaTitle, download.chapterNumber)
+                if (resolved == null) {
                     dao.updateStatus(download.id, "ERROR")
                     continue
                 }
+                val pages = resolved.pages
 
-                // Update total pages if needed
-                if (download.totalPages != pages.size) {
-                    dao.insertDownload(download.copy(totalPages = pages.size))
+                // Persist page count AND the resolved sourceId so future reads of
+                // this downloaded chapter save history with a real source context
+                // instead of the empty placeholder from queueing. The reader reads
+                // `sourceId` off DownloadEntity, so updating the row here is enough.
+                val needsUpdate = download.totalPages != pages.size ||
+                    (download.sourceId.isEmpty() && resolved.sourceId.isNotEmpty())
+                if (needsUpdate) {
+                    dao.insertDownload(
+                        download.copy(
+                            totalPages = pages.size,
+                            sourceId = resolved.sourceId.ifEmpty { download.sourceId },
+                        )
+                    )
                 }
 
                 updateNotification("${download.mangaTitle} — Ch. ${download.chapterKey}", 0, pages.size)
@@ -117,14 +128,17 @@ class DownloadService : Service() {
         }
     }
 
+    private data class ResolvedChapter(val pages: List<MangaPage>, val sourceId: String)
+
     /**
      * Resolves the page list for a chapter. Tries MangaDex first; falls back
      * to MangaPill (the parser the reader uses for licensed/unavailable
      * titles). Page objects keep their `headers` so the downloader can apply
-     * the Referer that MangaPill's CDN requires.
+     * the Referer that MangaPill's CDN requires. The resolved sourceId is
+     * returned so the caller can persist it back onto the download row.
      */
-    private suspend fun resolvePages(mangaTitle: String, chapterNumber: Int): List<MangaPage> {
-        if (chapterNumber < 0) return emptyList()
+    private suspend fun resolvePages(mangaTitle: String, chapterNumber: Int): ResolvedChapter? {
+        if (chapterNumber < 0) return null
 
         // MangaDex
         runCatching {
@@ -135,7 +149,7 @@ class DownloadService : Service() {
                 val chapter = chapters.find { it.number.toInt() == chapterNumber }
                 if (chapter != null) {
                     val pages = mangaDex.getPages(chapter.id)
-                    if (pages.isNotEmpty()) return pages
+                    if (pages.isNotEmpty()) return ResolvedChapter(pages, source.id)
                 }
             }
         }
@@ -149,12 +163,12 @@ class DownloadService : Service() {
                 val chapter = chapters.find { it.number.toInt() == chapterNumber }
                 if (chapter != null) {
                     val pages = mangaPill.getPages(chapter.id)
-                    if (pages.isNotEmpty()) return pages
+                    if (pages.isNotEmpty()) return ResolvedChapter(pages, source.id)
                 }
             }
         }
 
-        return emptyList()
+        return null
     }
 
     private fun createNotificationChannel() {

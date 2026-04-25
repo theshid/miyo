@@ -106,7 +106,7 @@ fun MangaReaderScreen(
     mediaId: Int,
     chapterNum: Int,
     onBack: () -> Unit,
-    onNextChapter: ((Int) -> Unit)? = null,
+    onNextChapter: ((chapter: Int, sourceId: String?) -> Unit)? = null,
     viewModel: MangaReaderViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
 ) {
     val context = LocalContext.current
@@ -291,6 +291,11 @@ fun MangaReaderScreen(
                     translationY = offsetY,
                 ),
         ) {
+            // Wrap the parent callback so inner readers keep their simple `(Int) -> Unit`
+            // signature but the resolved source id is forwarded.
+            val onNextChapterWithSource: ((Int) -> Unit)? = onNextChapter?.let { cb ->
+                { next -> cb(next, readerState.resolvedSourceId) }
+            }
             when (settings.mode) {
                 ReadingMode.WEBTOON -> {
                     WebtoonReader(
@@ -299,7 +304,7 @@ fun MangaReaderScreen(
                         background = settings.background,
                         startPage = readerState.startPage,
                         onPageChanged = { currentPage = it },
-                        onNextChapter = onNextChapter,
+                        onNextChapter = onNextChapterWithSource,
                         chapterNum = chapterNum,
                     )
                 }
@@ -310,7 +315,7 @@ fun MangaReaderScreen(
                         reverseLayout = false,
                         startPage = readerState.startPage,
                         onPageChanged = { currentPage = it },
-                        onNextChapter = onNextChapter,
+                        onNextChapter = onNextChapterWithSource,
                         chapterNum = chapterNum,
                     )
                 }
@@ -321,7 +326,7 @@ fun MangaReaderScreen(
                         reverseLayout = true,
                         startPage = readerState.startPage,
                         onPageChanged = { currentPage = it },
-                        onNextChapter = onNextChapter,
+                        onNextChapter = onNextChapterWithSource,
                         chapterNum = chapterNum,
                     )
                 }
@@ -481,7 +486,7 @@ fun MangaReaderScreen(
             onDismiss = { showChapterList = false },
             onJumpToChapter = { target ->
                 showChapterList = false
-                onNextChapter?.invoke(target)
+                onNextChapter?.invoke(target, readerState.resolvedSourceId)
             },
             onDownloadClick = { ch ->
                 viewModel.queueSingleChapterDownload(ch) {

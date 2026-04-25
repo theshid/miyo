@@ -213,8 +213,8 @@ fun SaikouNavHost(
                 mediaId = mediaId,
                 chapterNum = chapterNum,
                 onBack = { navController.popBackStack() },
-                onNextChapter = { nextChap ->
-                    navController.navigate(Screen.MangaReader.createRoute(mediaId, nextChap)) {
+                onNextChapter = { nextChap, sourceId ->
+                    navController.navigate(Screen.MangaReader.createRoute(mediaId, nextChap, sourceId)) {
                         popUpTo(Screen.MangaReader.route) { inclusive = true }
                     }
                 },

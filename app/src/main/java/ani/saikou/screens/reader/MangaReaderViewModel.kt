@@ -16,6 +16,8 @@ import ani.saikou.data.local.ListEventBus
 import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSource
 import io.github.theshid.prettylog.Log
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,7 +70,13 @@ class MangaReaderViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private var mangaSources: List<MangaSource> = emptyList()
-    private var resolvedSourceId: String? = null
+    private var _resolvedSourceId: String? = null
+    private var resolvedSourceId: String?
+        get() = _resolvedSourceId
+        set(value) {
+            _resolvedSourceId = value
+            _uiState.value = _uiState.value.copy(resolvedSourceId = value)
+        }
     private var resolvedChapterId: String? = null
     private var coverUrl: String? = null
     private var saveJob: Job? = null
@@ -223,6 +231,9 @@ class MangaReaderViewModel(
             // Check if we have a saved source from history — skip search
             val history = historyDao.getForManga(mediaId)
             if (history != null && history.sourceId.isNotEmpty()) {
+                activeParser = history.sourceName.ifEmpty {
+                    if (history.sourceId.startsWith("/manga/") || history.sourceId.startsWith("/chapters/")) "MangaPill" else "MangaDex"
+                }
                 resolvedSourceId = history.sourceId
                 loadChapterFromSource(
                     sourceId = history.sourceId,
@@ -231,21 +242,32 @@ class MangaReaderViewModel(
                 return@launch
             }
 
-            // Search MangaDex first, then fall back to MangaPill
-            mangaSources = mangaDex.search(title)
-            if (mangaSources.isNotEmpty()) {
-                activeParser = "MangaDex"
-                Log.d(tag = "MangaReader", message = "Found ${mangaSources.size} sources on MangaDex")
-            } else {
-                // Fallback: try MangaPill (has licensed manga that MangaDex doesn't)
-                Log.d(tag = "MangaReader", message = "No results on MangaDex — trying MangaPill")
-                mangaSources = mangaPill.search(title)
-                activeParser = "MangaPill"
-                Log.d(tag = "MangaReader", message = "Found ${mangaSources.size} sources on MangaPill")
+            // History may exist without a usable sourceId (e.g., chapter was read from a
+            // local download queued with an empty sourceId). Fall back on the parser name
+            // so we don't blindly search MangaDex for licensed titles like Vinland Saga
+            // that only MangaPill hosts.
+            val preferredParser = history?.sourceName?.takeIf { it.isNotEmpty() }
+            mangaSources = when (preferredParser) {
+                "MangaPill" -> mangaPill.search(title).also { activeParser = "MangaPill" }
+                "MangaDex" -> mangaDex.search(title).also { activeParser = "MangaDex" }
+                else -> {
+                    // Search MangaDex first, then fall back to MangaPill
+                    val dex = mangaDex.search(title)
+                    if (dex.isNotEmpty()) {
+                        activeParser = "MangaDex"
+                        dex
+                    } else {
+                        Log.d(tag = "MangaReader", message = "No results on MangaDex — trying MangaPill")
+                        activeParser = "MangaPill"
+                        mangaPill.search(title)
+                    }
+                }
             }
+            Log.d(tag = "MangaReader", message = "Found ${mangaSources.size} sources on $activeParser (preferredParser=$preferredParser)")
 
             if (mangaSources.isEmpty()) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = "Manga not found on any source")
+                reportReaderError("Manga not found on any source", chapter = null)
                 return@launch
             }
 
@@ -381,6 +403,7 @@ class MangaReaderViewModel(
                 isLoading = false,
                 error = "Chapter $chapterNum not found on any source",
             )
+            reportReaderError("Chapter not found on any source", chapter = chapterNum)
             return
         }
 
@@ -394,6 +417,7 @@ class MangaReaderViewModel(
 
         if (pages.isEmpty()) {
             _uiState.value = _uiState.value.copy(isLoading = false, error = "No pages found for chapter $chapterNum")
+            reportReaderError("No pages found for chapter", chapter = chapterNum)
             return
         }
 
@@ -461,6 +485,22 @@ class MangaReaderViewModel(
         // Can't use suspend here, but the debounced save should have caught the last page
         super.onCleared()
     }
+
+    /** Report a non-fatal reader error to Sentry with the context needed to debug it. */
+    private fun reportReaderError(message: String, chapter: Int?) {
+        try {
+            Sentry.withScope { scope ->
+                scope.level = SentryLevel.WARNING
+                scope.setTag("area", "MangaReader")
+                scope.setTag("mediaId", mediaId.toString())
+                if (chapter != null) scope.setTag("chapter", chapter.toString())
+                scope.setTag("activeParser", activeParser)
+                scope.setExtra("title", _uiState.value.title)
+                scope.setExtra("resolvedSourceId", resolvedSourceId ?: "")
+                Sentry.captureMessage(message)
+            }
+        } catch (_: Exception) { /* best-effort */ }
+    }
 }
 
 data class ReaderUiState(
@@ -473,4 +513,6 @@ data class ReaderUiState(
     val showSourceSelector: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
+    /** Opaque id of the manga on the resolved source — forwarded to the next chapter so it doesn't re-search. */
+    val resolvedSourceId: String? = null,
 )
