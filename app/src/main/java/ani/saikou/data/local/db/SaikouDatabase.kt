@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WatchHistoryEntity::class,
         ActivityEventEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class SaikouDatabase : RoomDatabase() {
@@ -71,6 +71,18 @@ abstract class SaikouDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Capture media context per activity event so the heatmap can
+                // show "what you actually did on day X" — old rows keep NULLs.
+                db.execSQL("ALTER TABLE activity_events ADD COLUMN mediaId INTEGER")
+                db.execSQL("ALTER TABLE activity_events ADD COLUMN mediaTitle TEXT")
+                db.execSQL("ALTER TABLE activity_events ADD COLUMN coverUrl TEXT")
+                db.execSQL("ALTER TABLE activity_events ADD COLUMN episodeNumber INTEGER")
+                db.execSQL("ALTER TABLE activity_events ADD COLUMN chapterNumber INTEGER")
+            }
+        }
+
         fun getInstance(context: Context): SaikouDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -78,7 +90,7 @@ abstract class SaikouDatabase : RoomDatabase() {
                     SaikouDatabase::class.java,
                     "saikou_v2.db"
                 )
-                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     // Fallback only as a last resort — prefers migrations above
                     .fallbackToDestructiveMigration()
                     .build()

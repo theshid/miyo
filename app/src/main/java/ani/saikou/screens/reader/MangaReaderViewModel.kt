@@ -199,7 +199,14 @@ class MangaReaderViewModel(
                     coverUrl = try { repository.getMedia(mediaId)?.cover } catch (_: Exception) { null }
                     Log.d(tag = "MangaReader", message = "Loaded ${localPages.size} pages from local cache for chapter $chapterNum")
                     activityDao.insert(
-                        ActivityEventEntity(timestampMs = System.currentTimeMillis(), type = "read")
+                        ActivityEventEntity(
+                            timestampMs = System.currentTimeMillis(),
+                            type = "read",
+                            mediaId = mediaId,
+                            mediaTitle = localDownload.mangaTitle,
+                            coverUrl = coverUrl,
+                            chapterNumber = chapterNum,
+                        )
                     )
                     _uiState.value = _uiState.value.copy(
                         title = localDownload.mangaTitle,
@@ -429,7 +436,14 @@ class MangaReaderViewModel(
         )
 
         activityDao.insert(
-            ActivityEventEntity(timestampMs = System.currentTimeMillis(), type = "read")
+            ActivityEventEntity(
+                timestampMs = System.currentTimeMillis(),
+                type = "read",
+                mediaId = mediaId,
+                mediaTitle = _uiState.value.title,
+                coverUrl = coverUrl,
+                chapterNumber = chapterNum,
+            )
         )
 
         // Save initial history entry

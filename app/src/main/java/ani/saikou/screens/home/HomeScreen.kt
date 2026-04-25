@@ -281,7 +281,9 @@ fun HomeScreen(
         ActivityHeatmap(
             countsByDay = state.activityByDay,
             airingsByDay = airingsThisMonth,
+            activitiesByDay = state.activitiesByDay,
             onAiringClick = onNavigateToMedia,
+            onActivityClick = onNavigateToMedia,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)

@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +44,7 @@ import ani.saikou.ui.theme.SurfaceContainerHigh
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -55,23 +59,45 @@ data class AiringInfo(
     val airingTimeMs: Long,
 )
 
+/** Something the user actually did on a given day (watched an episode or read a chapter). */
+data class DayActivity(
+    val mediaId: Int,
+    val title: String,
+    val coverUrl: String?,
+    val kind: Kind,
+    val number: Int,
+    val timestampMs: Long,
+) {
+    enum class Kind { WATCHED, READ }
+}
+
 @Composable
 fun ActivityHeatmap(
     countsByDay: Map<LocalDate, Int>,
     airingsByDay: Map<LocalDate, List<AiringInfo>> = emptyMap(),
+    activitiesByDay: Map<LocalDate, List<DayActivity>> = emptyMap(),
     onAiringClick: (mediaId: Int) -> Unit = {},
+    onActivityClick: (mediaId: Int) -> Unit = onAiringClick,
+    displayedMonth: YearMonth = YearMonth.now(),
+    onMonthChange: (YearMonth) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val today = LocalDate.now()
-    val firstOfMonth = today.withDayOfMonth(1)
-    val lastOfMonth = today.withDayOfMonth(today.lengthOfMonth())
+    val firstOfMonth = displayedMonth.atDay(1)
+    val lastOfMonth = displayedMonth.atEndOfMonth()
     val gridStart = firstOfMonth.with(DayOfWeek.MONDAY)
     val gridEnd = lastOfMonth.with(DayOfWeek.SUNDAY)
     val totalDays = ChronoUnit.DAYS.between(gridStart, gridEnd).toInt() + 1
     val rows = totalDays / 7
 
-    val monthLabel = firstOfMonth.month
-        .getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + firstOfMonth.year
+    val monthLabel = displayedMonth.month
+        .getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + displayedMonth.year
+
+    // Bound month navigation to the current calendar year so users can only
+    // browse between Jan and Dec of LocalDate.now().year — keeps the UI scoped.
+    val currentYear = today.year
+    val canGoPrev = displayedMonth > YearMonth.of(currentYear, 1)
+    val canGoNext = displayedMonth < YearMonth.of(currentYear, 12)
 
     GlassCard(modifier = modifier, contentPadding = 16.dp) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -85,11 +111,37 @@ fun ActivityHeatmap(
                     style = MaterialTheme.typography.titleMedium,
                     color = OnSurface,
                 )
-                Text(
-                    text = monthLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = OnSurfaceVariant,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { onMonthChange(displayedMonth.minusMonths(1)) },
+                        enabled = canGoPrev,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.ChevronLeft,
+                            contentDescription = "Previous month",
+                            tint = if (canGoPrev) OnSurfaceVariant else OnSurfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    Text(
+                        text = monthLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = OnSurfaceVariant,
+                    )
+                    IconButton(
+                        onClick = { onMonthChange(displayedMonth.plusMonths(1)) },
+                        enabled = canGoNext,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = "Next month",
+                            tint = if (canGoNext) OnSurfaceVariant else OnSurfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
             }
 
             // Weekday header row
@@ -122,14 +174,19 @@ fun ActivityHeatmap(
                     ) {
                         for (col in 0 until 7) {
                             val date = gridStart.plusDays((row * 7 + col).toLong())
+                            val inDisplayedMonth = YearMonth.from(date) == displayedMonth
                             HeatmapCell(
                                 date = date,
                                 today = today,
-                                count = if (date.month == today.month && date.year == today.year && !date.isAfter(today))
+                                inMonth = inDisplayedMonth,
+                                count = if (inDisplayedMonth && !date.isAfter(today))
                                     countsByDay[date] ?: 0 else 0,
-                                airings = if (date.month == today.month && date.year == today.year)
+                                airings = if (inDisplayedMonth)
                                     airingsByDay[date].orEmpty() else emptyList(),
+                                activities = if (inDisplayedMonth)
+                                    activitiesByDay[date].orEmpty() else emptyList(),
                                 onAiringClick = onAiringClick,
+                                onActivityClick = onActivityClick,
                                 modifier = Modifier
                                     .weight(1f)
                                     .aspectRatio(1f),
@@ -189,15 +246,18 @@ fun ActivityHeatmap(
 private fun HeatmapCell(
     date: LocalDate,
     today: LocalDate,
+    inMonth: Boolean,
     count: Int,
     airings: List<AiringInfo>,
+    activities: List<DayActivity>,
     onAiringClick: (Int) -> Unit,
+    onActivityClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val inMonth = date.month == today.month && date.year == today.year
     val isFuture = date.isAfter(today)
     val isToday = date == today
     var menuOpen by remember { mutableStateOf(false) }
+    val hasContent = airings.isNotEmpty() || activities.isNotEmpty()
 
     val cover = airings.firstOrNull()?.coverUrl
     val cellMod = modifier
@@ -209,7 +269,7 @@ private fun HeatmapCell(
             else base
         }
         .let { base ->
-            if (airings.isNotEmpty()) base.clickable { menuOpen = true } else base
+            if (hasContent) base.clickable { menuOpen = true } else base
         }
 
     Box(modifier = cellMod) {
@@ -240,7 +300,7 @@ private fun HeatmapCell(
             )
         }
 
-        if (airings.isNotEmpty()) {
+        if (hasContent) {
             DropdownMenu(
                 expanded = menuOpen,
                 onDismissRequest = { menuOpen = false },
@@ -252,60 +312,37 @@ private fun HeatmapCell(
                     color = OnSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
-                airings.forEach { airing ->
-                    DropdownMenuItem(
-                        text = {
-                            Column(modifier = Modifier.width(220.dp)) {
-                                Text(
-                                    text = airing.title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = OnSurface,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 2,
-                                )
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    Text(
-                                        text = "Ep ${airing.episodeNumber}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Secondary,
-                                    )
-                                    Text(
-                                        text = "·",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = OnSurfaceVariant,
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Default.Schedule,
-                                        contentDescription = null,
-                                        tint = Secondary,
-                                        modifier = Modifier.size(12.dp),
-                                    )
-                                    Text(
-                                        text = formatAiringTime(airing.airingTimeMs),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Secondary,
-                                    )
-                                }
-                            }
-                        },
-                        leadingIcon = {
-                            coil.compose.AsyncImage(
-                                model = airing.coverUrl,
-                                contentDescription = airing.title,
-                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(width = 32.dp, height = 44.dp)
-                                    .clip(RoundedCornerShape(4.dp)),
-                            )
-                        },
-                        onClick = {
+
+                if (airings.isNotEmpty()) {
+                    SectionLabel("Airing")
+                    airings.forEach { airing ->
+                        AiringMenuRow(airing) {
                             menuOpen = false
                             onAiringClick(airing.mediaId)
-                        },
-                    )
+                        }
+                    }
+                }
+
+                val watched = activities.filter { it.kind == DayActivity.Kind.WATCHED }
+                val read = activities.filter { it.kind == DayActivity.Kind.READ }
+
+                if (watched.isNotEmpty()) {
+                    SectionLabel("Watched")
+                    watched.forEach { activity ->
+                        ActivityMenuRow(activity) {
+                            menuOpen = false
+                            onActivityClick(activity.mediaId)
+                        }
+                    }
+                }
+                if (read.isNotEmpty()) {
+                    SectionLabel("Read")
+                    read.forEach { activity ->
+                        ActivityMenuRow(activity) {
+                            menuOpen = false
+                            onActivityClick(activity.mediaId)
+                        }
+                    }
                 }
             }
         }
@@ -316,6 +353,96 @@ private fun formatAiringTime(timeMs: Long): String {
     val zone = ZoneId.systemDefault()
     val time = Instant.ofEpochMilli(timeMs).atZone(zone).toLocalTime()
     return time.format(DateTimeFormatter.ofPattern("HH:mm"))
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text.uppercase(Locale.ENGLISH),
+        style = MaterialTheme.typography.labelSmall,
+        color = OnSurfaceVariant,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+    )
+}
+
+@Composable
+private fun AiringMenuRow(airing: AiringInfo, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = {
+            Column(modifier = Modifier.width(220.dp)) {
+                Text(
+                    text = airing.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text("Ep ${airing.episodeNumber}", style = MaterialTheme.typography.labelSmall, color = Secondary)
+                    Text("·", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = Secondary,
+                        modifier = Modifier.size(12.dp),
+                    )
+                    Text(formatAiringTime(airing.airingTimeMs), style = MaterialTheme.typography.labelSmall, color = Secondary)
+                }
+            }
+        },
+        leadingIcon = {
+            coil.compose.AsyncImage(
+                model = airing.coverUrl,
+                contentDescription = airing.title,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier
+                    .size(width = 32.dp, height = 44.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+            )
+        },
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun ActivityMenuRow(activity: DayActivity, onClick: () -> Unit) {
+    val unitLabel = when (activity.kind) {
+        DayActivity.Kind.WATCHED -> "Ep ${activity.number}"
+        DayActivity.Kind.READ -> "Ch. ${activity.number}"
+    }
+    DropdownMenuItem(
+        text = {
+            Column(modifier = Modifier.width(220.dp)) {
+                Text(
+                    text = activity.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                )
+                Text(
+                    text = unitLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Primary,
+                )
+            }
+        },
+        leadingIcon = {
+            coil.compose.AsyncImage(
+                model = activity.coverUrl,
+                contentDescription = activity.title,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier
+                    .size(width = 32.dp, height = 44.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+            )
+        },
+        onClick = onClick,
+    )
 }
 
 private fun cellColor(count: Int, inMonth: Boolean, isFuture: Boolean): Color {

@@ -41,16 +41,55 @@ class HomeViewModel : ViewModel() {
     private fun observeActivity() {
         viewModelScope.launch {
             val zone = ZoneId.systemDefault()
+            // Fetch the whole current year so the user can browse any month
+            // via the heatmap's navigation arrows without a second round-trip.
             val sinceMs = LocalDate.now()
-                .withDayOfMonth(1)
+                .withDayOfYear(1)
                 .atStartOfDay(zone)
                 .toInstant()
                 .toEpochMilli()
             activityDao.getSince(sinceMs).collect { events ->
-                val counts = events.groupingBy { event ->
+                val byDay = events.groupBy { event ->
                     Instant.ofEpochMilli(event.timestampMs).atZone(zone).toLocalDate()
-                }.eachCount()
-                _uiState.value = _uiState.value.copy(activityByDay = counts)
+                }
+                val counts = byDay.mapValues { (_, list) -> list.size }
+                // Build the per-day list of "what you actually did" for the
+                // heatmap menu. Drop session events and rows missing media
+                // context (pre-v8 schema rows have NULLs).
+                val activities = byDay.mapValues { (_, list) ->
+                    list.mapNotNull { event ->
+                        val title = event.mediaTitle ?: return@mapNotNull null
+                        val mediaId = event.mediaId ?: return@mapNotNull null
+                        when (event.type) {
+                            "watch" -> ani.saikou.components.DayActivity(
+                                mediaId = mediaId,
+                                title = title,
+                                coverUrl = event.coverUrl,
+                                kind = ani.saikou.components.DayActivity.Kind.WATCHED,
+                                number = event.episodeNumber ?: 0,
+                                timestampMs = event.timestampMs,
+                            )
+                            "read" -> ani.saikou.components.DayActivity(
+                                mediaId = mediaId,
+                                title = title,
+                                coverUrl = event.coverUrl,
+                                kind = ani.saikou.components.DayActivity.Kind.READ,
+                                number = event.chapterNumber ?: 0,
+                                timestampMs = event.timestampMs,
+                            )
+                            else -> null
+                        }
+                    }
+                        // De-duplicate: a single chapter/episode can fire
+                        // multiple events as the user swaps pages or replays;
+                        // we only want one row per (media, kind, number).
+                        .distinctBy { Triple(it.mediaId, it.kind, it.number) }
+                        .sortedByDescending { it.timestampMs }
+                }
+                _uiState.value = _uiState.value.copy(
+                    activityByDay = counts,
+                    activitiesByDay = activities,
+                )
             }
         }
     }
@@ -206,6 +245,7 @@ data class HomeUiState(
     val localEpisodesWatched: Int = 0,
     val localChaptersRead: Int = 0,
     val activityByDay: Map<LocalDate, Int> = emptyMap(),
+    val activitiesByDay: Map<LocalDate, List<ani.saikou.components.DayActivity>> = emptyMap(),
     val isLoading: Boolean = true,
     val error: String? = null,
 )

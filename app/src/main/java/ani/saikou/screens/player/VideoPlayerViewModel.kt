@@ -202,8 +202,16 @@ class VideoPlayerViewModel(
         if (!firstSaveDone) {
             firstSaveDone = true
             viewModelScope.launch {
+                val state = _uiState.value
                 activityDao.insert(
-                    ActivityEventEntity(timestampMs = System.currentTimeMillis(), type = "watch")
+                    ActivityEventEntity(
+                        timestampMs = System.currentTimeMillis(),
+                        type = "watch",
+                        mediaId = mediaId,
+                        mediaTitle = state.title,
+                        coverUrl = state.coverUrl,
+                        episodeNumber = episodeNum,
+                    )
                 )
                 saveLocalProgress(positionMs, durationMs)
             }
