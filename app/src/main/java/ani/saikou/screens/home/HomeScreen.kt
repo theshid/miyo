@@ -218,7 +218,10 @@ fun HomeScreen(
                         tint = OnSurfaceVariant,
                     )
                 }
-                IconButton(onClick = onNavigateToFeedback) {
+                IconButton(
+                    onClick = onNavigateToFeedback,
+                    modifier = Modifier.tourTarget(tourState, TourTarget.FEEDBACK),
+                ) {
                     Icon(
                         Icons.Default.Feedback,
                         contentDescription = "Send feedback",

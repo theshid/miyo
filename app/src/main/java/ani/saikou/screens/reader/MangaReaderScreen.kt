@@ -71,6 +71,10 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
+import ani.saikou.components.TourOverlay
+import ani.saikou.components.TourTarget
+import ani.saikou.components.rememberTourState
+import ani.saikou.components.tourTarget
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -113,9 +117,23 @@ fun MangaReaderScreen(
     val readerState by viewModel.uiState.collectAsState()
 
     val settingsStorage = remember { ReaderSettingsStorage(context) }
+    val onboardingPrefs = remember { ani.saikou.di.AppModule.onboardingPrefs() }
+    val tourState = rememberTourState()
+    var showReaderTour by remember { mutableStateOf(false) }
     var showOverlay by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var settings by remember { mutableStateOf(settingsStorage.load()) }
+
+    // First-reader tour: once pages are loaded, force the controls overlay
+    // visible so the chapter-list icon has a measured position, then show the
+    // tour pointing at it.
+    LaunchedEffect(readerState.isLoading, readerState.error) {
+        if (readerState.isLoading || readerState.error != null) return@LaunchedEffect
+        if (onboardingPrefs.hasSeenReaderTour()) return@LaunchedEffect
+        showOverlay = true
+        kotlinx.coroutines.delay(400) // let the overlay animate in + bounds settle
+        showReaderTour = true
+    }
 
     LaunchedEffect(settings) {
         settingsStorage.save(settings)
@@ -364,7 +382,10 @@ fun MangaReaderScreen(
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { showChapterList = true }) {
+                        IconButton(
+                            onClick = { showChapterList = true },
+                            modifier = Modifier.tourTarget(tourState, TourTarget.READER_CHAPTERS),
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.MenuBook,
                                 "Chapters",
@@ -505,6 +526,21 @@ fun MangaReaderScreen(
             settings = settings,
             onSettingsChange = { settings = it },
             onDismiss = { showSettings = false },
+        )
+    }
+
+    // ── First-reader tour ────────────────────────────────────
+    if (showReaderTour) {
+        var tourStep by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+        TourOverlay(
+            steps = ani.saikou.components.DefaultReaderTourSteps,
+            state = tourState,
+            currentStep = tourStep,
+            onStepChanged = { tourStep = it },
+            onComplete = {
+                showReaderTour = false
+                onboardingPrefs.markReaderTourSeen()
+            },
         )
     }
 }

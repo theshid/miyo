@@ -48,6 +48,8 @@ enum class TourTarget {
     ACTIONS,
     AIRING,
     CONTINUE_WATCHING,
+    FEEDBACK,
+    READER_CHAPTERS,
 }
 
 data class TourStep(
@@ -81,6 +83,20 @@ val DefaultHomeTourSteps = listOf(
         target = TourTarget.CONTINUE_WATCHING,
         title = "Continue watching",
         description = "Pick up the show or chapter you last left off — synced from your watch and read history.",
+    ),
+    TourStep(
+        target = TourTarget.FEEDBACK,
+        title = "Send us feedback",
+        description = "Found a bug or have an idea? Tap here to send a quick note — it lands directly in our team chat.",
+    ),
+)
+
+/** Reader-specific tour, fired the first time a user opens a chapter. */
+val DefaultReaderTourSteps = listOf(
+    TourStep(
+        target = TourTarget.READER_CHAPTERS,
+        title = "Browse and download chapters",
+        description = "Tap here to see every chapter in the series. From the list you can jump around or download chapters for offline reading.",
     ),
 )
 
