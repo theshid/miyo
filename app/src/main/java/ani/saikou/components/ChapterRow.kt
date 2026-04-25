@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Schedule
@@ -62,6 +63,7 @@ fun ChapterRow(
     onClick: () -> Unit,
     onDownloadClick: () -> Unit,
     onCancelDownloadClick: () -> Unit,
+    onDeleteClick: () -> Unit = onCancelDownloadClick,
 ) {
     GlassCard(
         modifier = Modifier
@@ -108,6 +110,7 @@ fun ChapterRow(
                 state = downloadState,
                 onDownload = onDownloadClick,
                 onCancel = onCancelDownloadClick,
+                onDelete = onDeleteClick,
             )
         }
     }
@@ -118,6 +121,7 @@ fun ChapterDownloadButton(
     state: ChapterDownloadState?,
     onDownload: () -> Unit,
     onCancel: () -> Unit,
+    onDelete: () -> Unit = onCancel,
 ) {
     when (state?.status) {
         null -> {
@@ -162,12 +166,25 @@ fun ChapterDownloadButton(
             }
         }
         "COMPLETED" -> {
-            Icon(
-                Icons.Default.DownloadDone,
-                contentDescription = "Downloaded",
-                tint = Secondary,
-                modifier = Modifier.size(24.dp),
-            )
+            // Status icon (non-interactive) + separate delete button — keeps
+            // the "downloaded" indicator unmistakable and makes the destructive
+            // action discoverable as its own tap target.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.DownloadDone,
+                    contentDescription = "Downloaded",
+                    tint = Secondary,
+                    modifier = Modifier.size(20.dp),
+                )
+                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete download",
+                        tint = OnSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
         }
         "ERROR" -> {
             IconButton(onClick = onDownload, modifier = Modifier.size(36.dp)) {
