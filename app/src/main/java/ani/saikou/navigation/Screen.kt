@@ -35,12 +35,13 @@ sealed class Screen(
     }
 
     // ── Search & Lists ────────────────────────────────────────
-    data object Search : Screen("search?genre={genre}&type={type}") {
-        fun createRoute(genre: String? = null, type: String? = null): String {
+    data object Search : Screen("search?genre={genre}&type={type}&sort={sort}") {
+        fun createRoute(genre: String? = null, type: String? = null, sort: String? = null): String {
             val base = "search"
             val params = mutableListOf<String>()
             if (genre != null) params.add("genre=$genre")
             if (type != null) params.add("type=$type")
+            if (sort != null) params.add("sort=$sort")
             return if (params.isEmpty()) base else "$base?${params.joinToString("&")}"
         }
     }

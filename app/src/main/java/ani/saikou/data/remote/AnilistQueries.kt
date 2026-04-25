@@ -39,8 +39,18 @@ object AnilistQueries {
     fun airingSchedule(weekStart: Long, weekEnd: Long, page: Int = 1, perPage: Int = 100) =
         """{ Page(page:$page,perPage:$perPage) { airingSchedules(airingAt_greater:$weekStart,airingAt_lesser:$weekEnd,sort:TIME) { airingAt episode media { id isAdult status episodes nextAiringEpisode{episode airingAt} meanScore isFavourite coverImage{large} title{english romaji userPreferred} mediaListEntry{progress score(format:POINT_100)status} } } } }"""
 
-    fun search(query: String, type: String, page: Int = 1, perPage: Int = 20, genres: String? = null, sort: String? = null) =
-        """{ Page(page:$page,perPage:$perPage) { media(type:$type,search:"$query"${if (sort != null) ",sort:$sort" else ""}${if (genres != null) ",genre_in:[$genres]" else ""}) { id isAdult status chapters episodes nextAiringEpisode{episode} meanScore isFavourite bannerImage coverImage{large} title{english romaji userPreferred} mediaListEntry{progress score(format:POINT_100)status} } } }"""
+    fun search(query: String, type: String, page: Int = 1, perPage: Int = 20, genres: String? = null, sort: String? = null): String {
+        // Omit `search:""` when no query — AniList treats empty string as
+        // "match nothing", but if we drop the field the genre/sort filters
+        // become a pure browse (e.g. "all Action anime by popularity").
+        val searchClause = if (query.isNotBlank()) ",search:\"$query\"" else ""
+        val sortClause = if (sort != null) ",sort:$sort" else ""
+        val genresClause = if (genres != null) ",genre_in:[$genres]" else ""
+        // Default sort when browsing without a query so users see something
+        // sensible (popularity) instead of AniList's id-asc default.
+        val effectiveSort = if (query.isBlank() && sort == null) ",sort:POPULARITY_DESC" else sortClause
+        return """{ Page(page:$page,perPage:$perPage) { media(type:$type$searchClause$effectiveSort$genresClause) { id isAdult status chapters episodes nextAiringEpisode{episode} meanScore isFavourite bannerImage coverImage{large} title{english romaji userPreferred} mediaListEntry{progress score(format:POINT_100)status} } } }"""
+    }
 
     fun mediaLists(userId: Int, type: String) =
         """{ MediaListCollection(userId:$userId,type:$type) { lists { name entries { status progress score(format:POINT_100) media { id isAdult status chapters episodes nextAiringEpisode{episode} bannerImage meanScore isFavourite coverImage{large} title{english romaji userPreferred} } } } user { mediaListOptions { rowOrder animeList{sectionOrder} mangaList{sectionOrder} } } } }"""

@@ -60,10 +60,13 @@ class SearchViewModel : ViewModel() {
 
     private fun debounceSearch() {
         searchJob?.cancel()
-        val query = _uiState.value.query.trim()
-        // Don't fire API calls for very short queries — noise + wasted bandwidth
-        if (query.length < MIN_QUERY_LENGTH) {
-            _uiState.value = _uiState.value.copy(results = emptyList(), totalFound = 0, isLoading = false)
+        val state = _uiState.value
+        // Don't fire API calls when there's nothing to search by — empty query
+        // AND no filters means we'd just hit the AniList rate-limit for empty
+        // results. With at least one filter (genre or sort), browse without a
+        // typed query is the whole point.
+        if (!hasAnyFilter(state)) {
+            _uiState.value = state.copy(results = emptyList(), totalFound = 0, isLoading = false)
             return
         }
         searchJob = viewModelScope.launch {
@@ -75,7 +78,7 @@ class SearchViewModel : ViewModel() {
     fun search() {
         val state = _uiState.value
         val query = state.query.trim()
-        if (query.length < MIN_QUERY_LENGTH) {
+        if (!hasAnyFilter(state)) {
             _uiState.value = state.copy(results = emptyList(), totalFound = 0, isLoading = false)
             return
         }
@@ -119,7 +122,7 @@ class SearchViewModel : ViewModel() {
 
     fun loadMore() {
         val state = _uiState.value
-        if (state.isLoading || state.query.isBlank()) return
+        if (state.isLoading || !hasAnyFilter(state)) return
         viewModelScope.launch {
             currentPage++
             val more = repository.search(
@@ -134,6 +137,13 @@ class SearchViewModel : ViewModel() {
                 totalFound = _uiState.value.results.size + more.size,
             )
         }
+    }
+
+    /** True iff there's something to search by — typed query, picked genre, or sort. */
+    private fun hasAnyFilter(state: SearchUiState): Boolean {
+        return state.query.trim().length >= MIN_QUERY_LENGTH ||
+            state.selectedGenres.isNotEmpty() ||
+            state.sort != null
     }
 
     companion object {

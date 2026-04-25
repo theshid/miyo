@@ -70,14 +70,16 @@ fun SearchScreen(
     onNavigateToMedia: (Int) -> Unit,
     initialGenre: String? = null,
     initialType: String? = null,
+    initialSort: String? = null,
     viewModel: SearchViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
 
     // Apply initial filters once
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        if (initialGenre != null) viewModel.toggleGenre(initialGenre)
         if (initialType != null) viewModel.updateType(initialType)
+        if (initialSort != null) viewModel.updateSort(initialSort)
+        if (initialGenre != null) viewModel.toggleGenre(initialGenre)
     }
 
     Column(

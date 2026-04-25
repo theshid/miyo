@@ -98,14 +98,14 @@ fun SaikouNavHost(
         composable(Screen.Anime.route) {
             AnimeScreen(
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
-                onNavigateToSearch = { genre -> navController.navigate(Screen.Search.createRoute(genre = genre, type = "ANIME")) },
+                onNavigateToSearch = { genre, sort -> navController.navigate(Screen.Search.createRoute(genre = genre, type = "ANIME", sort = sort)) },
             )
         }
 
         composable(Screen.Manga.route) {
             MangaScreen(
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
-                onNavigateToSearch = { genre -> navController.navigate(Screen.Search.createRoute(genre = genre, type = "MANGA")) },
+                onNavigateToSearch = { genre, sort -> navController.navigate(Screen.Search.createRoute(genre = genre, type = "MANGA", sort = sort)) },
             )
         }
 
@@ -145,15 +145,18 @@ fun SaikouNavHost(
             arguments = listOf(
                 navArgument("genre") { type = NavType.StringType; defaultValue = "" },
                 navArgument("type") { type = NavType.StringType; defaultValue = "" },
+                navArgument("sort") { type = NavType.StringType; defaultValue = "" },
             ),
         ) { backStackEntry ->
             val initialGenre = backStackEntry.arguments?.getString("genre")?.takeIf { it.isNotEmpty() }
             val initialType = backStackEntry.arguments?.getString("type")?.takeIf { it.isNotEmpty() }
+            val initialSort = backStackEntry.arguments?.getString("sort")?.takeIf { it.isNotEmpty() }
             SearchScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
                 initialGenre = initialGenre,
                 initialType = initialType,
+                initialSort = initialSort,
             )
         }
 

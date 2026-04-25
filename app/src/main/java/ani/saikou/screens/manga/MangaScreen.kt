@@ -34,7 +34,7 @@ import ani.saikou.ui.theme.Primary
 @Composable
 fun MangaScreen(
     onNavigateToMedia: (Int) -> Unit,
-    onNavigateToSearch: (genre: String?) -> Unit,
+    onNavigateToSearch: (genre: String?, sort: String?) -> Unit,
     viewModel: MangaViewModel = viewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -54,7 +54,7 @@ fun MangaScreen(
         // ── Search bar ───────────────────────────────────────
         item {
             SaikouSearchBar(
-                onClick = { onNavigateToSearch(null) },
+                onClick = { onNavigateToSearch(null, null) },
                 placeholder = "Search manga...",
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
@@ -81,10 +81,10 @@ fun MangaScreen(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                GenreChip(text = "ALL MANGA", selected = true, onClick = { onNavigateToSearch(null) })
-                GenreChip(text = "ACTION", onClick = { onNavigateToSearch("Action") })
-                GenreChip(text = "ROMANCE", onClick = { onNavigateToSearch("Romance") })
-                GenreChip(text = "FANTASY", onClick = { onNavigateToSearch("Fantasy") })
+                GenreChip(text = "ALL MANGA", selected = true, onClick = { onNavigateToSearch(null, "POPULARITY_DESC") })
+                GenreChip(text = "ACTION", onClick = { onNavigateToSearch("Action", null) })
+                GenreChip(text = "ROMANCE", onClick = { onNavigateToSearch("Romance", null) })
+                GenreChip(text = "FANTASY", onClick = { onNavigateToSearch("Fantasy", null) })
             }
         }
 
