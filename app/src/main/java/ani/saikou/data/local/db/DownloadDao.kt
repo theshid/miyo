@@ -76,6 +76,25 @@ interface DownloadDao {
     @Query("DELETE FROM downloads WHERE mangaId = :mangaId")
     suspend fun deleteAllForManga(mangaId: Int)
 
+    /**
+     * Completed downloads where the user has read ≥80% of the chapter — the
+     * "safe to evict" set for the manual cleanup action. The 80% threshold
+     * matches what the home stat counts as "read" and lines up with the
+     * AniList progress sync trigger.
+     */
+    @Query(
+        """
+        SELECT d.* FROM downloads d
+        INNER JOIN reading_history h
+          ON d.mangaId = h.mangaId AND d.chapterNumber = h.chapterNumber
+        WHERE d.status = 'COMPLETED'
+          AND d.chapterNumber > 0
+          AND h.totalPages > 0
+          AND ((h.lastPage + 1) * 1.0 / h.totalPages) >= 0.8
+        """
+    )
+    suspend fun getReadCompletedDownloads(): List<DownloadEntity>
+
     // ── Downloaded Manga ──────────────────────────────────────
 
     @Query("SELECT * FROM downloaded_manga ORDER BY title ASC")

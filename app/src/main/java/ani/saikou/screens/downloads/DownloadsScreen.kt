@@ -65,6 +65,7 @@ fun DownloadsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val selectedIds = remember { mutableStateListOf<String>() }
+    var showCleanupDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
         LazyColumn(
@@ -129,6 +130,48 @@ fun DownloadsScreen(
                         trackColor = SurfaceContainerHigh,
                         strokeCap = StrokeCap.Round,
                     )
+                }
+            }
+
+            // ── Cleanup banner: chapters you've already read ─
+            if (state.readChapterCount > 0) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(SurfaceContainerHigh)
+                            .clickable { showCleanupDialog = true }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Primary,
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "${state.readChapterCount} chapters read",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = OnSurface,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                "Free up ${formatSize(state.readChapterBytes)} by clearing chapters you've finished.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OnSurfaceVariant,
+                            )
+                        }
+                        Text(
+                            "CLEAR",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
 
@@ -242,6 +285,35 @@ fun DownloadsScreen(
                     },
                 )
             }
+        }
+
+        if (showCleanupDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showCleanupDialog = false },
+                title = { Text("Clear read chapters?", color = OnSurface) },
+                text = {
+                    Text(
+                        "This will delete ${state.readChapterCount} chapters " +
+                            "(${formatSize(state.readChapterBytes)}) you've already read. " +
+                            "Unread and in-progress chapters stay put.",
+                        color = OnSurfaceVariant,
+                    )
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = {
+                        showCleanupDialog = false
+                        viewModel.clearReadChapters()
+                    }) {
+                        Text("Clear", color = Primary, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { showCleanupDialog = false }) {
+                        Text("Cancel", color = OnSurfaceVariant)
+                    }
+                },
+                containerColor = SurfaceContainerHigh,
+            )
         }
     }
 }

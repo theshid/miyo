@@ -31,13 +31,32 @@ class DownloadsViewModel : ViewModel() {
                     )
                 }.filter { it.chapters.isNotEmpty() }
 
+                // Re-query the "read" set every time downloads change. Cheap —
+                // it's a small index-backed join.
+                val readChapters = runCatching { dao.getReadCompletedDownloads() }.getOrDefault(emptyList())
+
                 DownloadsUiState(
                     mangaList = grouped,
                     totalStorageUsed = manager.getStorageUsed(),
                     freeSpace = manager.getAvailableSpace(),
+                    readChapterCount = readChapters.size,
+                    readChapterBytes = readChapters.sumOf { it.fileSizeBytes },
                     isLoading = false,
                 )
             }.collect { _uiState.value = it }
+        }
+    }
+
+    /**
+     * Delete every completed-and-read chapter (≥80% read) — what the
+     * cleanup banner offers. Files + DB rows go together via [MangaDownloadManager.cancelDownload].
+     */
+    fun clearReadChapters() {
+        viewModelScope.launch {
+            val toDelete = runCatching { dao.getReadCompletedDownloads() }.getOrDefault(emptyList())
+            for (download in toDelete) {
+                manager.cancelDownload(download.id)
+            }
         }
     }
 
@@ -74,6 +93,8 @@ data class DownloadsUiState(
     val mangaList: List<MangaWithDownloads> = emptyList(),
     val totalStorageUsed: Long = 0,
     val freeSpace: Long = 0,
+    val readChapterCount: Int = 0,
+    val readChapterBytes: Long = 0,
     val isLoading: Boolean = true,
 )
 
