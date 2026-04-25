@@ -61,6 +61,17 @@ fun AnimeScreen(
             )
         }
 
+        // ── Load failure banner ──────────────────────────────
+        state.error?.let { msg ->
+            item {
+                ani.saikou.components.LoadErrorBanner(
+                    message = msg,
+                    onRetry = { viewModel.retry() },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+        }
+
         // ── Trending Carousel (full-bleed hero) ──────────────
         item {
             TrendingCarousel(

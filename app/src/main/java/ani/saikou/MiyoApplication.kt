@@ -17,7 +17,13 @@ import ani.saikou.notifications.EpisodeNotificationChannel
 import io.github.theshid.prettylog.Log
 import io.github.theshid.prettylog.LogBreadcrumbs
 import io.github.theshid.prettylog.LogLevel
+import io.github.theshid.prettylog.LoggingService
 import io.github.theshid.prettylog.PrettyLog
+import io.github.theshid.prettylog.PrettyLoggingService
+import io.github.theshid.prettylog.DefaultLoggingService
+import io.sentry.Breadcrumb
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,10 +40,18 @@ class MiyoApplication : Application() {
         super.onCreate()
         // Initialize the logging library BEFORE anything else — AppModule,
         // workers, and any other startup code may log during their own init.
+        // The custom service forwards every log call into Sentry as a breadcrumb
+        // so a crash report carries the last ~100 log lines as context.
+        val baseService: LoggingService = if (BuildConfig.DEBUG) {
+            PrettyLoggingService(defaultTag = "Miyo", minLevel = LogLevel.Debug)
+        } else {
+            DefaultLoggingService(defaultTag = "Miyo")
+        }
         PrettyLog.init(
             isDebug = BuildConfig.DEBUG,
             defaultTag = "Miyo",
             minLevel = LogLevel.Debug,
+            custom = SentryBreadcrumbLoggingService(baseService),
         )
         AppModule.init(this)
         installCrashBreadcrumbs()
@@ -96,12 +110,14 @@ class MiyoApplication : Application() {
     private fun installCrashBreadcrumbs() {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            // Dump the last 50 log entries to a file before crashing
+            // Dump the last 50 log entries to a file before crashing.
+            // Sentry's own UncaughtExceptionHandlerIntegration captures the crash
+            // automatically — we just want the local breadcrumb file as a backup.
             try {
                 Log.wtf(tag = "CRASH", message = "Uncaught exception on ${thread.name}: ${throwable.message}")
                 LogBreadcrumbs.dumpToFile(this)
             } catch (_: Exception) { /* best-effort */ }
-            // Forward to the default handler (crash dialog / process kill)
+            // Forward to the default handler (Sentry's wrapper, then crash dialog)
             defaultHandler?.uncaughtException(thread, throwable)
         }
     }
@@ -132,5 +148,39 @@ class MiyoApplication : Application() {
             ExistingWorkPolicy.KEEP,
             immediateRequest,
         )
+    }
+}
+
+/**
+ * Wraps a [LoggingService] and mirrors every Info+ log call into Sentry as a
+ * [Breadcrumb]. Sentry attaches the most recent ~100 breadcrumbs to each event
+ * automatically, so a crash report shows what the app was doing right before
+ * it died (network calls, navigation, error states) without us having to
+ * instrument anything further. Debug/Verbose are skipped to keep the trail
+ * focused on user-facing events.
+ */
+private class SentryBreadcrumbLoggingService(
+    private val delegate: LoggingService,
+) : LoggingService {
+    override fun log(message: String, tag: String?, level: LogLevel, error: Throwable?) {
+        delegate.log(message, tag, level, error)
+
+        if (level == LogLevel.Debug) return
+
+        try {
+            val crumb = Breadcrumb().apply {
+                this.level = when (level) {
+                    LogLevel.Debug -> SentryLevel.DEBUG
+                    LogLevel.Info -> SentryLevel.INFO
+                    LogLevel.Warning -> SentryLevel.WARNING
+                    LogLevel.Error -> SentryLevel.ERROR
+                    LogLevel.Critical -> SentryLevel.FATAL
+                }
+                this.category = tag ?: "log"
+                this.message = message
+                if (error != null) setData("throwable", error.toString())
+            }
+            Sentry.addBreadcrumb(crumb)
+        } catch (_: Exception) { /* best-effort */ }
     }
 }

@@ -5,6 +5,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.25"
     id("com.google.devtools.ksp") version "1.9.25-1.0.20"
+
+    id("io.sentry.android.gradle") version "6.5.0"
 }
 
 android {
@@ -140,7 +142,20 @@ dependencies {
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.browser:browser:1.8.0")
 
+    // Sentry — crash + non-fatal error reporting (DSN configured in AndroidManifest.xml)
+    implementation("io.sentry:sentry-android:7.18.1")
+
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+
+sentry {
+    org.set("shidji-inc")
+    projectName.set("android")
+
+    // this will upload your source code to Sentry to show it as part of the stack traces
+    // disable if you don't want to expose your sources
+    includeSourceContext.set(true)
 }

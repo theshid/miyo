@@ -16,6 +16,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Saikou">
 
+        <!-- Sentry: auto-init reads DSN + config from these meta-data tags. -->
+        <meta-data android:name="io.sentry.dsn" android:value="https://771a921dd61df543557574d22677df43@o4511279790686208.ingest.de.sentry.io/4511279799664720" />
+        <meta-data android:name="io.sentry.session-replay.on-error-sample-rate" android:value="0" />
+        <meta-data android:name="io.sentry.traces.sample-rate" android:value="0" />
+        <meta-data android:name="io.sentry.send-default-pii" android:value="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

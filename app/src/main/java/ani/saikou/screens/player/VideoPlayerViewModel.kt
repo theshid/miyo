@@ -16,6 +16,8 @@ import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.StreamLink
 import io.github.theshid.prettylog.Log
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -100,6 +102,7 @@ class VideoPlayerViewModel(
             animeSources = gogoParser.search(title)
             if (animeSources.isEmpty()) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = "Anime not found on source")
+                reportPlayerError("Anime not found on source")
                 return@launch
             }
 
@@ -130,6 +133,7 @@ class VideoPlayerViewModel(
         val episode = episodes.find { it.number == episodeNum.toString() }
         if (episode?.link == null) {
             _uiState.value = _uiState.value.copy(isLoading = false, error = "Episode $episodeNum not found")
+            reportPlayerError("Episode not found on source")
             return
         }
 
@@ -259,6 +263,21 @@ class VideoPlayerViewModel(
         }
         saveJob?.cancel()
         super.onCleared()
+    }
+
+    /** Report a non-fatal player error to Sentry with the context needed to debug it. */
+    private fun reportPlayerError(message: String) {
+        try {
+            Sentry.withScope { scope ->
+                scope.level = SentryLevel.WARNING
+                scope.setTag("area", "VideoPlayer")
+                scope.setTag("mediaId", mediaId.toString())
+                scope.setTag("episode", episodeNum.toString())
+                scope.setExtra("title", _uiState.value.title)
+                scope.setExtra("resolvedSourceSlug", resolvedSourceSlug ?: "")
+                Sentry.captureMessage(message)
+            }
+        } catch (_: Exception) { /* best-effort */ }
     }
 }
 

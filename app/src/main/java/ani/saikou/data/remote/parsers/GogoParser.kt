@@ -6,6 +6,8 @@ import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.Episode
 import ani.saikou.domain.model.StreamLink
 import ani.saikou.domain.model.SubtitleTrack
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
@@ -33,6 +35,7 @@ class GogoParser(private val dub: Boolean = false) {
                 )
             }
         } catch (e: Exception) {
+            reportParserIssue("search", e, mapOf("query" to query))
             emptyList()
         }
     }
@@ -82,7 +85,7 @@ class GogoParser(private val dub: Boolean = false) {
                 }
             }
         } catch (e: Exception) {
-            // silent fail
+            reportParserIssue("getEpisodes", e, mapOf("slug" to slug))
         }
         episodes
     }
@@ -136,8 +139,21 @@ class GogoParser(private val dub: Boolean = false) {
             Log.d("GogoParser", "── Total stream links: ${links.size} ──")
         } catch (e: Exception) {
             Log.e("GogoParser", "getStreamLinks failed", e)
+            reportParserIssue("getStreamLinks", e, mapOf("episodeLink" to episodeLink))
         }
         links
+    }
+
+    private fun reportParserIssue(method: String, throwable: Throwable, extras: Map<String, String> = emptyMap()) {
+        try {
+            Sentry.withScope { scope ->
+                scope.level = SentryLevel.ERROR
+                scope.setTag("area", "GogoParser")
+                scope.setTag("method", method)
+                extras.forEach { (k, v) -> scope.setExtra(k, v) }
+                Sentry.captureException(throwable)
+            }
+        } catch (_: Exception) { /* best-effort */ }
     }
 
     private fun extractDirectLink(name: String, url: String, subtitles: List<SubtitleTrack> = emptyList()): StreamLink? {

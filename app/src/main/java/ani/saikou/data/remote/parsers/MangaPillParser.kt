@@ -3,6 +3,8 @@ package ani.saikou.data.remote.parsers
 import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSource
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
@@ -41,7 +43,8 @@ class MangaPillParser {
                     coverUrl = cover.ifEmpty { null },
                 )
             }.distinctBy { it.id }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            reportParserIssue("search", e, mapOf("query" to query))
             emptyList()
         }
     }
@@ -65,7 +68,8 @@ class MangaPillParser {
                     name = "Ch. ${numMatch.groupValues[1]}",
                 )
             }.sortedBy { it.number }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            reportParserIssue("getChapters", e, mapOf("mangaPath" to mangaPath))
             emptyList()
         }
     }
@@ -86,8 +90,21 @@ class MangaPillParser {
                 val imageUrl = img.attr("data-src").ifEmpty { img.attr("src") }
                 MangaPage(index = index, imageUrl = imageUrl, headers = referer)
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            reportParserIssue("getPages", e, mapOf("chapterPath" to chapterPath))
             emptyList()
         }
+    }
+
+    private fun reportParserIssue(method: String, throwable: Throwable, extras: Map<String, String> = emptyMap()) {
+        try {
+            Sentry.withScope { scope ->
+                scope.level = SentryLevel.ERROR
+                scope.setTag("area", "MangaPillParser")
+                scope.setTag("method", method)
+                extras.forEach { (k, v) -> scope.setExtra(k, v) }
+                Sentry.captureException(throwable)
+            }
+        } catch (_: Exception) { /* best-effort */ }
     }
 }

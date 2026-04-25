@@ -60,6 +60,17 @@ fun MangaScreen(
             )
         }
 
+        // ── Load failure banner ──────────────────────────────
+        state.error?.let { msg ->
+            item {
+                ani.saikou.components.LoadErrorBanner(
+                    message = msg,
+                    onRetry = { viewModel.loadMangaData() },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+        }
+
         // ── Trending Manga Carousel ──────────────────────────
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

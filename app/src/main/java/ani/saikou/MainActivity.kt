@@ -12,7 +12,6 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-
         setContent {
             SaikouTheme {
                 SaikouApp()

@@ -226,6 +226,15 @@ fun HomeScreen(
             }
         }
 
+        // ── Load failure banner ──────────────────────────────
+        state.error?.let { msg ->
+            ani.saikou.components.LoadErrorBanner(
+                message = msg,
+                onRetry = { viewModel.retryLoadHomeData() },
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+
         // ── Stats Cards ──────────────────────────────────────
         Row(
             modifier = Modifier

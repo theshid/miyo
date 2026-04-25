@@ -5,6 +5,8 @@ import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSource
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.sentry.Sentry
+import io.sentry.SentryLevel
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
@@ -71,6 +73,7 @@ class MangaDexParser {
                 }
             }
         } catch (e: Exception) {
+            reportParserIssue("search", e, mapOf("query" to query))
             emptyList()
         }
     }
@@ -127,6 +130,7 @@ class MangaDexParser {
                 }
             }
         } catch (e: Exception) {
+            reportParserIssue("getChapters", e, mapOf("mangaId" to mangaId))
             emptyList()
         }
     }
@@ -154,7 +158,20 @@ class MangaDexParser {
                 )
             } ?: emptyList()
         } catch (e: Exception) {
+            reportParserIssue("getPages", e, mapOf("chapterId" to chapterId))
             emptyList()
         }
+    }
+
+    private fun reportParserIssue(method: String, throwable: Throwable, extras: Map<String, String> = emptyMap()) {
+        try {
+            Sentry.withScope { scope ->
+                scope.level = SentryLevel.ERROR
+                scope.setTag("area", "MangaDexParser")
+                scope.setTag("method", method)
+                extras.forEach { (k, v) -> scope.setExtra(k, v) }
+                Sentry.captureException(throwable)
+            }
+        } catch (_: Exception) { /* best-effort */ }
     }
 }

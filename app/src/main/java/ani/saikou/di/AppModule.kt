@@ -46,6 +46,9 @@ object AppModule {
     fun repository(): AnilistRepository =
         repository ?: throw IllegalStateException("AppModule not initialized. Call init() in Application.onCreate()")
 
+    fun anilistApi(): AnilistApi =
+        api ?: throw IllegalStateException("AppModule not initialized.")
+
     fun tokenStorage(): TokenStorage =
         tokenStorage ?: throw IllegalStateException("AppModule not initialized.")
 

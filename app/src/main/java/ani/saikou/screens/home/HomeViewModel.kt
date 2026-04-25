@@ -6,6 +6,7 @@ import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
 import ani.saikou.data.local.db.ReadingHistoryEntity
 import ani.saikou.data.local.db.WatchHistoryEntity
+import ani.saikou.data.remote.AnilistFailure
 import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.User
@@ -23,6 +24,7 @@ class HomeViewModel : ViewModel() {
     private val readingHistoryDao = AppModule.readingHistoryDao()
     private val watchHistoryDao = AppModule.watchHistoryDao()
     private val activityDao = AppModule.activityEventDao()
+    private val api = AppModule.anilistApi()
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
@@ -85,7 +87,7 @@ class HomeViewModel : ViewModel() {
 
     fun loadHomeData() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             val userDeferred = async { repository.getUserData() }
             val watchingDeferred = async { repository.getUserAnimeList("CURRENT") + repository.getUserAnimeList("REPEATING") }
@@ -93,6 +95,9 @@ class HomeViewModel : ViewModel() {
             val recommendationsDeferred = async { repository.getRecommendations() }
 
             val watching = watchingDeferred.await()
+            val reading = readingDeferred.await()
+            val recommendations = recommendationsDeferred.await()
+            val user = userDeferred.await()
 
             // Derive airing schedule: shows on user's CURRENT list that have a
             // future airing time, sorted soonest-first.
@@ -101,15 +106,32 @@ class HomeViewModel : ViewModel() {
                 .filter { it.nextAiringEpisodeTime != null && it.nextAiringEpisodeTime > now }
                 .sortedBy { it.nextAiringEpisodeTime }
 
+            // Surface a load error only if every AniList call effectively
+            // returned nothing AND the api recorded a network failure. A user
+            // with empty lists but no failure is a legitimate empty state.
+            val networkFailure = api.lastFailure.value
+            val nothingLoaded = user == null && watching.isEmpty() && reading.isEmpty() && recommendations.isEmpty()
+
             _uiState.value = _uiState.value.copy(
-                user = userDeferred.await(),
+                user = user,
                 continueWatching = watching,
-                continueReading = readingDeferred.await(),
-                recommendations = recommendationsDeferred.await(),
+                continueReading = reading,
+                recommendations = recommendations,
                 airingSchedule = airing,
                 isLoading = false,
+                error = if (networkFailure != null && nothingLoaded) friendlyMessage(networkFailure) else null,
             )
         }
+    }
+
+    fun retryLoadHomeData() {
+        loadHomeData()
+    }
+
+    private fun friendlyMessage(failure: AnilistFailure): String = when (failure) {
+        is AnilistFailure.Network -> "Couldn't reach AniList. Check your connection."
+        is AnilistFailure.Server -> "AniList is having issues (HTTP ${failure.httpStatus})."
+        is AnilistFailure.Other -> "Something went wrong loading your home feed."
     }
 
     /**
@@ -185,4 +207,5 @@ data class HomeUiState(
     val localChaptersRead: Int = 0,
     val activityByDay: Map<LocalDate, Int> = emptyMap(),
     val isLoading: Boolean = true,
+    val error: String? = null,
 )

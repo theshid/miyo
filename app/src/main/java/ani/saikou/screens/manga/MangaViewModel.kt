@@ -2,6 +2,7 @@ package ani.saikou.screens.manga
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ani.saikou.data.remote.AnilistFailure
 import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Media
 import kotlinx.coroutines.async
@@ -12,6 +13,7 @@ import kotlinx.coroutines.launch
 class MangaViewModel : ViewModel() {
 
     private val repository = AppModule.repository()
+    private val api = AppModule.anilistApi()
 
     private val _uiState = MutableStateFlow(MangaUiState())
     val uiState: StateFlow<MangaUiState> = _uiState
@@ -25,19 +27,37 @@ class MangaViewModel : ViewModel() {
 
     fun loadMangaData() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             val trendingDeferred = async { repository.getTrendingManga() }
             val updatedDeferred = async { repository.getRecentlyUpdatedManga() }
             val popularDeferred = async { repository.getPopularManga() }
 
+            val trending = trendingDeferred.await()
+            val updated = updatedDeferred.await()
+            val popular = popularDeferred.await()
+
+            val networkFailure = api.lastFailure.value
+            val allEmpty = trending.isEmpty() && updated.isEmpty() && popular.isEmpty()
+
             _uiState.value = MangaUiState(
-                trending = trendingDeferred.await(),
-                recentlyUpdated = updatedDeferred.await(),
-                popular = popularDeferred.await(),
+                trending = trending,
+                recentlyUpdated = updated,
+                popular = popular,
                 isLoading = false,
+                error = if (networkFailure != null && allEmpty) friendlyMessage(networkFailure) else null,
             )
         }
+    }
+
+    fun retry() {
+        loadMangaData()
+    }
+
+    private fun friendlyMessage(failure: AnilistFailure): String = when (failure) {
+        is AnilistFailure.Network -> "Couldn't reach AniList. Check your connection."
+        is AnilistFailure.Server -> "AniList is having issues (HTTP ${failure.httpStatus})."
+        is AnilistFailure.Other -> "Something went wrong loading this page."
     }
 
     fun loadMorePopular() {
@@ -59,4 +79,5 @@ data class MangaUiState(
     val recentlyUpdated: List<Media> = emptyList(),
     val popular: List<Media> = emptyList(),
     val isLoading: Boolean = true,
+    val error: String? = null,
 )
