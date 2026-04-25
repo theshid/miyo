@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Fullscreen
@@ -115,6 +116,10 @@ fun VideoPlayerScreen(
     // ── Intro state ──────────────────────────────────────────
     val shouldPlayIntro = !introShownThisSession
     var introActive by remember { mutableStateOf(shouldPlayIntro) }
+
+    // Reset per episode — once a user dismisses the Up Next overlay we don't bring it back
+    // until they navigate to a different episode.
+    var upNextDismissed by remember(mediaId, episodeNum) { mutableStateOf(false) }
     val introAlpha = remember { Animatable(if (shouldPlayIntro) 1f else 0f) }
 
     // Full immersive mode — hides status bar + navigation bar completely
@@ -843,7 +848,7 @@ fun VideoPlayerScreen(
         val isLastEpisode = playerState.totalEpisodes > 0 && episodeNum >= playerState.totalEpisodes
         val nearEnd = duration > 0 && (currentPosition.toFloat() / duration) >= 0.85f
         val showUpNext = isLastEpisode && nearEnd && isPlaying &&
-            playerState.recommendations.isNotEmpty() && !introActive
+            playerState.recommendations.isNotEmpty() && !introActive && !upNextDismissed
 
         AnimatedVisibility(
             visible = showUpNext,
@@ -858,9 +863,7 @@ fun VideoPlayerScreen(
                     exoPlayer.pause()
                     onNavigateToMedia?.invoke(id)
                 },
-                onDismiss = {
-                    // No-op — user can just keep watching; overlay doesn't block
-                },
+                onDismiss = { upNextDismissed = true },
             )
         }
     }
@@ -906,6 +909,22 @@ private fun UpNextOverlay(
                 )
             ),
     ) {
+        // Close button — sits in the bottom-area gradient (top of screen has playback
+        // controls, so a corner X up there would conflict with them).
+        IconButton(
+            onClick = onDismiss,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 56.dp, end = 16.dp)
+                .background(Color.Black.copy(alpha = 0.6f), CircleShape),
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Dismiss recommendations",
+                tint = Color.White,
+            )
+        }
+
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
