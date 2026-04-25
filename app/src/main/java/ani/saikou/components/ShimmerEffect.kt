@@ -64,38 +64,66 @@ fun ShimmerBox(
     )
 }
 
-/** Shimmer placeholder for the Home screen */
+/** Shimmer placeholder for the Home screen — mirrors the real layout: header,
+ *  stats, activity heatmap, action grid, then a couple of poster rows. */
 @Composable
 fun HomeShimmer() {
     Column(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
+        modifier = Modifier.padding(vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        // Avatar + greeting
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ShimmerBox(Modifier.size(54.dp).clip(CircleShape))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ShimmerBox(Modifier.width(120.dp).height(16.dp))
-                ShimmerBox(Modifier.width(80.dp).height(12.dp))
+        // Header: avatar + greeting + 3 action icons on the right
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                ShimmerBox(Modifier.size(48.dp).clip(CircleShape))
+                ShimmerBox(Modifier.width(140.dp).height(22.dp))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(3) { ShimmerBox(Modifier.size(28.dp).clip(CircleShape)) }
             }
         }
-        // Stat cards
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+
+        // Stats cards
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             ShimmerBox(Modifier.weight(1f).height(80.dp))
             ShimmerBox(Modifier.weight(1f).height(80.dp))
         }
-        // Action cards
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ShimmerBox(Modifier.weight(1f).height(56.dp))
-            ShimmerBox(Modifier.weight(1f).height(56.dp))
+
+        // Activity heatmap — month nav + 6-row grid is roughly 220dp tall
+        ShimmerBox(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(220.dp),
+        )
+
+        // Quick action grid: 3 paired rows + 1 full-width
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            repeat(3) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    ShimmerBox(Modifier.weight(1f).height(64.dp))
+                    ShimmerBox(Modifier.weight(1f).height(64.dp))
+                }
+            }
+            ShimmerBox(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(64.dp))
         }
-        // Section header
-        ShimmerBox(Modifier.width(160.dp).height(20.dp))
-        // Poster row
-        PosterRowShimmer()
-        // Another section
-        ShimmerBox(Modifier.width(140.dp).height(20.dp))
-        PosterRowShimmer()
+
+        // Airing Soon
+        SectionShimmer(headerWidth = 120.dp)
+        // Continue Watching (with SEE ALL hint)
+        SectionShimmer(headerWidth = 180.dp, hasSeeAll = true)
+        // Continue Reading
+        SectionShimmer(headerWidth = 170.dp, hasSeeAll = true)
     }
 }
 
@@ -143,5 +171,21 @@ private fun PosterRowShimmer() {
                 ShimmerBox(Modifier.width(100.dp).height(12.dp))
             }
         }
+    }
+}
+
+/** Section header (with optional "SEE ALL" hint) + a poster row underneath. */
+@Composable
+private fun SectionShimmer(headerWidth: androidx.compose.ui.unit.Dp, hasSeeAll: Boolean = false) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            ShimmerBox(Modifier.width(headerWidth).height(20.dp))
+            if (hasSeeAll) ShimmerBox(Modifier.width(56.dp).height(14.dp))
+        }
+        PosterRowShimmer()
     }
 }
