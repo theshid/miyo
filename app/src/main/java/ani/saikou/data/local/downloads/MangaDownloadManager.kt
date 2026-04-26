@@ -6,6 +6,7 @@ import ani.saikou.data.local.db.DownloadEntity
 import ani.saikou.data.local.db.DownloadedMangaEntity
 import ani.saikou.data.remote.parsers.MangaDexParser
 import ani.saikou.domain.model.MangaPage
+import io.github.theshid.prettylog.Log as PLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -80,8 +81,10 @@ class MangaDownloadManager(
         chapterDir.mkdirs()
 
         dao.updateStatus(downloadId, "DOWNLOADING")
-
-        var downloadedCount = download.downloadedPages
+        // Reflects how many of `pages.size` are actually on disk. Starts at 0
+        // so resumed runs don't double-count: the loop below increments for
+        // both skipped (already-on-disk) and newly-fetched pages.
+        var downloadedCount = 0
         var success = true
 
         for (page in pages) {
@@ -107,6 +110,11 @@ class MangaDownloadManager(
                 dao.updateProgress(downloadId, downloadedCount, "DOWNLOADING")
                 onProgress(downloadedCount, pages.size)
             } catch (e: Exception) {
+                PLog.e(
+                    tag = "Download",
+                    message = "Page ${page.index + 1}/${pages.size} of '${download.mangaTitle}' ch ${download.chapterNumber} failed after retries: ${e.javaClass.simpleName}: ${e.message}",
+                    throwable = e,
+                )
                 dao.updateStatus(downloadId, "ERROR")
                 success = false
                 break
@@ -184,7 +192,33 @@ class MangaDownloadManager(
         return downloadDir.freeSpace
     }
 
-    private fun downloadPage(url: String, destination: File, headers: Map<String, String> = emptyMap()) {
+    private suspend fun downloadPage(url: String, destination: File, headers: Map<String, String> = emptyMap()) {
+        // Manga CDNs (mangap, mgcdn, etc.) periodically reset connections —
+        // either via load-balancer churn or rate-limit drops. Without a retry,
+        // a single SocketException kills the whole chapter download. 3 attempts
+        // with backoff (500ms / 1500ms / 4500ms) clears almost all transient
+        // blips. After exhaustion we re-throw so the caller marks ERROR.
+        val maxAttempts = 3
+        var lastException: Exception? = null
+        for (attempt in 1..maxAttempts) {
+            if (attempt > 1) {
+                kotlinx.coroutines.delay(500L * (1 shl (attempt - 1)))
+            }
+            try {
+                fetchPage(url, destination, headers)
+                return
+            } catch (e: java.net.SocketException) {
+                lastException = e
+            } catch (e: java.net.SocketTimeoutException) {
+                lastException = e
+            } catch (e: java.io.IOException) {
+                lastException = e
+            }
+        }
+        throw lastException ?: java.io.IOException("Failed after $maxAttempts attempts")
+    }
+
+    private fun fetchPage(url: String, destination: File, headers: Map<String, String>) {
         val connection = URL(url).openConnection()
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Android) Miyo/2.0")
         // MangaPill's CDN refuses requests without a Referer header; passing

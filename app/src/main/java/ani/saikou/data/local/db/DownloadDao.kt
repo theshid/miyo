@@ -50,6 +50,21 @@ interface DownloadDao {
     @Query("UPDATE downloads SET status = :status WHERE id = :id")
     suspend fun updateStatus(id: String, status: String)
 
+    /**
+     * Move ERROR rows back into the queue for another shot, but only those that
+     * haven't already been auto-retried [maxAttempts] times. Increments the
+     * counter atomically so a stuck chapter eventually settles back in ERROR
+     * instead of cycling forever. Returns how many rows were requeued.
+     */
+    @Query(
+        """
+        UPDATE downloads
+        SET status = 'QUEUED', attemptCount = attemptCount + 1
+        WHERE status = 'ERROR' AND attemptCount < :maxAttempts
+        """
+    )
+    suspend fun requeueRetryableErrors(maxAttempts: Int): Int
+
     @Query("UPDATE downloads SET downloadedPages = :pages, status = :status WHERE id = :id")
     suspend fun updateProgress(id: String, pages: Int, status: String)
 

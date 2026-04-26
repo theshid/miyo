@@ -37,6 +37,8 @@ class DownloadService : Service() {
         const val NOTIFICATION_ID = 1001
         const val ACTION_PAUSE = "ani.saikou.PAUSE_DOWNLOAD"
         const val ACTION_CANCEL = "ani.saikou.CANCEL_DOWNLOAD"
+        /** Cap on service-level auto-retries per row before we leave it ERROR. */
+        const val MAX_AUTO_RETRY_ATTEMPTS = 3
 
         fun start(context: Context) {
             val intent = Intent(context, DownloadService::class.java)
@@ -80,6 +82,10 @@ class DownloadService : Service() {
         downloadJob?.cancel()
         downloadJob = scope.launch {
             val dao = SaikouDatabase.getInstance(this@DownloadService).downloadDao()
+            // Pick up previous failures that haven't been retried too many times
+            // already — every time the service starts (a new download, app launch,
+            // etc.) we get a fresh shot at chapters that hit transient issues.
+            dao.requeueRetryableErrors(maxAttempts = MAX_AUTO_RETRY_ATTEMPTS)
             val pending = dao.getPendingDownloads()
 
             if (pending.isEmpty()) {
@@ -140,10 +146,13 @@ class DownloadService : Service() {
     private suspend fun resolvePages(mangaTitle: String, chapterNumber: Int): ResolvedChapter? {
         if (chapterNumber < 0) return null
 
-        // MangaDex
+        // MangaDex — prefer an exact-title match. Search relevance sometimes
+        // ranks colored re-releases or spin-offs above the canonical entry
+        // (e.g. "Vagabond (Hong Kong Colored Version)" before "Vagabond").
         runCatching {
             val sources = mangaDex.search(mangaTitle)
-            val source = sources.firstOrNull()
+            val source = sources.firstOrNull { it.title.trim().equals(mangaTitle.trim(), ignoreCase = true) }
+                ?: sources.firstOrNull()
             if (source != null) {
                 val chapters = mangaDex.getChapters(source.id)
                 val chapter = chapters.find { it.number.toInt() == chapterNumber }
@@ -154,10 +163,11 @@ class DownloadService : Service() {
             }
         }
 
-        // MangaPill fallback
+        // MangaPill fallback — same exact-match preference.
         runCatching {
             val sources = mangaPill.search(mangaTitle)
-            val source = sources.firstOrNull()
+            val source = sources.firstOrNull { it.title.trim().equals(mangaTitle.trim(), ignoreCase = true) }
+                ?: sources.firstOrNull()
             if (source != null) {
                 val chapters = mangaPill.getChapters(source.id)
                 val chapter = chapters.find { it.number.toInt() == chapterNumber }

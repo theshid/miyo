@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WatchHistoryEntity::class,
         ActivityEventEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class SaikouDatabase : RoomDatabase() {
@@ -83,6 +83,14 @@ abstract class SaikouDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Counter for service-level auto-retries on ERROR rows so we can
+                // cap how many times a genuinely-unfetchable chapter gets cycled.
+                db.execSQL("ALTER TABLE downloads ADD COLUMN attemptCount INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getInstance(context: Context): SaikouDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -90,7 +98,7 @@ abstract class SaikouDatabase : RoomDatabase() {
                     SaikouDatabase::class.java,
                     "saikou_v2.db"
                 )
-                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     // Fallback only as a last resort — prefers migrations above
                     .fallbackToDestructiveMigration()
                     .build()

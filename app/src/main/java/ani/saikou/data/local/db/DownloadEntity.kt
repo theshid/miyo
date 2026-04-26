@@ -18,6 +18,9 @@ data class DownloadEntity(
     val downloadedPages: Int,
     val fileSizeBytes: Long = 0,  // Measured at completion; 0 until then
     val createdAt: Long = System.currentTimeMillis(),
+    /** How many times processQueue has auto-retried this row after an ERROR. Capped to keep
+     *  genuinely-unfetchable chapters from cycling forever. Reset by a manual re-queue. */
+    val attemptCount: Int = 0,
 )
 
 @Entity(tableName = "downloaded_manga")
