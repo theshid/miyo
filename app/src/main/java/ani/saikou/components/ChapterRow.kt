@@ -13,15 +13,21 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +39,7 @@ import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
 import ani.saikou.ui.theme.SurfaceContainer
+import ani.saikou.ui.theme.SurfaceContainerHigh
 
 /**
  * UI-level download state for a chapter row. Keep this outside of any single
@@ -123,6 +130,36 @@ fun ChapterDownloadButton(
     onCancel: () -> Unit,
     onDelete: () -> Unit = onCancel,
 ) {
+    // Only used by the COMPLETED branch — kept here so the dialog markup
+    // doesn't need to live in every parent screen that uses ChapterRow.
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete this chapter?", color = OnSurface) },
+            text = {
+                Text(
+                    "The downloaded files will be removed from your device. You can re-download anytime.",
+                    color = OnSurfaceVariant,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    onDelete()
+                }) {
+                    Text("Delete", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel", color = OnSurfaceVariant)
+                }
+            },
+            containerColor = SurfaceContainerHigh,
+        )
+    }
+
     when (state?.status) {
         null -> {
             IconButton(onClick = onDownload, modifier = Modifier.size(36.dp)) {
@@ -137,7 +174,7 @@ fun ChapterDownloadButton(
         "QUEUED", "PAUSED" -> {
             IconButton(onClick = onCancel, modifier = Modifier.size(36.dp)) {
                 Icon(
-                    Icons.Default.Schedule,
+                    Icons.Default.HourglassEmpty,
                     contentDescription = "Queued — tap to cancel",
                     tint = OnSurfaceVariant,
                     modifier = Modifier.size(20.dp),
@@ -173,14 +210,14 @@ fun ChapterDownloadButton(
                 Icon(
                     Icons.Default.DownloadDone,
                     contentDescription = "Downloaded",
-                    tint = Secondary,
+                    tint = Primary,
                     modifier = Modifier.size(20.dp),
                 )
-                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = { showDeleteDialog = true }, modifier = Modifier.size(36.dp)) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Delete download",
-                        tint = OnSurfaceVariant,
+                        tint = Color(0xFFFF6B6B),
                         modifier = Modifier.size(20.dp),
                     )
                 }
