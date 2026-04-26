@@ -550,6 +550,7 @@ fun MediaDetailScreen(
                 onEpisodeClick = ::onEpisodeSelected,
             )
             "Chapters" -> ChaptersTab(
+                mediaId = media.id,
                 totalChapters = media.totalChapters,
                 userProgress = media.userProgress,
                 mediaTitle = media.nameRomaji ?: media.name ?: media.displayTitle,
@@ -809,6 +810,7 @@ private fun EpisodesTab(
 
 @Composable
 private fun ChaptersTab(
+    mediaId: Int,
     totalChapters: Int?,
     userProgress: Int?,
     mediaTitle: String?,
@@ -822,36 +824,66 @@ private fun ChaptersTab(
     var sourceChapterCount by remember { mutableStateOf<Int?>(null) }
     var loadingCount by remember { mutableStateOf(false) }
 
-    if (totalChapters == null || totalChapters == 0) {
-        androidx.compose.runtime.LaunchedEffect(mediaTitle) {
-            if (mediaTitle != null && !loadingCount) {
-                loadingCount = true
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    // Try MangaDex first, then MangaPill
-                    val title = mediaTitle
-                    val dexSources = MangaDexParser().search(title)
-                    if (dexSources.isNotEmpty()) {
-                        val chapters = MangaDexParser().getChapters(dexSources.first().id)
-                        if (chapters.isNotEmpty()) {
-                            sourceChapterCount = chapters.last().number.toInt()
-                        }
+    // Always probe the sources, even when AniList has a chapter count, since
+    // AniList sometimes reports a low/stale number for licensed or on-hiatus
+    // titles (e.g. Vagabond shows 5 here while MangaPill has 327). We pick the
+    // larger of AniList vs source to avoid silently truncating the chapter list.
+    androidx.compose.runtime.LaunchedEffect(mediaTitle) {
+        if (mediaTitle != null && !loadingCount) {
+            loadingCount = true
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val title = mediaTitle
+                var dexCount = 0
+                var dexHint: Int? = null
+                val dexSources = MangaDexParser().search(title)
+                // Prefer exact-title match — search relevance order sometimes
+                // puts colored re-releases or spin-offs first (e.g. Vagabond
+                // returns "Vagabond (Hong Kong Colored Version)" before the
+                // canonical entry, and the colored version only has 5 fragmentary chapters).
+                val pickedDex = dexSources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
+                    ?: dexSources.firstOrNull()
+                if (pickedDex != null) {
+                    dexHint = pickedDex.totalChapterHint
+                    val chapters = MangaDexParser().getChapters(pickedDex.id)
+                    if (chapters.isNotEmpty()) {
+                        dexCount = chapters.last().number.toInt()
                     }
-                    if (sourceChapterCount == null || sourceChapterCount == 0) {
-                        val pillSources = MangaPillParser().search(title)
-                        if (pillSources.isNotEmpty()) {
-                            val chapters = MangaPillParser().getChapters(pillSources.first().id)
-                            if (chapters.isNotEmpty()) {
-                                sourceChapterCount = chapters.last().number.toInt()
-                            }
+                }
+                // Cross-check MangaPill when MangaDex has nothing, looks like a
+                // partial catalog, or AniList didn't give us an authoritative
+                // chapter count to anchor on. We then take the max of all signals.
+                val mangaDexLooksPartial = dexHint != null && dexHint > 0 &&
+                    dexCount < (dexHint * 0.9)
+                val anilistFarAboveDex = totalChapters != null && totalChapters > dexCount * 2
+                val anilistMissing = totalChapters == null || totalChapters == 0
+                var pillCount = 0
+                if (dexCount == 0 || mangaDexLooksPartial || anilistFarAboveDex || anilistMissing) {
+                    val pillSources = MangaPillParser().search(title)
+                    val pickedPill = pillSources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
+                        ?: pillSources.firstOrNull()
+                    if (pickedPill != null) {
+                        val chapters = MangaPillParser().getChapters(pickedPill.id)
+                        if (chapters.isNotEmpty()) {
+                            pillCount = chapters.last().number.toInt()
                         }
                     }
                 }
-                loadingCount = false
+                sourceChapterCount = listOfNotNull(dexCount, dexHint, pillCount)
+                    .maxOrNull()?.takeIf { it > 0 }
+                // Stash the resolved count so other screens (lists, continue
+                // reading, etc.) can render the real number instead of "?"
+                // when AniList comes back null for this title.
+                sourceChapterCount?.let { ani.saikou.data.local.MangaChapterCountCache.put(mediaId, it) }
             }
+            loadingCount = false
         }
     }
 
+    // Prefer the source count when it's notably higher than what AniList
+    // reported — covers the Vagabond case where AniList returns null but the
+    // source actually has 327. The 1.5x guard avoids flipping on minor diffs.
     val count = when {
+        sourceChapterCount != null && sourceChapterCount!! > (totalChapters ?: 0) * 1.5 -> sourceChapterCount!!
         totalChapters != null && totalChapters > 0 -> totalChapters
         sourceChapterCount != null && sourceChapterCount!! > 0 -> sourceChapterCount!!
         else -> 0

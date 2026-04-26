@@ -43,8 +43,11 @@ data class Media(
     val episodeProgress: String?
         get() {
             if (userProgress == null) return null
-            val total = totalEpisodes ?: totalChapters ?: "?"
-            return "$userProgress / $total"
+            val total = totalEpisodes ?: totalChapters
+            // Don't render "12 / ?" when AniList has no count — happens for
+            // licensed/on-hiatus manga (Vagabond, Berserk) or anime in airing
+            // mid-season. Just show the progress on its own.
+            return if (total != null && total > 0) "$userProgress / $total" else "$userProgress"
         }
 
     val isOngoing: Boolean

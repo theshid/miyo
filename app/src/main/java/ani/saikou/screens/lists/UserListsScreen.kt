@@ -249,10 +249,16 @@ private fun ListMediaCard(
                     val label = if (type == "ANIME") "EPISODE PROGRESS" else "CHAPTER PROGRESS"
                     Text(label, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
 
+                    val cachedCounts by ani.saikou.data.local.MangaChapterCountCache.counts.collectAsState()
                     val progress = media.userProgress ?: 0
-                    val total = media.totalEpisodes ?: media.totalChapters
+                    // Prefer AniList's count; fall back to the source-derived
+                    // count we cached after the user opened the detail screen
+                    // (covers Vagabond and other AniList-null cases).
+                    val total = media.totalEpisodes
+                        ?: media.totalChapters
+                        ?: cachedCounts[media.id]
                     Text(
-                        text = "$progress / ${total ?: "?"}",
+                        text = if (total != null && total > 0) "$progress / $total" else "$progress",
                         style = MaterialTheme.typography.labelLarge,
                         color = Secondary,
                         fontWeight = FontWeight.Bold,
@@ -261,10 +267,13 @@ private fun ListMediaCard(
             }
         }
 
-        // Progress bar at bottom
+        // Progress bar at bottom — same source-cache fallback as above. When
+        // even that comes back empty we render 0 (vs the old fallback of 1f,
+        // which made any progress > 0 look like the user finished the series).
+        val cachedCountsForBar by ani.saikou.data.local.MangaChapterCountCache.counts.collectAsState()
         val progress = media.userProgress?.toFloat() ?: 0f
-        val total = (media.totalEpisodes ?: media.totalChapters)?.toFloat() ?: 1f
-        val fraction = if (total > 0) (progress / total).coerceIn(0f, 1f) else 0f
+        val total = (media.totalEpisodes ?: media.totalChapters ?: cachedCountsForBar[media.id])?.toFloat()
+        val fraction = if (total != null && total > 0) (progress / total).coerceIn(0f, 1f) else 0f
         Box(
             modifier = Modifier
                 .align(Alignment.BottomStart)
