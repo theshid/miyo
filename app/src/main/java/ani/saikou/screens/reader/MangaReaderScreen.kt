@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Settings
@@ -176,22 +177,31 @@ fun MangaReaderScreen(
     val batchSize = 5
     var nextChapterMissing by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf<Boolean?>(null) }
     var suggestionDismissed by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
+    var offlineBannerDismissed by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
     var showCellularConfirm by remember { mutableStateOf(false) }
     var estimatedBytes by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
     var downloadQueued by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
+    val isOnline by ani.saikou.di.AppModule.connectivity().isConnected.collectAsState(initial = true)
 
-    val showSuggestionBanner = settings.suggestDownloads &&
-        !readerState.isLoading &&
+    val atEndOfChapter = !readerState.isLoading &&
         readerState.error == null &&
         totalPages > 1 &&
         currentPage == totalPages &&
-        nextChapterMissing == true &&
-        !suggestionDismissed &&
-        !downloadQueued
+        nextChapterMissing == true
 
-    // Kick off the cache check once the user hits the last page.
-    LaunchedEffect(currentPage, totalPages, settings.suggestDownloads) {
-        if (!settings.suggestDownloads) return@LaunchedEffect
+    val showSuggestionBanner = atEndOfChapter &&
+        settings.suggestDownloads &&
+        !suggestionDismissed &&
+        !downloadQueued &&
+        isOnline
+
+    val showOfflineBanner = atEndOfChapter &&
+        !offlineBannerDismissed &&
+        !isOnline
+
+    // Kick off the cache check once the user hits the last page. Runs even when
+    // download suggestions are off, since the offline banner depends on it too.
+    LaunchedEffect(currentPage, totalPages) {
         if (nextChapterMissing != null) return@LaunchedEffect
         if (totalPages <= 1 || currentPage != totalPages) return@LaunchedEffect
         val missing = viewModel.isNextChapterMissing()
@@ -448,6 +458,18 @@ fun MangaReaderScreen(
                     }
                 },
                 onDismiss = { suggestionDismissed = true },
+            )
+        }
+
+        // ── Offline at end of last downloaded chapter ────────
+        AnimatedVisibility(
+            visible = showOfflineBanner,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            OfflineNextChapterBanner(
+                onDismiss = { offlineBannerDismissed = true },
             )
         }
     }
@@ -761,6 +783,51 @@ private fun DownloadNextChaptersBanner(
                 style = MaterialTheme.typography.labelLarge,
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
+            )
+        }
+        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Dismiss",
+                tint = OnSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+// ── Offline Next Chapter Banner ─────────────────────────────
+@Composable
+private fun OfflineNextChapterBanner(
+    onDismiss: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .background(SurfaceContainerHigh)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            Icons.Default.CloudOff,
+            contentDescription = null,
+            tint = Primary,
+            modifier = Modifier.size(20.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "You're offline",
+                style = MaterialTheme.typography.bodyMedium,
+                color = OnSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "Reconnect to read the next chapter or download more.",
+                style = MaterialTheme.typography.labelSmall,
+                color = OnSurfaceVariant,
             )
         }
         IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
