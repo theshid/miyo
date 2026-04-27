@@ -8,6 +8,7 @@ import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
 import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Character
+import ani.saikou.domain.model.DownloadRequest
 import ani.saikou.domain.model.Media
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,26 +22,23 @@ class MediaDetailViewModel(
 ) : ViewModel() {
 
     private val repository = AppModule.repository()
-    private val downloadDao = AppModule.downloadDao()
-    private val downloadManager = AppModule.downloadManager()
+    private val downloadRepo = AppModule.downloadRepository()
     private val mediaId: Int = savedStateHandle["id"] ?: 0
 
     private val _uiState = MutableStateFlow(MediaDetailUiState())
     val uiState: StateFlow<MediaDetailUiState> = _uiState
 
-    /** Map of chapter number → download status (`QUEUED`, `DOWNLOADING`, `COMPLETED`, `ERROR`, `PAUSED`). */
-    val chapterDownloads: StateFlow<Map<Int, ChapterDownloadState>> = downloadDao
-        .getDownloadsForManga(mediaId)
-        .map { rows ->
-            rows
-                .filter { it.chapterNumber >= 0 }
-                .associate { row ->
-                    row.chapterNumber to ChapterDownloadState(
-                        status = row.status,
-                        downloadedPages = row.downloadedPages,
-                        totalPages = row.totalPages,
-                    )
-                }
+    /** Map of chapter number → download status. */
+    val chapterDownloads: StateFlow<Map<Int, ChapterDownloadState>> = downloadRepo
+        .observeDownloadsForManga(mediaId)
+        .map { downloads ->
+            downloads.mapValues { (_, d) ->
+                ChapterDownloadState(
+                    status = d.status.name,
+                    downloadedPages = d.downloadedPages,
+                    totalPages = d.totalPages,
+                )
+            }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
@@ -53,15 +51,16 @@ class MediaDetailViewModel(
         viewModelScope.launch {
             // totalPages and sourceId are placeholders — DownloadService re-resolves
             // the source and updates the row with the real page count when it runs.
-            downloadManager.queueDownload(
-                mangaId = media.id,
-                mangaTitle = media.displayTitle,
-                coverUrl = media.cover,
-                chapterKey = chapterNumber.toString(),
-                chapterNumber = chapterNumber,
-                chapterName = "Chapter $chapterNumber",
-                sourceId = "",
-                totalPages = 0,
+            downloadRepo.queueChapter(
+                DownloadRequest(
+                    mangaId = media.id,
+                    mangaTitle = media.displayTitle,
+                    coverUrl = media.cover,
+                    chapterKey = chapterNumber.toString(),
+                    chapterNumber = chapterNumber,
+                    chapterName = "Chapter $chapterNumber",
+                    sourceId = "",
+                ),
             )
             // Run AFTER the DB insert completes so the service sees the row.
             onQueued?.invoke()
@@ -71,7 +70,7 @@ class MediaDetailViewModel(
     fun cancelChapterDownload(chapterNumber: Int) {
         val media = _uiState.value.media ?: return
         viewModelScope.launch {
-            downloadManager.cancelDownload("${media.id}_$chapterNumber")
+            downloadRepo.cancelChapter("${media.id}_$chapterNumber")
         }
     }
 
