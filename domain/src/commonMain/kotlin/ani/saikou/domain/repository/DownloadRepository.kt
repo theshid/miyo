@@ -2,6 +2,8 @@ package ani.saikou.domain.repository
 
 import ani.saikou.domain.model.Download
 import ani.saikou.domain.model.DownloadRequest
+import ani.saikou.domain.model.DownloadedManga
+import ani.saikou.domain.model.EvictionSummary
 import ani.saikou.domain.model.MangaPage
 import kotlinx.coroutines.flow.Flow
 
@@ -59,4 +61,40 @@ interface DownloadRepository {
      * the DB row.
      */
     suspend fun cancelChapter(downloadId: String)
+
+    /** Pause an in-flight download — keeps partial files on disk so a
+     *  subsequent resume picks up where it left off. */
+    suspend fun pauseChapter(downloadId: String)
+
+    /** Remove every download (and on-disk file) for [mangaId]. */
+    suspend fun deleteAllForManga(mangaId: Int)
+
+    // ─── Library-wide observations / queries ──────────────────────────────
+
+    /** Reactive list of every download row across the whole DB. */
+    fun observeAllDownloads(): Flow<List<Download>>
+
+    /** Reactive list of every per-series row in `downloaded_manga`. */
+    fun observeAllDownloadedManga(): Flow<List<DownloadedManga>>
+
+    // ─── Cleanup / storage ────────────────────────────────────────────────
+
+    /**
+     * List downloads that are safe to evict — chapters the user has read
+     * to ≥80% AND that are COMPLETED on disk. The threshold is enforced
+     * at the storage layer; consumers just see the candidate list.
+     */
+    suspend fun listEvictableReadChapters(): List<Download>
+
+    /**
+     * Delete every download in [listEvictableReadChapters]. Returns a
+     * summary the UI surfaces back to the user.
+     */
+    suspend fun evictReadChapters(): EvictionSummary
+
+    /** Total bytes used by all downloads on disk. */
+    suspend fun storageUsedBytes(): Long
+
+    /** Bytes available on the filesystem hosting downloads. */
+    suspend fun availableSpaceBytes(): Long
 }

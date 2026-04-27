@@ -2,9 +2,9 @@ package ani.saikou.screens.downloads
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.data.local.db.DownloadEntity
-import ani.saikou.data.local.db.DownloadedMangaEntity
 import ani.saikou.di.AppModule
+import ani.saikou.domain.model.Download
+import ani.saikou.domain.model.DownloadedManga
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -12,8 +12,7 @@ import kotlinx.coroutines.launch
 
 class DownloadsViewModel : ViewModel() {
 
-    private val dao = AppModule.downloadDao()
-    private val manager = AppModule.downloadManager()
+    private val downloadRepo = AppModule.downloadRepository()
 
     private val _uiState = MutableStateFlow(DownloadsUiState())
     val uiState: StateFlow<DownloadsUiState> = _uiState
@@ -21,8 +20,8 @@ class DownloadsViewModel : ViewModel() {
     init {
         viewModelScope.launch {
             combine(
-                dao.getAllDownloadedManga(),
-                dao.getAllDownloads(),
+                downloadRepo.observeAllDownloadedManga(),
+                downloadRepo.observeAllDownloads(),
             ) { manga, downloads ->
                 val grouped = manga.map { m ->
                     MangaWithDownloads(
@@ -31,16 +30,16 @@ class DownloadsViewModel : ViewModel() {
                     )
                 }.filter { it.chapters.isNotEmpty() }
 
-                // Re-query the "read" set every time downloads change. Cheap —
-                // it's a small index-backed join.
-                val readChapters = runCatching { dao.getReadCompletedDownloads() }.getOrDefault(emptyList())
+                // Re-query the evictable set every time downloads change. Cheap —
+                // it's a small index-backed join inside the DAO.
+                val evictable = downloadRepo.listEvictableReadChapters()
 
                 DownloadsUiState(
                     mangaList = grouped,
-                    totalStorageUsed = manager.getStorageUsed(),
-                    freeSpace = manager.getAvailableSpace(),
-                    readChapterCount = readChapters.size,
-                    readChapterBytes = readChapters.sumOf { it.fileSizeBytes },
+                    totalStorageUsed = downloadRepo.storageUsedBytes(),
+                    freeSpace = downloadRepo.availableSpaceBytes(),
+                    readChapterCount = evictable.size,
+                    readChapterBytes = evictable.sumOf { it.fileSizeBytes },
                     isLoading = false,
                 )
             }.collect { _uiState.value = it }
@@ -49,42 +48,29 @@ class DownloadsViewModel : ViewModel() {
 
     /**
      * Delete every completed-and-read chapter (≥80% read) — what the
-     * cleanup banner offers. Files + DB rows go together via [MangaDownloadManager.cancelDownload].
+     * cleanup banner offers. Files + DB rows go together.
      */
     fun clearReadChapters() {
         viewModelScope.launch {
-            val toDelete = runCatching { dao.getReadCompletedDownloads() }.getOrDefault(emptyList())
-            for (download in toDelete) {
-                manager.cancelDownload(download.id)
-            }
+            downloadRepo.evictReadChapters()
         }
     }
 
     fun deleteChapter(downloadId: String) {
         viewModelScope.launch {
-            manager.cancelDownload(downloadId)
+            downloadRepo.cancelChapter(downloadId)
         }
     }
 
     fun deleteAllForManga(mangaId: Int) {
         viewModelScope.launch {
-            manager.deleteAllForManga(mangaId)
+            downloadRepo.deleteAllForManga(mangaId)
         }
     }
 
     fun pauseDownload(downloadId: String) {
         viewModelScope.launch {
-            manager.pauseDownload(downloadId)
-        }
-    }
-
-    fun resumeDownload(downloadId: String) {
-        viewModelScope.launch {
-            manager.resumeDownload(downloadId)
-            ani.saikou.data.local.downloads.DownloadService.start(
-                // Need context — we'll use the app context
-                AppModule.downloadManager().let { return@launch } // Simplified — service should be started from UI with context
-            )
+            downloadRepo.pauseChapter(downloadId)
         }
     }
 }
@@ -99,6 +85,6 @@ data class DownloadsUiState(
 )
 
 data class MangaWithDownloads(
-    val manga: DownloadedMangaEntity,
-    val chapters: List<DownloadEntity>,
+    val manga: DownloadedManga,
+    val chapters: List<Download>,
 )

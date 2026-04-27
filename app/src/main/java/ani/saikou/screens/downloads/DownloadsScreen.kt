@@ -49,7 +49,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
-import ani.saikou.data.local.db.DownloadEntity
+import ani.saikou.domain.model.Download
+import ani.saikou.domain.model.DownloadStatus
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -188,7 +189,7 @@ fun DownloadsScreen(
 
             // ── Active Downloads ─────────────────────────────
             val activeDownloads = state.mangaList.flatMap { it.chapters }
-                .filter { it.status == "DOWNLOADING" || it.status == "QUEUED" }
+                .filter { it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.QUEUED }
 
             if (activeDownloads.isNotEmpty()) {
                 item {
@@ -212,7 +213,7 @@ fun DownloadsScreen(
 
             // ── Library Storage ──────────────────────────────
             val completedManga = state.mangaList.filter { group ->
-                group.chapters.any { it.status == "COMPLETED" }
+                group.chapters.any { it.status == DownloadStatus.COMPLETED }
             }
 
             if (completedManga.isNotEmpty()) {
@@ -320,7 +321,7 @@ fun DownloadsScreen(
 
 @Composable
 private fun ActiveDownloadCard(
-    download: DownloadEntity,
+    download: Download,
     coverUrl: String?,
     onPause: () -> Unit,
 ) {
@@ -391,7 +392,7 @@ private fun MangaGroupCard(
     onToggleSelect: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val completedChapters = mangaGroup.chapters.filter { it.status == "COMPLETED" }
+    val completedChapters = mangaGroup.chapters.filter { it.status == DownloadStatus.COMPLETED }
 
     Column(
         modifier = Modifier

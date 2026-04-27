@@ -2,11 +2,14 @@ package ani.saikou.data.repository
 
 import ani.saikou.data.local.db.DownloadDao
 import ani.saikou.data.local.db.DownloadEntity
+import ani.saikou.data.local.db.DownloadedMangaEntity
 import ani.saikou.data.local.downloads.ChapterSizeEstimator
 import ani.saikou.data.local.downloads.MangaDownloadManager
 import ani.saikou.domain.model.Download
 import ani.saikou.domain.model.DownloadRequest
 import ani.saikou.domain.model.DownloadStatus
+import ani.saikou.domain.model.DownloadedManga
+import ani.saikou.domain.model.EvictionSummary
 import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.repository.DownloadRepository
 import kotlinx.coroutines.flow.Flow
@@ -62,6 +65,53 @@ class DownloadRepositoryImpl(
     override suspend fun cancelChapter(downloadId: String) {
         manager.cancelDownload(downloadId)
     }
+
+    override suspend fun pauseChapter(downloadId: String) {
+        manager.pauseDownload(downloadId)
+    }
+
+    override suspend fun deleteAllForManga(mangaId: Int) {
+        manager.deleteAllForManga(mangaId)
+    }
+
+    override fun observeAllDownloads(): Flow<List<Download>> =
+        dao.getAllDownloads().map { rows -> rows.map { it.toDomain() } }
+
+    override fun observeAllDownloadedManga(): Flow<List<DownloadedManga>> =
+        dao.getAllDownloadedManga().map { rows -> rows.map { it.toDomain() } }
+
+    override suspend fun listEvictableReadChapters(): List<Download> =
+        // Wrap in runCatching to mirror the DAO's pre-existing best-effort
+        // contract — a malformed reading_history row shouldn't crash the
+        // cleanup banner; an empty list is a safe degraded state.
+        runCatching { dao.getReadCompletedDownloads() }
+            .getOrDefault(emptyList())
+            .map { it.toDomain() }
+
+    override suspend fun evictReadChapters(): EvictionSummary {
+        val targets = listEvictableReadChapters()
+        var freed = 0L
+        var removed = 0
+        for (download in targets) {
+            // cancelDownload removes both DB row + on-disk files in one pass.
+            // We pre-tally bytesFreed because the row is gone after cancel().
+            freed += download.fileSizeBytes
+            manager.cancelDownload(download.id)
+            removed++
+        }
+        return EvictionSummary(chaptersRemoved = removed, bytesFreed = freed)
+    }
+
+    override suspend fun storageUsedBytes(): Long = manager.getStorageUsed()
+
+    override suspend fun availableSpaceBytes(): Long = manager.getAvailableSpace()
+
+    private fun DownloadedMangaEntity.toDomain(): DownloadedManga = DownloadedManga(
+        mangaId = mangaId,
+        title = title,
+        coverUrl = coverUrl,
+        sourceId = sourceId,
+    )
 
     private fun DownloadEntity.toDomain(): Download = Download(
         id = id,
