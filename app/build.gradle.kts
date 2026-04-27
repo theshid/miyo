@@ -84,6 +84,7 @@ dependencies {
     implementation(project(":platform"))
     implementation(project(":platform-android"))
     implementation(project(":data"))
+    implementation(project(":data-android"))
 
     // PrettyLog — our extracted logging library (via JitPack)
     implementation("com.github.theshid:Pretty-Log:0.1.0")
@@ -132,11 +133,9 @@ dependencies {
     implementation("com.google.accompanist:accompanist-pager:0.36.0")
     implementation("com.google.accompanist:accompanist-pager-indicators:0.36.0")
 
-    // Room (offline downloads DB)
-    val roomVersion = "2.6.1"
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
+    // Room runtime + DAOs come transitively from :data-android (declared
+    // there with `api` so :app sees DAO/entity types). The KSP processor
+    // for Room only runs in the module that owns the @Dao/@Entity sources.
 
     // HTML parsing (for anime/manga source parsers)
     implementation("org.jsoup:jsoup:1.18.3")

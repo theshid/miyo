@@ -58,7 +58,8 @@ object AppModule {
         repository = AnilistRepositoryImpl(api!!, tokenStorage!!)
         connectivityObserver = ConnectivityObserver(appContext)
         database = SaikouDatabase.getInstance(appContext)
-        downloadManager = MangaDownloadManager(appContext, database!!.downloadDao())
+        // Note: downloadManager construction moves below, after parser init —
+        // it now takes MangaDexParser via constructor.
         openAiService = OpenAiService(BuildConfig.OPENAI_API_KEY)
         onboardingPrefs = OnboardingPrefs(appContext)
         feedbackService = FeedbackService()
@@ -81,6 +82,10 @@ object AppModule {
             mangaDex = mangaDexParser!!,
             mangaPill = mangaPillParser!!,
         )
+
+        // Construct after parser init — MangaDownloadManager pulls MangaDex
+        // through its constructor now (no AppModule lookup at runtime).
+        downloadManager = MangaDownloadManager(appContext, database!!.downloadDao(), mangaDexParser!!)
     }
 
     fun repository(): AnilistRepository =
