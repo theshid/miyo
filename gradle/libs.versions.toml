@@ -1,0 +1,141 @@
+[versions]
+agp = "8.7.3"
+kotlin = "1.9.25"
+ksp = "1.9.25-1.0.20"
+
+# Compose / AndroidX (kept aligned with current :app values)
+compose-bom = "2024.12.01"
+compose-compiler = "1.5.15"
+activity = "1.9.3"
+lifecycle = "2.8.7"
+navigation = "2.8.5"
+core-ktx = "1.15.0"
+splashscreen = "1.0.1"
+browser = "1.8.0"
+work = "2.10.0"
+media3 = "1.5.1"
+
+# Kotlin / coroutines / serialization
+coroutines = "1.9.0"
+serialization = "1.7.3"
+
+# DI — Koin 4.x supports KMP + Compose
+koin = "4.0.0"
+koin-annotations = "1.4.0"
+
+# Networking
+ktor = "2.3.13"
+
+# Persistence — Room 2.6.1 today (Android-only). When we move DAOs into
+# commonMain we'll need Room KMP (2.7+), which requires Kotlin 2.0+.
+room = "2.6.1"
+
+# Image loading — Coil 2 today. Migration to Coil 3 (KMP) lands in a
+# later slice once the data layer move is done.
+coil = "2.7.0"
+
+# Multiplatform Settings — KMP-friendly replacement for SharedPreferences.
+multiplatform-settings = "1.2.0"
+
+# Misc
+accompanist = "0.36.0"
+jsoup = "1.18.3"
+lottie = "6.6.2"
+prettylog = "0.1.0"
+sentry = "7.18.1"
+sentry-plugin = "6.5.0"
+
+# Test
+junit = "4.13.2"
+mockk = "1.13.13"
+turbine = "1.2.0"
+robolectric = "4.14.1"
+
+[libraries]
+# --- Compose ---
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+
+# --- AndroidX ---
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
+core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
+core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
+browser = { module = "androidx.browser:browser", version.ref = "browser" }
+work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+
+# --- Kotlinx ---
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+
+# --- Koin ---
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
+koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
+koin-test-junit4 = { module = "io.insert-koin:koin-test-junit4", version.ref = "koin" }
+koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin-annotations" }
+koin-ksp-compiler = { module = "io.insert-koin:koin-ksp-compiler", version.ref = "koin-annotations" }
+
+# --- Ktor ---
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+
+# --- Room (Android-only for now) ---
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+
+# --- Settings (KMP-friendly prefs) ---
+multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatform-settings" }
+multiplatform-settings-coroutines = { module = "com.russhwolf:multiplatform-settings-coroutines", version.ref = "multiplatform-settings" }
+
+# --- Image loading (Coil 2 today; Coil 3 migration arrives later) ---
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
+
+# --- Media3 (Android-only) ---
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
+media3-exoplayer-dash = { module = "androidx.media3:media3-exoplayer-dash", version.ref = "media3" }
+media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+media3-common = { module = "androidx.media3:media3-common", version.ref = "media3" }
+
+# --- Sentry (Android-only) ---
+sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
+
+# --- Misc ---
+accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanist" }
+accompanist-pager = { module = "com.google.accompanist:accompanist-pager", version.ref = "accompanist" }
+accompanist-pager-indicators = { module = "com.google.accompanist:accompanist-pager-indicators", version.ref = "accompanist" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
+prettylog = { module = "com.github.theshid:Pretty-Log", version.ref = "prettylog" }
+
+# --- Test ---
+junit = { module = "junit:junit", version.ref = "junit" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+sentry-android = { id = "io.sentry.android.gradle", version.ref = "sentry-plugin" }
