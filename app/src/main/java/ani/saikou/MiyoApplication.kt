@@ -8,11 +8,15 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import ani.saikou.data.android.di.dataAndroidModule
+import ani.saikou.data.di.dataModule
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
 import ani.saikou.data.local.db.ActivityEventEntity
 import ani.saikou.di.AppModule
+import ani.saikou.di.appModule
 import ani.saikou.notifications.EpisodeCheckWorker
+import ani.saikou.platform.android.di.platformAndroidModule
 import ani.saikou.notifications.EpisodeNotificationChannel
 import io.github.theshid.prettylog.Log
 import io.github.theshid.prettylog.LogBreadcrumbs
@@ -25,6 +29,10 @@ import io.sentry.Breadcrumb
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import kotlinx.coroutines.CoroutineScope
+import org.koin.android.ext.koin.androidContext
+import org.koin.android.ext.koin.androidLogger
+import org.koin.core.context.startKoin
+import org.koin.core.logger.Level
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -53,6 +61,21 @@ class MiyoApplication : Application() {
             minLevel = LogLevel.Debug,
             custom = SentryBreadcrumbLoggingService(baseService),
         )
+        // Koin owns the DI graph now. AppModule is a thin facade over
+        // getKoin().get<T>() so existing call sites keep working while
+        // ViewModel migrations happen feature-by-feature.
+        startKoin {
+            // ERROR keeps the noise floor low in release; DEBUG flips on
+            // verbose binding traces in dev builds.
+            androidLogger(if (BuildConfig.DEBUG) Level.DEBUG else Level.ERROR)
+            androidContext(this@MiyoApplication)
+            modules(
+                appModule,
+                platformAndroidModule,
+                dataModule,
+                dataAndroidModule,
+            )
+        }
         AppModule.init(this)
         installCrashBreadcrumbs()
         EpisodeNotificationChannel.createChannel(this)

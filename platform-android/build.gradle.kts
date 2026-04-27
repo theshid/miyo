@@ -25,4 +25,8 @@ dependencies {
     // means commonMain consumers (use cases, repos, parsers) can stay
     // Sentry-free and reach it only through the Logger interface.
     implementation(libs.sentry.android)
+
+    // Koin module declaration uses the `module { }` DSL — no Android extensions
+    // needed here since this module doesn't touch Activity/Application context.
+    implementation(libs.koin.core)
 }

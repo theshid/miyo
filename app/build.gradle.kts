@@ -86,6 +86,12 @@ dependencies {
     implementation(project(":data"))
     implementation(project(":data-android"))
 
+    // Koin — DI graph. koin-androidx-compose unlocks koinViewModel() in
+    // composables, which the next commit migrates ViewModels onto.
+    implementation(libs.koin.core)
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
+
     // PrettyLog — our extracted logging library (via JitPack)
     implementation("com.github.theshid:Pretty-Log:0.1.0")
 
