@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
 import ani.saikou.domain.model.Download
@@ -62,7 +63,7 @@ import coil.compose.AsyncImage
 @Composable
 fun DownloadsScreen(
     onBack: () -> Unit,
-    viewModel: DownloadsViewModel = viewModel(),
+    viewModel: DownloadsViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val selectedIds = remember { mutableStateListOf<String>() }

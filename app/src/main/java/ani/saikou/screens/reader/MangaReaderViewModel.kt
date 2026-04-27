@@ -5,17 +5,23 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.components.ChapterDownloadState
 import ani.saikou.components.SourceItem
+import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ActivityEventEntity
+import ani.saikou.data.local.db.ReadingHistoryDao
 import ani.saikou.data.local.db.ReadingHistoryEntity
 import ani.saikou.data.local.downloads.ChapterSizeEstimator
-import ani.saikou.di.AppModule
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
+import ani.saikou.data.source.manga.MangaDexParser
+import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.DownloadRequest
 import ani.saikou.domain.model.DownloadStatus
 import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSearchResult
+import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.repository.DownloadRepository
+import ani.saikou.domain.repository.MangaSourceRepository
 import io.github.theshid.prettylog.Log
 import io.sentry.Sentry
 import io.sentry.SentryLevel
@@ -30,14 +36,15 @@ import kotlinx.coroutines.launch
 
 class MangaReaderViewModel(
     savedStateHandle: SavedStateHandle,
+    private val repository: AnilistRepository,
+    private val historyDao: ReadingHistoryDao,
+    private val activityDao: ActivityEventDao,
+    private val downloadRepo: DownloadRepository,
+    private val mangaSourceRepo: MangaSourceRepository,
+    private val mangaDex: MangaDexParser,
+    private val mangaPill: MangaPillParser,
 ) : ViewModel() {
 
-    private val repository = AppModule.repository()
-    private val historyDao = AppModule.readingHistoryDao()
-    private val activityDao = AppModule.activityEventDao()
-    private val downloadRepo = AppModule.downloadRepository()
-    private val mangaDex = AppModule.mangaDexParser()
-    private val mangaPill = AppModule.mangaPillParser()
     private var activeParser: String = "MangaDex" // tracks which parser resolved the source
 
     val mediaId: Int = savedStateHandle["mediaId"] ?: 0
@@ -107,8 +114,7 @@ class MangaReaderViewModel(
                     // First-time resolution — let the repo pick the best source
                     // (handles the partial-catalog and licensed-title cases that
                     // used to be hand-coded here).
-                    val resolved = ani.saikou.di.AppModule.mangaSourceRepository()
-                        .resolveChapters(_uiState.value.title)
+                    val resolved = mangaSourceRepo.resolveChapters(_uiState.value.title)
                     if (resolved != null) {
                         activeParser = resolved.sourceName
                         resolvedSourceId = resolved.sourceMangaId

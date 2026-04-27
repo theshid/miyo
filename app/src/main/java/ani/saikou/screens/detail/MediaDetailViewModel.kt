@@ -6,10 +6,11 @@ import androidx.lifecycle.viewModelScope
 import ani.saikou.components.ChapterDownloadState
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
-import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Character
 import ani.saikou.domain.model.DownloadRequest
 import ani.saikou.domain.model.Media
+import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.repository.DownloadRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,10 +20,10 @@ import kotlinx.coroutines.launch
 
 class MediaDetailViewModel(
     savedStateHandle: SavedStateHandle,
+    private val repository: AnilistRepository,
+    private val downloadRepo: DownloadRepository,
 ) : ViewModel() {
 
-    private val repository = AppModule.repository()
-    private val downloadRepo = AppModule.downloadRepository()
     private val mediaId: Int = savedStateHandle["id"] ?: 0
 
     private val _uiState = MutableStateFlow(MediaDetailUiState())

@@ -10,10 +10,13 @@ import ani.saikou.data.remote.FeedbackService
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.screens.detail.MediaDetailViewModel
+import ani.saikou.screens.downloads.DownloadsViewModel
+import ani.saikou.screens.reader.MangaReaderViewModel
 import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
-import org.koin.dsl.bind
 import org.koin.dsl.module
 
 /**
@@ -43,4 +46,12 @@ val appModule = module {
     // ─── Remote services ───────────────────────────────────────────────
     single { OpenAiService(BuildConfig.OPENAI_API_KEY) }
     singleOf(::FeedbackService)
+
+    // ─── ViewModels ────────────────────────────────────────────────────
+    // Migrated to constructor injection in 8b. Remaining VMs (search,
+    // home, anime, etc.) follow in 8b-2 — until then they keep their
+    // AppModule.X() lookups, which now route through Koin via the facade.
+    viewModelOf(::MangaReaderViewModel)
+    viewModelOf(::MediaDetailViewModel)
+    viewModelOf(::DownloadsViewModel)
 }

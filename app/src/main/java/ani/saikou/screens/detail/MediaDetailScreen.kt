@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.ChapterDownloadState
 import ani.saikou.components.ChapterRow
 import ani.saikou.components.GlassCard
@@ -101,7 +102,7 @@ fun MediaDetailScreen(
     onNavigateToReader: (Int, String?) -> Unit,
     onNavigateToMedia: (Int) -> Unit,
     onNavigateToTorrent: ((String) -> Unit)? = null,
-    viewModel: MediaDetailViewModel = viewModel(),
+    viewModel: MediaDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
 

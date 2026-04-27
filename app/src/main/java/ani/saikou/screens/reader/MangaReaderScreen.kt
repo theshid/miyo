@@ -112,7 +112,7 @@ fun MangaReaderScreen(
     chapterNum: Int,
     onBack: () -> Unit,
     onNextChapter: ((chapter: Int, sourceId: String?) -> Unit)? = null,
-    viewModel: MangaReaderViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    viewModel: MangaReaderViewModel = org.koin.androidx.compose.koinViewModel(),
 ) {
     val context = LocalContext.current
     val readerState by viewModel.uiState.collectAsState()

@@ -2,17 +2,17 @@ package ani.saikou.screens.downloads
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Download
 import ani.saikou.domain.model.DownloadedManga
+import ani.saikou.domain.repository.DownloadRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-class DownloadsViewModel : ViewModel() {
-
-    private val downloadRepo = AppModule.downloadRepository()
+class DownloadsViewModel(
+    private val downloadRepo: DownloadRepository,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DownloadsUiState())
     val uiState: StateFlow<DownloadsUiState> = _uiState
