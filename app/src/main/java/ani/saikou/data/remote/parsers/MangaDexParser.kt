@@ -2,7 +2,8 @@ package ani.saikou.data.remote.parsers
 
 import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.MangaPage
-import ani.saikou.domain.model.MangaSource
+import ani.saikou.domain.model.MangaSearchResult
+import ani.saikou.domain.source.MangaSource
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.sentry.Sentry
@@ -19,7 +20,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-class MangaDexParser {
+class MangaDexParser : MangaSource {
 
     companion object {
         private const val API = "https://api.mangadex.org"
@@ -28,7 +29,7 @@ class MangaDexParser {
     private val client = HttpClient(OkHttp)
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
-    suspend fun search(query: String): List<MangaSource> = withContext(Dispatchers.IO) {
+    override suspend fun search(query: String): List<MangaSearchResult> = withContext(Dispatchers.IO) {
         try {
             val response = client.get("$API/manga") {
                 parameter("limit", "25")
@@ -62,7 +63,7 @@ class MangaDexParser {
                         if (it is JsonNull) null else it.jsonPrimitive.content.toFloatOrNull()?.toInt()
                     }
 
-                    MangaSource(
+                    MangaSearchResult(
                         id = id,
                         title = title,
                         coverUrl = coverUrl,
@@ -78,7 +79,8 @@ class MangaDexParser {
         }
     }
 
-    suspend fun getChapters(mangaId: String): List<Chapter> = withContext(Dispatchers.IO) {
+    override suspend fun getChapters(sourceId: String): List<Chapter> = withContext(Dispatchers.IO) {
+        val mangaId = sourceId
         try {
             // Try English first, then fall back to any language
             var response = client.get("$API/manga/$mangaId/feed") {
@@ -135,7 +137,7 @@ class MangaDexParser {
         }
     }
 
-    suspend fun getPages(chapterId: String): List<MangaPage> = withContext(Dispatchers.IO) {
+    override suspend fun getPages(chapterId: String): List<MangaPage> = withContext(Dispatchers.IO) {
         try {
             val response = client.get("$API/at-home/server/$chapterId") {
                 header("User-Agent", "Miyo/2.0")

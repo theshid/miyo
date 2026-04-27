@@ -79,7 +79,7 @@ import ani.saikou.data.remote.parsers.GogoParser
 import ani.saikou.data.remote.parsers.MangaDexParser
 import ani.saikou.data.remote.parsers.MangaPillParser
 import ani.saikou.domain.model.AnimeSource
-import ani.saikou.domain.model.MangaSource
+import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.model.Media
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.Favorite
@@ -181,8 +181,8 @@ fun MediaDetailScreen(
     // ── Manga source picker state ──
     var pendingChapter by remember { mutableStateOf<Int?>(null) }
     var mangaSourceSearching by remember { mutableStateOf(false) }
-    var foundMangaSources by remember { mutableStateOf<List<MangaSource>>(emptyList()) }
-    var showMangaSourcePicker by remember { mutableStateOf(false) }
+    var foundMangaSearchResults by remember { mutableStateOf<List<MangaSearchResult>>(emptyList()) }
+    var showMangaSearchResultPicker by remember { mutableStateOf(false) }
 
     fun onChapterSelected(chapterNum: Int) {
         scope.launch {
@@ -208,24 +208,24 @@ fun MediaDetailScreen(
                 sources.isEmpty() -> onNavigateToReader(chapterNum, null)
                 sources.size == 1 -> onNavigateToReader(chapterNum, sources.first().id)
                 else -> {
-                    foundMangaSources = sources
-                    showMangaSourcePicker = true
+                    foundMangaSearchResults = sources
+                    showMangaSearchResultPicker = true
                 }
             }
         }
     }
 
-    if (showMangaSourcePicker) {
+    if (showMangaSearchResultPicker) {
         SourceSelectorSheet(
             title = "Select Manga Source",
-            sources = foundMangaSources.map { SourceItem(id = it.id, title = it.title, coverUrl = it.coverUrl) },
+            sources = foundMangaSearchResults.map { SourceItem(id = it.id, title = it.title, coverUrl = it.coverUrl) },
             onSelect = { source ->
-                showMangaSourcePicker = false
+                showMangaSearchResultPicker = false
                 val ch = pendingChapter ?: return@SourceSelectorSheet
                 onNavigateToReader(ch, source.id)
             },
             onDismiss = {
-                showMangaSourcePicker = false
+                showMangaSearchResultPicker = false
                 pendingChapter = null
             },
         )

@@ -14,7 +14,7 @@ import ani.saikou.di.AppModule
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
 import ani.saikou.domain.model.MangaPage
-import ani.saikou.domain.model.MangaSource
+import ani.saikou.domain.model.MangaSearchResult
 import io.github.theshid.prettylog.Log
 import io.sentry.Sentry
 import io.sentry.SentryLevel
@@ -69,7 +69,7 @@ class MangaReaderViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
-    private var mangaSources: List<MangaSource> = emptyList()
+    private var mangaSources: List<MangaSearchResult> = emptyList()
     private var _resolvedSourceId: String? = null
     private var resolvedSourceId: String?
         get() = _resolvedSourceId
@@ -293,7 +293,7 @@ class MangaReaderViewModel(
         }
     }
 
-    fun selectSource(source: MangaSource) {
+    fun selectSource(source: MangaSearchResult) {
         resolvedSourceId = source.id
         _uiState.value = _uiState.value.copy(showSourceSelector = false, isLoading = true)
         viewModelScope.launch {

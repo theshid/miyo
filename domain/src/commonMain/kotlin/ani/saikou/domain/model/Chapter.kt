@@ -12,7 +12,12 @@ data class MangaPage(
     val headers: Map<String, String> = emptyMap(),
 )
 
-data class MangaSource(
+/**
+ * One hit from a [MangaSource.search] call. Contains everything needed to
+ * disambiguate which result the user (or auto-resolution logic) picks before
+ * fetching chapters.
+ */
+data class MangaSearchResult(
     val id: String,
     val title: String,
     val coverUrl: String? = null,

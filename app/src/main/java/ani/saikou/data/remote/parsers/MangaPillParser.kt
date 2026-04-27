@@ -2,7 +2,8 @@ package ani.saikou.data.remote.parsers
 
 import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.MangaPage
-import ani.saikou.domain.model.MangaSource
+import ani.saikou.domain.model.MangaSearchResult
+import ani.saikou.domain.source.MangaSource
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import kotlinx.coroutines.Dispatchers
@@ -13,14 +14,14 @@ import org.jsoup.Jsoup
  * Fallback manga source for titles not available on MangaDex (e.g. licensed manga).
  * Parses mangapill.com — no JS rendering, no Cloudflare, clean HTML.
  */
-class MangaPillParser {
+class MangaPillParser : MangaSource {
 
     companion object {
         private const val HOST = "https://mangapill.com"
         private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
 
-    suspend fun search(query: String): List<MangaSource> = withContext(Dispatchers.IO) {
+    override suspend fun search(query: String): List<MangaSearchResult> = withContext(Dispatchers.IO) {
         try {
             val doc = Jsoup.connect("$HOST/search?q=$query")
                 .userAgent(USER_AGENT)
@@ -37,7 +38,7 @@ class MangaPillParser {
                     el.select("img").attr("src")
                 }
 
-                MangaSource(
+                MangaSearchResult(
                     id = href,  // e.g. "/manga/4741/vinland-saga"
                     title = title,
                     coverUrl = cover.ifEmpty { null },
@@ -49,7 +50,8 @@ class MangaPillParser {
         }
     }
 
-    suspend fun getChapters(mangaPath: String): List<Chapter> = withContext(Dispatchers.IO) {
+    override suspend fun getChapters(sourceId: String): List<Chapter> = withContext(Dispatchers.IO) {
+        val mangaPath = sourceId
         try {
             val url = if (mangaPath.startsWith("http")) mangaPath else "$HOST$mangaPath"
             val doc = Jsoup.connect(url)
@@ -74,7 +76,8 @@ class MangaPillParser {
         }
     }
 
-    suspend fun getPages(chapterPath: String): List<MangaPage> = withContext(Dispatchers.IO) {
+    override suspend fun getPages(chapterId: String): List<MangaPage> = withContext(Dispatchers.IO) {
+        val chapterPath = chapterId
         try {
             val url = if (chapterPath.startsWith("http")) chapterPath else "$HOST$chapterPath"
             val doc = Jsoup.connect(url)
