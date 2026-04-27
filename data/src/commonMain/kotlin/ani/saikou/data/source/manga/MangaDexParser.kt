@@ -1,4 +1,4 @@
-package ani.saikou.data.remote.parsers
+package ani.saikou.data.source.manga
 
 import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.MangaPage
@@ -6,7 +6,6 @@ import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.source.MangaSource
 import ani.saikou.platform.log.Logger
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
@@ -19,7 +18,14 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+/**
+ * MangaDex implementation of [MangaSource]. Lives in commonMain — the body
+ * uses only Ktor + kotlinx.serialization, both KMP. The HTTP engine is
+ * supplied via the injected [HttpClient] so platform-specific engine choice
+ * (OkHttp on Android, Darwin on iOS) stays in the DI graph.
+ */
 class MangaDexParser(
+    private val client: HttpClient,
     private val logger: Logger,
 ) : MangaSource {
 
@@ -27,7 +33,6 @@ class MangaDexParser(
         private const val API = "https://api.mangadex.org"
     }
 
-    private val client = HttpClient(OkHttp)
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     override suspend fun search(query: String): List<MangaSearchResult> = withContext(Dispatchers.IO) {

@@ -6,8 +6,6 @@ import androidx.lifecycle.viewModelScope
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
 import ani.saikou.data.local.MangaChapterCountCache
-import ani.saikou.data.remote.parsers.MangaDexParser
-import ani.saikou.data.remote.parsers.MangaPillParser
 import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Media
 import kotlinx.coroutines.Dispatchers
@@ -127,11 +125,11 @@ class UserListsViewModel(
      */
     private suspend fun resolveChapterCount(title: String): Int? = withContext(Dispatchers.IO) {
         val dex = runCatching {
-            val sources = MangaDexParser(AppModule.logger()).search(title)
+            val sources = AppModule.mangaDexParser().search(title)
             val picked = sources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
                 ?: sources.firstOrNull()
             picked?.let { src ->
-                val chapters = runCatching { MangaDexParser(AppModule.logger()).getChapters(src.id) }.getOrDefault(emptyList())
+                val chapters = runCatching { AppModule.mangaDexParser().getChapters(src.id) }.getOrDefault(emptyList())
                 Pair(chapters.lastOrNull()?.number?.toInt() ?: 0, src.totalChapterHint ?: 0)
             }
         }.getOrNull() ?: Pair(0, 0)
@@ -140,11 +138,11 @@ class UserListsViewModel(
         val needsPill = dexCount == 0 || (dexHint > 0 && dexCount < dexHint * 0.9)
         val pillCount = if (needsPill) {
             runCatching {
-                val sources = MangaPillParser(AppModule.logger()).search(title)
+                val sources = AppModule.mangaPillParser().search(title)
                 val picked = sources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
                     ?: sources.firstOrNull()
                 picked?.let { src ->
-                    runCatching { MangaPillParser(AppModule.logger()).getChapters(src.id) }.getOrDefault(emptyList())
+                    runCatching { AppModule.mangaPillParser().getChapters(src.id) }.getOrDefault(emptyList())
                         .lastOrNull()?.number?.toInt() ?: 0
                 } ?: 0
             }.getOrDefault(0)

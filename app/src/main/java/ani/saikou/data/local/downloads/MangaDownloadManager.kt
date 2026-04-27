@@ -4,7 +4,6 @@ import android.content.Context
 import ani.saikou.data.local.db.DownloadDao
 import ani.saikou.data.local.db.DownloadEntity
 import ani.saikou.data.local.db.DownloadedMangaEntity
-import ani.saikou.data.remote.parsers.MangaDexParser
 import ani.saikou.di.AppModule
 import ani.saikou.domain.model.MangaPage
 import io.github.theshid.prettylog.Log as PLog
@@ -21,7 +20,7 @@ class MangaDownloadManager(
     private val context: Context,
     private val dao: DownloadDao,
 ) {
-    private val mangaDex = MangaDexParser(AppModule.logger())
+    private val mangaDex = AppModule.mangaDexParser()
     private val concurrencySemaphore = Semaphore(3) // Max 3 concurrent page downloads
 
     private val _activeDownloadId = MutableStateFlow<String?>(null)

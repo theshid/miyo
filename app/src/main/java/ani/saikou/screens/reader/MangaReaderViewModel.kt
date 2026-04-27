@@ -8,8 +8,6 @@ import ani.saikou.components.SourceItem
 import ani.saikou.data.local.db.ActivityEventEntity
 import ani.saikou.domain.model.Chapter
 import ani.saikou.data.local.db.ReadingHistoryEntity
-import ani.saikou.data.remote.parsers.MangaDexParser
-import ani.saikou.data.remote.parsers.MangaPillParser
 import ani.saikou.di.AppModule
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
@@ -37,8 +35,8 @@ class MangaReaderViewModel(
     private val downloadDao = AppModule.downloadDao()
     private val downloadManager = AppModule.downloadManager()
     private val sizeEstimator = ani.saikou.data.local.downloads.ChapterSizeEstimator(downloadDao)
-    private val mangaDex = MangaDexParser(AppModule.logger())
-    private val mangaPill = MangaPillParser(AppModule.logger())
+    private val mangaDex = AppModule.mangaDexParser()
+    private val mangaPill = AppModule.mangaPillParser()
     private var activeParser: String = "MangaDex" // tracks which parser resolved the source
 
     val mediaId: Int = savedStateHandle["mediaId"] ?: 0

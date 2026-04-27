@@ -76,8 +76,6 @@ import ani.saikou.components.PillButton
 import ani.saikou.components.SourceItem
 import ani.saikou.components.SourceSelectorSheet
 import ani.saikou.data.remote.parsers.GogoParser
-import ani.saikou.data.remote.parsers.MangaDexParser
-import ani.saikou.data.remote.parsers.MangaPillParser
 import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.model.Media
@@ -198,9 +196,9 @@ fun MediaDetailScreen(
             val title = media.nameRomaji ?: media.name ?: media.displayTitle
 
             // Try MangaDex first, then MangaPill as fallback
-            var sources = MangaDexParser(AppModule.logger()).search(title)
+            var sources = AppModule.mangaDexParser().search(title)
             if (sources.isEmpty()) {
-                sources = MangaPillParser(AppModule.logger()).search(title)
+                sources = AppModule.mangaPillParser().search(title)
             }
             mangaSourceSearching = false
 
@@ -839,7 +837,7 @@ private fun ChaptersTab(
                 val title = mediaTitle
                 var dexCount = 0
                 var dexHint: Int? = null
-                val dexSources = MangaDexParser(AppModule.logger()).search(title)
+                val dexSources = AppModule.mangaDexParser().search(title)
                 // Prefer exact-title match — search relevance order sometimes
                 // puts colored re-releases or spin-offs first (e.g. Vagabond
                 // returns "Vagabond (Hong Kong Colored Version)" before the
@@ -848,7 +846,7 @@ private fun ChaptersTab(
                     ?: dexSources.firstOrNull()
                 if (pickedDex != null) {
                     dexHint = pickedDex.totalChapterHint
-                    val chapters = MangaDexParser(AppModule.logger()).getChapters(pickedDex.id)
+                    val chapters = AppModule.mangaDexParser().getChapters(pickedDex.id)
                     if (chapters.isNotEmpty()) {
                         dexCount = chapters.last().number.toInt()
                     }
@@ -862,11 +860,11 @@ private fun ChaptersTab(
                 val anilistMissing = totalChapters == null || totalChapters == 0
                 var pillCount = 0
                 if (dexCount == 0 || mangaDexLooksPartial || anilistFarAboveDex || anilistMissing) {
-                    val pillSources = MangaPillParser(AppModule.logger()).search(title)
+                    val pillSources = AppModule.mangaPillParser().search(title)
                     val pickedPill = pillSources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
                         ?: pillSources.firstOrNull()
                     if (pickedPill != null) {
-                        val chapters = MangaPillParser(AppModule.logger()).getChapters(pickedPill.id)
+                        val chapters = AppModule.mangaPillParser().getChapters(pickedPill.id)
                         if (chapters.isNotEmpty()) {
                             pillCount = chapters.last().number.toInt()
                         }

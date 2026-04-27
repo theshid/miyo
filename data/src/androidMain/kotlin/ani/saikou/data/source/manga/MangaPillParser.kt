@@ -1,4 +1,4 @@
-package ani.saikou.data.remote.parsers
+package ani.saikou.data.source.manga
 
 import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.MangaPage

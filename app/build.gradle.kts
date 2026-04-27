@@ -83,6 +83,7 @@ dependencies {
     implementation(project(":domain"))
     implementation(project(":platform"))
     implementation(project(":platform-android"))
+    implementation(project(":data"))
 
     // PrettyLog — our extracted logging library (via JitPack)
     implementation("com.github.theshid:Pretty-Log:0.1.0")

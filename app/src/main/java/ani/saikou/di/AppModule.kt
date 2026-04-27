@@ -15,9 +15,18 @@ import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.FeedbackService
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
+import ani.saikou.data.source.manga.MangaDexParser
+import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.platform.android.log.SentryLogger
 import ani.saikou.platform.log.Logger
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 
 /**
  * Simple service locator. Keeps things lightweight without adding Hilt/Koin
@@ -35,6 +44,9 @@ object AppModule {
     private var onboardingPrefs: OnboardingPrefs? = null
     private var feedbackService: FeedbackService? = null
     private var logger: Logger? = null
+    private var httpClient: HttpClient? = null
+    private var mangaDexParser: MangaDexParser? = null
+    private var mangaPillParser: MangaPillParser? = null
 
     fun init(context: Context) {
         val appContext = context.applicationContext
@@ -48,6 +60,20 @@ object AppModule {
         onboardingPrefs = OnboardingPrefs(appContext)
         feedbackService = FeedbackService()
         logger = SentryLogger()
+
+        // Single shared Ktor client — reused across every parser. Creating
+        // one per call (the old MangaDexParser() pattern) leaked OkHttp
+        // connection pools on hot navigation between detail/lists/reader.
+        httpClient = HttpClient(OkHttp) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true; isLenient = true })
+            }
+            if (BuildConfig.DEBUG) {
+                install(Logging) { level = LogLevel.INFO }
+            }
+        }
+        mangaDexParser = MangaDexParser(httpClient!!, logger!!)
+        mangaPillParser = MangaPillParser(logger!!)
     }
 
     fun repository(): AnilistRepository =
@@ -88,4 +114,10 @@ object AppModule {
 
     fun logger(): Logger =
         logger ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun mangaDexParser(): MangaDexParser =
+        mangaDexParser ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun mangaPillParser(): MangaPillParser =
+        mangaPillParser ?: throw IllegalStateException("AppModule not initialized.")
 }
