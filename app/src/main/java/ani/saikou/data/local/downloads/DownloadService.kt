@@ -15,6 +15,7 @@ import ani.saikou.R
 import ani.saikou.data.local.db.SaikouDatabase
 import ani.saikou.data.remote.parsers.MangaDexParser
 import ani.saikou.data.remote.parsers.MangaPillParser
+import ani.saikou.di.AppModule
 import ani.saikou.domain.model.MangaPage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -55,8 +56,9 @@ class DownloadService : Service() {
         createNotificationChannel()
         val dao = SaikouDatabase.getInstance(this).downloadDao()
         downloadManager = MangaDownloadManager(this, dao)
-        mangaDex = MangaDexParser()
-        mangaPill = MangaPillParser()
+        val logger = AppModule.logger()
+        mangaDex = MangaDexParser(logger)
+        mangaPill = MangaPillParser(logger)
         startForeground(NOTIFICATION_ID, buildNotification("Preparing download..."))
     }
 

@@ -127,11 +127,11 @@ class UserListsViewModel(
      */
     private suspend fun resolveChapterCount(title: String): Int? = withContext(Dispatchers.IO) {
         val dex = runCatching {
-            val sources = MangaDexParser().search(title)
+            val sources = MangaDexParser(AppModule.logger()).search(title)
             val picked = sources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
                 ?: sources.firstOrNull()
             picked?.let { src ->
-                val chapters = runCatching { MangaDexParser().getChapters(src.id) }.getOrDefault(emptyList())
+                val chapters = runCatching { MangaDexParser(AppModule.logger()).getChapters(src.id) }.getOrDefault(emptyList())
                 Pair(chapters.lastOrNull()?.number?.toInt() ?: 0, src.totalChapterHint ?: 0)
             }
         }.getOrNull() ?: Pair(0, 0)
@@ -140,11 +140,11 @@ class UserListsViewModel(
         val needsPill = dexCount == 0 || (dexHint > 0 && dexCount < dexHint * 0.9)
         val pillCount = if (needsPill) {
             runCatching {
-                val sources = MangaPillParser().search(title)
+                val sources = MangaPillParser(AppModule.logger()).search(title)
                 val picked = sources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
                     ?: sources.firstOrNull()
                 picked?.let { src ->
-                    runCatching { MangaPillParser().getChapters(src.id) }.getOrDefault(emptyList())
+                    runCatching { MangaPillParser(AppModule.logger()).getChapters(src.id) }.getOrDefault(emptyList())
                         .lastOrNull()?.number?.toInt() ?: 0
                 } ?: 0
             }.getOrDefault(0)

@@ -4,10 +4,9 @@ import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.source.MangaSource
+import ani.saikou.platform.log.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
-import io.sentry.Sentry
-import io.sentry.SentryLevel
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
@@ -20,7 +19,9 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-class MangaDexParser : MangaSource {
+class MangaDexParser(
+    private val logger: Logger,
+) : MangaSource {
 
     companion object {
         private const val API = "https://api.mangadex.org"
@@ -166,14 +167,6 @@ class MangaDexParser : MangaSource {
     }
 
     private fun reportParserIssue(method: String, throwable: Throwable, extras: Map<String, String> = emptyMap()) {
-        try {
-            Sentry.withScope { scope ->
-                scope.level = SentryLevel.ERROR
-                scope.setTag("area", "MangaDexParser")
-                scope.setTag("method", method)
-                extras.forEach { (k, v) -> scope.setExtra(k, v) }
-                Sentry.captureException(throwable)
-            }
-        } catch (_: Exception) { /* best-effort */ }
+        logger.reportError(area = "MangaDexParser", method = method, throwable = throwable, extras = extras)
     }
 }

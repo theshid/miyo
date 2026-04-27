@@ -17,3 +17,12 @@ android {
         jvmTarget = "17"
     }
 }
+
+dependencies {
+    implementation(project(":platform"))
+
+    // Sentry is the concrete error sink today. Keeping the integration here
+    // means commonMain consumers (use cases, repos, parsers) can stay
+    // Sentry-free and reach it only through the Logger interface.
+    implementation(libs.sentry.android)
+}

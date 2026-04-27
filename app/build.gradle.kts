@@ -81,6 +81,8 @@ dependencies {
     // AnilistRepository interface. Source migration into the other layers
     // (data, presentation, etc.) happens in subsequent commits.
     implementation(project(":domain"))
+    implementation(project(":platform"))
+    implementation(project(":platform-android"))
 
     // PrettyLog — our extracted logging library (via JitPack)
     implementation("com.github.theshid:Pretty-Log:0.1.0")

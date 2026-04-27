@@ -16,6 +16,8 @@ import ani.saikou.data.remote.FeedbackService
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.platform.android.log.SentryLogger
+import ani.saikou.platform.log.Logger
 
 /**
  * Simple service locator. Keeps things lightweight without adding Hilt/Koin
@@ -32,6 +34,7 @@ object AppModule {
     private var openAiService: OpenAiService? = null
     private var onboardingPrefs: OnboardingPrefs? = null
     private var feedbackService: FeedbackService? = null
+    private var logger: Logger? = null
 
     fun init(context: Context) {
         val appContext = context.applicationContext
@@ -44,6 +47,7 @@ object AppModule {
         openAiService = OpenAiService(BuildConfig.OPENAI_API_KEY)
         onboardingPrefs = OnboardingPrefs(appContext)
         feedbackService = FeedbackService()
+        logger = SentryLogger()
     }
 
     fun repository(): AnilistRepository =
@@ -81,4 +85,7 @@ object AppModule {
 
     fun feedbackService(): FeedbackService =
         feedbackService ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun logger(): Logger =
+        logger ?: throw IllegalStateException("AppModule not initialized.")
 }

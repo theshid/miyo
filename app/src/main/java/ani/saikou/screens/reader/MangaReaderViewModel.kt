@@ -37,8 +37,8 @@ class MangaReaderViewModel(
     private val downloadDao = AppModule.downloadDao()
     private val downloadManager = AppModule.downloadManager()
     private val sizeEstimator = ani.saikou.data.local.downloads.ChapterSizeEstimator(downloadDao)
-    private val mangaDex = MangaDexParser()
-    private val mangaPill = MangaPillParser()
+    private val mangaDex = MangaDexParser(AppModule.logger())
+    private val mangaPill = MangaPillParser(AppModule.logger())
     private var activeParser: String = "MangaDex" // tracks which parser resolved the source
 
     val mediaId: Int = savedStateHandle["mediaId"] ?: 0
