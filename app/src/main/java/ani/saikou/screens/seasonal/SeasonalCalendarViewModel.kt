@@ -2,9 +2,9 @@ package ani.saikou.screens.seasonal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.di.AppModule
 import ani.saikou.domain.model.AiringEntry
 import ani.saikou.domain.model.Media
+import ani.saikou.domain.repository.AnilistRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,9 +14,9 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
 
-class SeasonalCalendarViewModel : ViewModel() {
-
-    private val repository = AppModule.repository()
+class SeasonalCalendarViewModel(
+    private val repository: AnilistRepository,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SeasonalUiState())
     val uiState: StateFlow<SeasonalUiState> = _uiState

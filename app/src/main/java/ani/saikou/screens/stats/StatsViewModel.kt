@@ -2,15 +2,15 @@ package ani.saikou.screens.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.di.AppModule
 import ani.saikou.domain.model.UserStats
+import ani.saikou.domain.repository.AnilistRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class StatsViewModel : ViewModel() {
-
-    private val repository = AppModule.repository()
+class StatsViewModel(
+    private val repository: AnilistRepository,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState

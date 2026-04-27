@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import ani.saikou.domain.model.Media
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
@@ -54,7 +55,7 @@ fun CharacterDetailScreen(
     characterId: Int,
     onBack: () -> Unit,
     onNavigateToMedia: (Int) -> Unit,
-    viewModel: CharacterDetailViewModel = viewModel(),
+    viewModel: CharacterDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
 

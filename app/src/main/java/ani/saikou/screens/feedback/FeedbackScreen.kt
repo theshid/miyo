@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.data.remote.FeedbackService
 import ani.saikou.ui.theme.Background
@@ -50,7 +51,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun FeedbackScreen(
     onBack: () -> Unit,
-    viewModel: FeedbackViewModel = viewModel(),
+    viewModel: FeedbackViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
 

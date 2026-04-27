@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.GlassCard
 import ani.saikou.components.PillButton
@@ -64,7 +65,7 @@ fun UserListsScreen(
     type: String,
     onBack: () -> Unit,
     onNavigateToMedia: (Int) -> Unit,
-    viewModel: UserListsViewModel = viewModel(),
+    viewModel: UserListsViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     var editingMedia by remember { mutableStateOf<Media?>(null) }

@@ -86,6 +86,7 @@ import androidx.media3.exoplayer.source.SingleSampleMediaSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.compose.runtime.collectAsState
+import org.koin.androidx.compose.koinViewModel
 import ani.saikou.R
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -107,7 +108,7 @@ fun VideoPlayerScreen(
     onBack: () -> Unit,
     onNextEpisode: ((Int) -> Unit)? = null,
     onNavigateToMedia: ((Int) -> Unit)? = null,
-    viewModel: VideoPlayerViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    viewModel: VideoPlayerViewModel = koinViewModel(),
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.ActivityHeatmap
 import ani.saikou.components.DefaultHomeTourSteps
 import ani.saikou.components.GlassCard
@@ -82,7 +83,7 @@ fun HomeScreen(
     onLogout: () -> Unit = {},
     onNavigateToReader: (mediaId: Int, chapterNum: Int) -> Unit = { _, _ -> },
     onNavigateToPlayer: (mediaId: Int, episodeNum: Int) -> Unit = { _, _ -> },
-    viewModel: HomeViewModel = viewModel(),
+    viewModel: HomeViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
 

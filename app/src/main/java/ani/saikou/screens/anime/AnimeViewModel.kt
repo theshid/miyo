@@ -2,9 +2,10 @@ package ani.saikou.screens.anime
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.AnilistFailure
-import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Media
+import ani.saikou.domain.repository.AnilistRepository
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import kotlinx.coroutines.async
@@ -12,10 +13,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class AnimeViewModel : ViewModel() {
-
-    private val repository = AppModule.repository()
-    private val api = AppModule.anilistApi()
+class AnimeViewModel(
+    private val repository: AnilistRepository,
+    private val api: AnilistApi,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState

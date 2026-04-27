@@ -10,9 +10,20 @@ import ani.saikou.data.remote.FeedbackService
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.screens.ai.AiChatViewModel
+import ani.saikou.screens.anime.AnimeViewModel
+import ani.saikou.screens.character.CharacterDetailViewModel
 import ani.saikou.screens.detail.MediaDetailViewModel
 import ani.saikou.screens.downloads.DownloadsViewModel
+import ani.saikou.screens.feedback.FeedbackViewModel
+import ani.saikou.screens.home.HomeViewModel
+import ani.saikou.screens.lists.UserListsViewModel
+import ani.saikou.screens.manga.MangaViewModel
+import ani.saikou.screens.player.VideoPlayerViewModel
 import ani.saikou.screens.reader.MangaReaderViewModel
+import ani.saikou.screens.search.SearchViewModel
+import ani.saikou.screens.seasonal.SeasonalCalendarViewModel
+import ani.saikou.screens.stats.StatsViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.singleOf
@@ -48,10 +59,21 @@ val appModule = module {
     singleOf(::FeedbackService)
 
     // ─── ViewModels ────────────────────────────────────────────────────
-    // Migrated to constructor injection in 8b. Remaining VMs (search,
-    // home, anime, etc.) follow in 8b-2 — until then they keep their
-    // AppModule.X() lookups, which now route through Koin via the facade.
-    viewModelOf(::MangaReaderViewModel)
-    viewModelOf(::MediaDetailViewModel)
+    // Every Compose-backed ViewModel resolves through Koin now.
+    // viewModelOf reflects against the constructor and pulls each param
+    // from the graph (including SavedStateHandle for VMs that take it).
+    viewModelOf(::AiChatViewModel)
+    viewModelOf(::AnimeViewModel)
+    viewModelOf(::CharacterDetailViewModel)
     viewModelOf(::DownloadsViewModel)
+    viewModelOf(::FeedbackViewModel)
+    viewModelOf(::HomeViewModel)
+    viewModelOf(::MangaReaderViewModel)
+    viewModelOf(::MangaViewModel)
+    viewModelOf(::MediaDetailViewModel)
+    viewModelOf(::SearchViewModel)
+    viewModelOf(::SeasonalCalendarViewModel)
+    viewModelOf(::StatsViewModel)
+    viewModelOf(::UserListsViewModel)
+    viewModelOf(::VideoPlayerViewModel)
 }

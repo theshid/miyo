@@ -3,14 +3,13 @@ package ani.saikou.screens.feedback
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.data.remote.FeedbackService
-import ani.saikou.di.AppModule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class FeedbackViewModel : ViewModel() {
-
-    private val service = AppModule.feedbackService()
+class FeedbackViewModel(
+    private val service: FeedbackService,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedbackUiState())
     val uiState: StateFlow<FeedbackUiState> = _uiState

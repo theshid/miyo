@@ -4,12 +4,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
+import ani.saikou.data.local.db.ActivityEventDao
+import ani.saikou.data.local.db.ReadingHistoryDao
 import ani.saikou.data.local.db.ReadingHistoryEntity
+import ani.saikou.data.local.db.WatchHistoryDao
 import ani.saikou.data.local.db.WatchHistoryEntity
+import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.AnilistFailure
-import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.User
+import ani.saikou.domain.repository.AnilistRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,13 +22,13 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-class HomeViewModel : ViewModel() {
-
-    private val repository = AppModule.repository()
-    private val readingHistoryDao = AppModule.readingHistoryDao()
-    private val watchHistoryDao = AppModule.watchHistoryDao()
-    private val activityDao = AppModule.activityEventDao()
-    private val api = AppModule.anilistApi()
+class HomeViewModel(
+    private val repository: AnilistRepository,
+    private val readingHistoryDao: ReadingHistoryDao,
+    private val watchHistoryDao: WatchHistoryDao,
+    private val activityDao: ActivityEventDao,
+    private val api: AnilistApi,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState

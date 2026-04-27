@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.MediaBannerCard
 import ani.saikou.components.MediaPosterCard
@@ -35,7 +36,7 @@ import ani.saikou.ui.theme.Primary
 fun MangaScreen(
     onNavigateToMedia: (Int) -> Unit,
     onNavigateToSearch: (genre: String?, sort: String?) -> Unit,
-    viewModel: MangaViewModel = viewModel(),
+    viewModel: MangaViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
 

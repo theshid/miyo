@@ -2,17 +2,17 @@ package ani.saikou.screens.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Media
+import ani.saikou.domain.repository.AnilistRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class SearchViewModel : ViewModel() {
-
-    private val repository = AppModule.repository()
+class SearchViewModel(
+    private val repository: AnilistRepository,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState

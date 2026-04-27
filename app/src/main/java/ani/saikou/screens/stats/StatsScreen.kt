@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GlassCard
 import ani.saikou.domain.model.AnimeStats
 import ani.saikou.domain.model.GenreStat
@@ -70,7 +71,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun StatsScreen(
     onBack: () -> Unit,
-    viewModel: StatsViewModel = viewModel(),
+    viewModel: StatsViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current

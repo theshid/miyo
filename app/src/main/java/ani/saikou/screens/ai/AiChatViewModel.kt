@@ -3,15 +3,15 @@ package ani.saikou.screens.ai
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.data.remote.OpenAiService
-import ani.saikou.di.AppModule
+import ani.saikou.domain.repository.AnilistRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class AiChatViewModel : ViewModel() {
-
-    private val openAiService = AppModule.openAiService()
-    private val repository = AppModule.repository()
+class AiChatViewModel(
+    private val openAiService: OpenAiService,
+    private val repository: AnilistRepository,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AiChatUiState())
     val uiState: StateFlow<AiChatUiState> = _uiState

@@ -4,17 +4,19 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.components.SourceItem
+import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ActivityEventEntity
+import ani.saikou.data.local.db.WatchHistoryDao
 import ani.saikou.data.local.db.WatchHistoryEntity
 import ani.saikou.data.remote.AniSkipApi
 import ani.saikou.data.remote.SkipTimes
 import ani.saikou.data.remote.parsers.GogoParser
-import ani.saikou.di.AppModule
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
 import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.StreamLink
+import ani.saikou.domain.repository.AnilistRepository
 import io.github.theshid.prettylog.Log
 import io.sentry.Sentry
 import io.sentry.SentryLevel
@@ -28,11 +30,11 @@ import kotlinx.coroutines.launch
 
 class VideoPlayerViewModel(
     savedStateHandle: SavedStateHandle,
+    private val repository: AnilistRepository,
+    private val watchHistoryDao: WatchHistoryDao,
+    private val activityDao: ActivityEventDao,
 ) : ViewModel() {
 
-    private val repository = AppModule.repository()
-    private val watchHistoryDao = AppModule.watchHistoryDao()
-    private val activityDao = AppModule.activityEventDao()
     private val gogoParser = GogoParser()
     private val aniSkipApi = AniSkipApi()
 

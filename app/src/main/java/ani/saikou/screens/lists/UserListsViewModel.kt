@@ -6,8 +6,9 @@ import androidx.lifecycle.viewModelScope
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
 import ani.saikou.data.local.MangaChapterCountCache
-import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Media
+import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.repository.MangaSourceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,9 +19,10 @@ import kotlinx.coroutines.withContext
 
 class UserListsViewModel(
     savedStateHandle: SavedStateHandle,
+    private val repository: AnilistRepository,
+    private val mangaSourceRepo: MangaSourceRepository,
 ) : ViewModel() {
 
-    private val repository = AppModule.repository()
     private val type: String = savedStateHandle["type"] ?: "ANIME"
 
     private val _uiState = MutableStateFlow(UserListsUiState(type = type))
@@ -119,7 +121,7 @@ class UserListsViewModel(
     }
 
     private suspend fun resolveChapterCount(title: String): Int? = withContext(Dispatchers.IO) {
-        AppModule.mangaSourceRepository().resolveChapterCount(title)
+        mangaSourceRepo.resolveChapterCount(title)
     }
 
     companion object {

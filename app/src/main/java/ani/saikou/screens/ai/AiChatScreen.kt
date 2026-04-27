@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.MarkdownText
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
@@ -61,7 +62,7 @@ import ani.saikou.ui.theme.SurfaceContainerHigh
 @Composable
 fun AiChatScreen(
     onBack: () -> Unit,
-    viewModel: AiChatViewModel = viewModel(),
+    viewModel: AiChatViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     var inputText by remember { mutableStateOf("") }
