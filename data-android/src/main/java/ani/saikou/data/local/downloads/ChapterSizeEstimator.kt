@@ -17,6 +17,23 @@ class ChapterSizeEstimator(private val dao: DownloadDao) {
         // Color webtoons are 3-5× bigger but quickly replace this value with
         // their own measured average after a single completed download.
         const val DEFAULT_CHAPTER_BYTES = 10L * 1024 * 1024
+
+        /**
+         * Human-readable "≈ 42 MB" or "≈ 1.2 GB" form. Static so callers
+         * (UI, repos) can format byte counts without holding a DAO-bound
+         * estimator instance.
+         */
+        fun format(bytes: Long): String {
+            val kb = bytes / 1024.0
+            val mb = kb / 1024.0
+            val gb = mb / 1024.0
+            return when {
+                gb >= 1.0 -> "%.1f GB".format(gb)
+                mb >= 10.0 -> "%.0f MB".format(mb)
+                mb >= 1.0 -> "%.1f MB".format(mb)
+                else -> "%.0f KB".format(kb)
+            }
+        }
     }
 
     /**
@@ -29,20 +46,5 @@ class ChapterSizeEstimator(private val dao: DownloadDao) {
             ?: dao.getGlobalAverageSize()?.toLong()
             ?: DEFAULT_CHAPTER_BYTES
         return perChapter * count
-    }
-
-    /**
-     * Human-readable "≈ 42 MB" or "≈ 1.2 GB" form.
-     */
-    fun format(bytes: Long): String {
-        val kb = bytes / 1024.0
-        val mb = kb / 1024.0
-        val gb = mb / 1024.0
-        return when {
-            gb >= 1.0 -> "%.1f GB".format(gb)
-            mb >= 10.0 -> "%.0f MB".format(mb)
-            mb >= 1.0 -> "%.1f MB".format(mb)
-            else -> "%.0f KB".format(kb)
-        }
     }
 }

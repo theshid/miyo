@@ -6,11 +6,14 @@ import androidx.lifecycle.viewModelScope
 import ani.saikou.components.ChapterDownloadState
 import ani.saikou.components.SourceItem
 import ani.saikou.data.local.db.ActivityEventEntity
-import ani.saikou.domain.model.Chapter
 import ani.saikou.data.local.db.ReadingHistoryEntity
+import ani.saikou.data.local.downloads.ChapterSizeEstimator
 import ani.saikou.di.AppModule
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
+import ani.saikou.domain.model.Chapter
+import ani.saikou.domain.model.DownloadRequest
+import ani.saikou.domain.model.DownloadStatus
 import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSearchResult
 import io.github.theshid.prettylog.Log
@@ -32,9 +35,7 @@ class MangaReaderViewModel(
     private val repository = AppModule.repository()
     private val historyDao = AppModule.readingHistoryDao()
     private val activityDao = AppModule.activityEventDao()
-    private val downloadDao = AppModule.downloadDao()
-    private val downloadManager = AppModule.downloadManager()
-    private val sizeEstimator = ani.saikou.data.local.downloads.ChapterSizeEstimator(downloadDao)
+    private val downloadRepo = AppModule.downloadRepository()
     private val mangaDex = AppModule.mangaDexParser()
     private val mangaPill = AppModule.mangaPillParser()
     private var activeParser: String = "MangaDex" // tracks which parser resolved the source
@@ -54,14 +55,14 @@ class MangaReaderViewModel(
     val chapterListLoading: StateFlow<Boolean> = _chapterListLoading
 
     /** Reactive map of chapterNumber → download state for this manga. */
-    val chapterDownloads: StateFlow<Map<Int, ChapterDownloadState>> = downloadDao
-        .getDownloadsForManga(mediaId)
-        .map { rows ->
-            rows.filter { it.chapterNumber >= 0 }.associate { row ->
-                row.chapterNumber to ChapterDownloadState(
-                    status = row.status,
-                    downloadedPages = row.downloadedPages,
-                    totalPages = row.totalPages,
+    val chapterDownloads: StateFlow<Map<Int, ChapterDownloadState>> = downloadRepo
+        .observeDownloadsForManga(mediaId)
+        .map { downloads ->
+            downloads.mapValues { (_, d) ->
+                ChapterDownloadState(
+                    status = d.status.name,
+                    downloadedPages = d.downloadedPages,
+                    totalPages = d.totalPages,
                 )
             }
         }
@@ -124,7 +125,7 @@ class MangaReaderViewModel(
 
     fun cancelDownload(chapterNumber: Int) {
         viewModelScope.launch {
-            downloadManager.cancelDownload("${mediaId}_$chapterNumber")
+            downloadRepo.cancelChapter("${mediaId}_$chapterNumber")
         }
     }
 
@@ -132,19 +133,20 @@ class MangaReaderViewModel(
         val state = _uiState.value
         viewModelScope.launch {
             val id = "${mediaId}_$chapterNumber"
-            val existing = downloadDao.getDownload(id)
-            if (existing?.status == "COMPLETED" || existing?.status == "DOWNLOADING" || existing?.status == "QUEUED") {
+            val existing = downloadRepo.getDownload(id)
+            if (existing?.status in setOf(DownloadStatus.COMPLETED, DownloadStatus.DOWNLOADING, DownloadStatus.QUEUED)) {
                 return@launch
             }
-            downloadManager.queueDownload(
-                mangaId = mediaId,
-                mangaTitle = state.title,
-                coverUrl = coverUrl,
-                chapterKey = chapterNumber.toString(),
-                chapterNumber = chapterNumber,
-                chapterName = "Chapter $chapterNumber",
-                sourceId = "",
-                totalPages = 0,
+            downloadRepo.queueChapter(
+                DownloadRequest(
+                    mangaId = mediaId,
+                    mangaTitle = state.title,
+                    coverUrl = coverUrl,
+                    chapterKey = chapterNumber.toString(),
+                    chapterNumber = chapterNumber,
+                    chapterName = "Chapter $chapterNumber",
+                    sourceId = "",
+                ),
             )
             onQueued()
         }
@@ -157,10 +159,10 @@ class MangaReaderViewModel(
             // Cache-first: if this chapter is downloaded, skip ALL network work.
             // Works even fully offline because we don't touch the AniList API
             // or the source parser to discover the chapter id.
-            val localDownload = downloadDao.getCompletedByChapterNumber(mediaId, chapterNum)
+            val localDownload = downloadRepo.getCompletedChapter(mediaId, chapterNum)
             if (localDownload != null) {
-                val localPages = downloadManager.getLocalPages(mediaId, localDownload.chapterKey)
-                if (!localPages.isNullOrEmpty()) {
+                val localPages = downloadRepo.getLocalPages(mediaId, localDownload.chapterKey)
+                if (localPages.isNotEmpty()) {
                     activeParser = localDownload.sourceId.let { sid ->
                         if (sid.startsWith("/manga/") || sid.startsWith("/chapters/")) "MangaPill" else "MangaDex"
                     }
@@ -298,19 +300,20 @@ class MangaReaderViewModel(
             for (offset in 1..count) {
                 val nextChapter = chapterNum + offset
                 val id = "${mediaId}_$nextChapter"
-                val existing = downloadDao.getDownload(id)
-                if (existing?.status == "COMPLETED" || existing?.status == "DOWNLOADING" || existing?.status == "QUEUED") {
+                val existing = downloadRepo.getDownload(id)
+                if (existing?.status in setOf(DownloadStatus.COMPLETED, DownloadStatus.DOWNLOADING, DownloadStatus.QUEUED)) {
                     continue // already have it (or working on it)
                 }
-                downloadManager.queueDownload(
-                    mangaId = mediaId,
-                    mangaTitle = state.title,
-                    coverUrl = coverUrl,
-                    chapterKey = nextChapter.toString(),
-                    chapterNumber = nextChapter,
-                    chapterName = "Chapter $nextChapter",
-                    sourceId = "",
-                    totalPages = 0,
+                downloadRepo.queueChapter(
+                    DownloadRequest(
+                        mangaId = mediaId,
+                        mangaTitle = state.title,
+                        coverUrl = coverUrl,
+                        chapterKey = nextChapter.toString(),
+                        chapterNumber = nextChapter,
+                        chapterName = "Chapter $nextChapter",
+                        sourceId = "",
+                    ),
                 )
             }
             onQueued()
@@ -319,16 +322,13 @@ class MangaReaderViewModel(
 
     /** Bytes estimate for `count` upcoming chapters, rendered via [ChapterSizeEstimator.format]. */
     suspend fun estimateBytesForNext(count: Int): Long =
-        sizeEstimator.estimateBytes(mediaId, count)
+        downloadRepo.estimateBytesForNext(mediaId, count)
 
-    fun formatBytes(bytes: Long): String = sizeEstimator.format(bytes)
+    fun formatBytes(bytes: Long): String = ChapterSizeEstimator.format(bytes)
 
     /** True iff the next chapter is NOT yet fully downloaded on this device. */
-    suspend fun isNextChapterMissing(): Boolean {
-        val nextChapter = chapterNum + 1
-        val existing = downloadDao.getCompletedByChapterNumber(mediaId, nextChapter)
-        return existing == null
-    }
+    suspend fun isNextChapterMissing(): Boolean =
+        downloadRepo.getCompletedChapter(mediaId, chapterNum + 1) == null
 
     /**
      * Called from the reader composable whenever the page changes.

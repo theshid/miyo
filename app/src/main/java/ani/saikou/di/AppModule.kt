@@ -10,15 +10,18 @@ import ani.saikou.data.local.db.DownloadDao
 import ani.saikou.data.local.db.ReadingHistoryDao
 import ani.saikou.data.local.db.SaikouDatabase
 import ani.saikou.data.local.db.WatchHistoryDao
+import ani.saikou.data.local.downloads.ChapterSizeEstimator
 import ani.saikou.data.local.downloads.MangaDownloadManager
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.FeedbackService
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
+import ani.saikou.data.repository.DownloadRepositoryImpl
 import ani.saikou.data.repository.MangaSourceRepositoryImpl
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.repository.DownloadRepository
 import ani.saikou.domain.repository.MangaSourceRepository
 import ani.saikou.platform.android.log.SentryLogger
 import ani.saikou.platform.log.Logger
@@ -50,6 +53,7 @@ object AppModule {
     private var mangaDexParser: MangaDexParser? = null
     private var mangaPillParser: MangaPillParser? = null
     private var mangaSourceRepository: MangaSourceRepository? = null
+    private var downloadRepository: DownloadRepository? = null
 
     fun init(context: Context) {
         val appContext = context.applicationContext
@@ -86,6 +90,11 @@ object AppModule {
         // Construct after parser init — MangaDownloadManager pulls MangaDex
         // through its constructor now (no AppModule lookup at runtime).
         downloadManager = MangaDownloadManager(appContext, database!!.downloadDao(), mangaDexParser!!)
+        downloadRepository = DownloadRepositoryImpl(
+            dao = database!!.downloadDao(),
+            manager = downloadManager!!,
+            sizeEstimator = ChapterSizeEstimator(database!!.downloadDao()),
+        )
     }
 
     fun repository(): AnilistRepository =
@@ -135,4 +144,7 @@ object AppModule {
 
     fun mangaSourceRepository(): MangaSourceRepository =
         mangaSourceRepository ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun downloadRepository(): DownloadRepository =
+        downloadRepository ?: throw IllegalStateException("AppModule not initialized.")
 }
