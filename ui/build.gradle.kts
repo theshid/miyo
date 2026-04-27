@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -16,6 +17,20 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    // Compose is wired up in a later commit when the screens migrate in.
-    // Enabling it on an empty module trips the Kotlin compiler.
+    buildFeatures {
+        compose = true
+    }
+}
+
+dependencies {
+    // Anchor on the same Compose BOM the app uses so versions don't drift.
+    val composeBom = platform(libs.compose.bom)
+    implementation(composeBom)
+    // Compose runtime is required for any Compose-enabled module — without
+    // it, the compiler plugin can't resolve @Composable / `remember` / etc.
+    implementation("androidx.compose.runtime:runtime")
+    implementation(libs.compose.ui)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.ui.tooling.preview)
+    debugImplementation(libs.compose.ui.tooling)
 }

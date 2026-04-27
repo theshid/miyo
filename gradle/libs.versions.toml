@@ -1,11 +1,14 @@
 [versions]
 agp = "8.7.3"
-kotlin = "1.9.25"
-ksp = "1.9.25-1.0.20"
+# Kotlin 2.0.21 is required for Room KMP (2.7+) and Coil 3. The Compose
+# Compiler is now a separate Gradle plugin (`org.jetbrains.kotlin.plugin.compose`)
+# tied to the Kotlin version — the legacy `kotlinCompilerExtensionVersion`
+# setup is no longer used.
+kotlin = "2.0.21"
+ksp = "2.0.21-1.0.27"
 
 # Compose / AndroidX (kept aligned with current :app values)
 compose-bom = "2024.12.01"
-compose-compiler = "1.5.15"
 activity = "1.9.3"
 lifecycle = "2.8.7"
 navigation = "2.8.5"
@@ -137,5 +140,8 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+# Compose Compiler Gradle plugin — required for any module with @Composable
+# functions on Kotlin 2.0+. Replaces the legacy compose-compiler-extension setup.
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 sentry-android = { id = "io.sentry.android.gradle", version.ref = "sentry-plugin" }

@@ -1,12 +1,12 @@
 import java.util.Properties
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.25"
-    id("com.google.devtools.ksp") version "1.9.25-1.0.20"
-
-    id("io.sentry.android.gradle") version "6.5.0"
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.sentry.android)
 }
 
 android {
@@ -65,10 +65,9 @@ android {
         compose = true
         buildConfig = true
     }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
-    }
+    // No more composeOptions { kotlinCompilerExtensionVersion = ... } — the
+    // org.jetbrains.kotlin.plugin.compose Gradle plugin (declared above) drives
+    // the compiler now, version-locked to Kotlin.
 
     packaging {
         resources {
