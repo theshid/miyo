@@ -16,12 +16,13 @@ import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.DownloadRequest
-import ani.saikou.domain.model.DownloadStatus
 import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.domain.repository.DownloadRepository
 import ani.saikou.domain.repository.MangaSourceRepository
+import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
+import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
 import io.github.theshid.prettylog.Log
 import io.sentry.Sentry
 import io.sentry.SentryLevel
@@ -43,6 +44,8 @@ class MangaReaderViewModel(
     private val mangaSourceRepo: MangaSourceRepository,
     private val mangaDex: MangaDexParser,
     private val mangaPill: MangaPillParser,
+    private val queueChapter: QueueChapterDownloadUseCase,
+    private val queueNextChaptersUseCase: QueueNextChaptersUseCase,
 ) : ViewModel() {
 
     private var activeParser: String = "MangaDex" // tracks which parser resolved the source
@@ -138,12 +141,7 @@ class MangaReaderViewModel(
     fun queueSingleChapterDownload(chapterNumber: Int, onQueued: () -> Unit = {}) {
         val state = _uiState.value
         viewModelScope.launch {
-            val id = "${mediaId}_$chapterNumber"
-            val existing = downloadRepo.getDownload(id)
-            if (existing?.status in setOf(DownloadStatus.COMPLETED, DownloadStatus.DOWNLOADING, DownloadStatus.QUEUED)) {
-                return@launch
-            }
-            downloadRepo.queueChapter(
+            queueChapter(
                 DownloadRequest(
                     mangaId = mediaId,
                     mangaTitle = state.title,
@@ -303,25 +301,13 @@ class MangaReaderViewModel(
     fun queueNextChapters(count: Int, onQueued: () -> Unit = {}) {
         val state = _uiState.value
         viewModelScope.launch {
-            for (offset in 1..count) {
-                val nextChapter = chapterNum + offset
-                val id = "${mediaId}_$nextChapter"
-                val existing = downloadRepo.getDownload(id)
-                if (existing?.status in setOf(DownloadStatus.COMPLETED, DownloadStatus.DOWNLOADING, DownloadStatus.QUEUED)) {
-                    continue // already have it (or working on it)
-                }
-                downloadRepo.queueChapter(
-                    DownloadRequest(
-                        mangaId = mediaId,
-                        mangaTitle = state.title,
-                        coverUrl = coverUrl,
-                        chapterKey = nextChapter.toString(),
-                        chapterNumber = nextChapter,
-                        chapterName = "Chapter $nextChapter",
-                        sourceId = "",
-                    ),
-                )
-            }
+            queueNextChaptersUseCase(
+                mangaId = mediaId,
+                mangaTitle = state.title,
+                coverUrl = coverUrl,
+                startChapter = chapterNum,
+                count = count,
+            )
             onQueued()
         }
     }

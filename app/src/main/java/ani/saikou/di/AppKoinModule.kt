@@ -10,6 +10,8 @@ import ani.saikou.data.remote.FeedbackService
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
+import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
 import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
 import ani.saikou.screens.character.CharacterDetailViewModel
@@ -26,6 +28,7 @@ import ani.saikou.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.screens.stats.StatsViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModelOf
+import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
@@ -57,6 +60,13 @@ val appModule = module {
     // ─── Remote services ───────────────────────────────────────────────
     single { OpenAiService(BuildConfig.OPENAI_API_KEY) }
     singleOf(::FeedbackService)
+
+    // ─── Use cases ─────────────────────────────────────────────────────
+    // factoryOf — fresh instance per resolution. Use cases are stateless
+    // wrappers and don't benefit from singleton-ness; per-call alloc keeps
+    // the door open for parameterized state if a future use case needs it.
+    factoryOf(::QueueChapterDownloadUseCase)
+    factoryOf(::QueueNextChaptersUseCase)
 
     // ─── ViewModels ────────────────────────────────────────────────────
     // Every Compose-backed ViewModel resolves through Koin now.
