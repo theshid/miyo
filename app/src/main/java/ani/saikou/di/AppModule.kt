@@ -15,9 +15,11 @@ import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.FeedbackService
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
+import ani.saikou.data.repository.MangaSourceRepositoryImpl
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.repository.MangaSourceRepository
 import ani.saikou.platform.android.log.SentryLogger
 import ani.saikou.platform.log.Logger
 import io.ktor.client.HttpClient
@@ -47,6 +49,7 @@ object AppModule {
     private var httpClient: HttpClient? = null
     private var mangaDexParser: MangaDexParser? = null
     private var mangaPillParser: MangaPillParser? = null
+    private var mangaSourceRepository: MangaSourceRepository? = null
 
     fun init(context: Context) {
         val appContext = context.applicationContext
@@ -74,6 +77,10 @@ object AppModule {
         }
         mangaDexParser = MangaDexParser(httpClient!!, logger!!)
         mangaPillParser = MangaPillParser(logger!!)
+        mangaSourceRepository = MangaSourceRepositoryImpl(
+            mangaDex = mangaDexParser!!,
+            mangaPill = mangaPillParser!!,
+        )
     }
 
     fun repository(): AnilistRepository =
@@ -120,4 +127,7 @@ object AppModule {
 
     fun mangaPillParser(): MangaPillParser =
         mangaPillParser ?: throw IllegalStateException("AppModule not initialized.")
+
+    fun mangaSourceRepository(): MangaSourceRepository =
+        mangaSourceRepository ?: throw IllegalStateException("AppModule not initialized.")
 }

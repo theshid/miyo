@@ -98,47 +98,21 @@ class MangaReaderViewModel(
             val chapters = try {
                 val sid = resolvedSourceId?.takeIf { it.isNotEmpty() }
                 if (sid != null) {
+                    // Source already resolved (from previous call or history) —
+                    // skip the search round-trip.
                     if (activeParser == "MangaPill") mangaPill.getChapters(sid)
                     else mangaDex.getChapters(sid)
                 } else {
-                    // Use MangaDex's own `lastChapter` hint to detect licensed
-                    // titles it only partially hosts. If the gap between
-                    // "series has 220 chapters" and "feed returned 7" is big,
-                    // we know MangaDex isn't the right source and skip straight
-                    // to MangaPill without a wasted getChapters round trip.
-                    val title = _uiState.value.title
-                    val mdx = mangaDex.search(title).firstOrNull()
-                    val mdxChapters = if (mdx != null) {
-                        runCatching { mangaDex.getChapters(mdx.id) }.getOrDefault(emptyList())
+                    // First-time resolution — let the repo pick the best source
+                    // (handles the partial-catalog and licensed-title cases that
+                    // used to be hand-coded here).
+                    val resolved = ani.saikou.di.AppModule.mangaSourceRepository()
+                        .resolveChapters(_uiState.value.title)
+                    if (resolved != null) {
+                        activeParser = resolved.sourceName
+                        resolvedSourceId = resolved.sourceMangaId
+                        resolved.chapters
                     } else emptyList()
-                    val mdxHint = mdx?.totalChapterHint
-                    val mdxCovers = mdxHint == null ||
-                        mdxChapters.size >= (mdxHint * 0.9)
-                    if (mdxChapters.isNotEmpty() && mdxCovers) {
-                        activeParser = "MangaDex"
-                        resolvedSourceId = mdx!!.id
-                        mdxChapters
-                    } else {
-                        val mp = mangaPill.search(title).firstOrNull()
-                        val mpChapters = if (mp != null) {
-                            runCatching { mangaPill.getChapters(mp.id) }.getOrDefault(emptyList())
-                        } else emptyList()
-                        // Last resort: fall back to MangaDex's partial list if
-                        // MangaPill had nothing either.
-                        when {
-                            mpChapters.size > mdxChapters.size -> {
-                                activeParser = "MangaPill"
-                                resolvedSourceId = mp!!.id
-                                mpChapters
-                            }
-                            mdxChapters.isNotEmpty() -> {
-                                activeParser = "MangaDex"
-                                resolvedSourceId = mdx!!.id
-                                mdxChapters
-                            }
-                            else -> emptyList()
-                        }
-                    }
                 }
             } catch (_: Exception) {
                 emptyList()

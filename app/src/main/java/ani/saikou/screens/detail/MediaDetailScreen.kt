@@ -828,54 +828,24 @@ private fun ChaptersTab(
 
     // Always probe the sources, even when AniList has a chapter count, since
     // AniList sometimes reports a low/stale number for licensed or on-hiatus
-    // titles (e.g. Vagabond shows 5 here while MangaPill has 327). We pick the
-    // larger of AniList vs source to avoid silently truncating the chapter list.
+    // titles (e.g. Vagabond shows 5 here while MangaPill has 327).
     androidx.compose.runtime.LaunchedEffect(mediaTitle) {
         if (mediaTitle != null && !loadingCount) {
             loadingCount = true
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val title = mediaTitle
-                var dexCount = 0
-                var dexHint: Int? = null
-                val dexSources = AppModule.mangaDexParser().search(title)
-                // Prefer exact-title match — search relevance order sometimes
-                // puts colored re-releases or spin-offs first (e.g. Vagabond
-                // returns "Vagabond (Hong Kong Colored Version)" before the
-                // canonical entry, and the colored version only has 5 fragmentary chapters).
-                val pickedDex = dexSources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
-                    ?: dexSources.firstOrNull()
-                if (pickedDex != null) {
-                    dexHint = pickedDex.totalChapterHint
-                    val chapters = AppModule.mangaDexParser().getChapters(pickedDex.id)
-                    if (chapters.isNotEmpty()) {
-                        dexCount = chapters.last().number.toInt()
-                    }
-                }
-                // Cross-check MangaPill when MangaDex has nothing, looks like a
-                // partial catalog, or AniList didn't give us an authoritative
-                // chapter count to anchor on. We then take the max of all signals.
-                val mangaDexLooksPartial = dexHint != null && dexHint > 0 &&
-                    dexCount < (dexHint * 0.9)
-                val anilistFarAboveDex = totalChapters != null && totalChapters > dexCount * 2
-                val anilistMissing = totalChapters == null || totalChapters == 0
-                var pillCount = 0
-                if (dexCount == 0 || mangaDexLooksPartial || anilistFarAboveDex || anilistMissing) {
-                    val pillSources = AppModule.mangaPillParser().search(title)
-                    val pickedPill = pillSources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
-                        ?: pillSources.firstOrNull()
-                    if (pickedPill != null) {
-                        val chapters = AppModule.mangaPillParser().getChapters(pickedPill.id)
-                        if (chapters.isNotEmpty()) {
-                            pillCount = chapters.last().number.toInt()
-                        }
-                    }
-                }
-                sourceChapterCount = listOfNotNull(dexCount, dexHint, pillCount)
-                    .maxOrNull()?.takeIf { it > 0 }
+                val resolved = AppModule.mangaSourceRepository().resolveChapterCount(
+                    title = mediaTitle,
+                    anilistTotal = totalChapters,
+                )
+                sourceChapterCount = resolved
                 // Stash the resolved count so other screens (lists, continue
                 // reading, etc.) can render the real number instead of "?"
-                // when AniList comes back null for this title.
-                sourceChapterCount?.let { ani.saikou.data.local.MangaChapterCountCache.put(mediaId, it) }
+                // when AniList comes back null for this title. The cache is
+                // keyed by AniList mediaId — that mapping isn't visible to
+                // the repo, so the put() stays here.
+                if (resolved != null) {
+                    ani.saikou.data.local.MangaChapterCountCache.put(mediaId, resolved)
+                }
             }
             loadingCount = false
         }

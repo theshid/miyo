@@ -118,36 +118,8 @@ class UserListsViewModel(
         }
     }
 
-    /**
-     * Mirrors the detail screen's logic: prefer an exact title match on
-     * MangaDex, take its `lastChapter` hint or hosted count, then probe
-     * MangaPill if needed and pick whichever gives the larger number.
-     */
     private suspend fun resolveChapterCount(title: String): Int? = withContext(Dispatchers.IO) {
-        val dex = runCatching {
-            val sources = AppModule.mangaDexParser().search(title)
-            val picked = sources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
-                ?: sources.firstOrNull()
-            picked?.let { src ->
-                val chapters = runCatching { AppModule.mangaDexParser().getChapters(src.id) }.getOrDefault(emptyList())
-                Pair(chapters.lastOrNull()?.number?.toInt() ?: 0, src.totalChapterHint ?: 0)
-            }
-        }.getOrNull() ?: Pair(0, 0)
-        val dexCount = dex.first
-        val dexHint = dex.second
-        val needsPill = dexCount == 0 || (dexHint > 0 && dexCount < dexHint * 0.9)
-        val pillCount = if (needsPill) {
-            runCatching {
-                val sources = AppModule.mangaPillParser().search(title)
-                val picked = sources.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
-                    ?: sources.firstOrNull()
-                picked?.let { src ->
-                    runCatching { AppModule.mangaPillParser().getChapters(src.id) }.getOrDefault(emptyList())
-                        .lastOrNull()?.number?.toInt() ?: 0
-                } ?: 0
-            }.getOrDefault(0)
-        } else 0
-        listOf(dexCount, dexHint, pillCount).maxOrNull()?.takeIf { it > 0 }
+        AppModule.mangaSourceRepository().resolveChapterCount(title)
     }
 
     companion object {
