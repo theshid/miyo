@@ -87,7 +87,14 @@ import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
 import ani.saikou.ui.theme.SurfaceContainer
-import ani.saikou.di.AppModule
+import ani.saikou.data.local.db.ReadingHistoryDao
+import ani.saikou.data.local.db.WatchHistoryDao
+import ani.saikou.data.remote.OpenAiService
+import ani.saikou.data.source.manga.MangaDexParser
+import ani.saikou.data.source.manga.MangaPillParser
+import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.repository.MangaSourceRepository
+import org.koin.compose.koinInject
 import ani.saikou.util.ShareCardGenerator
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
@@ -105,6 +112,15 @@ fun MediaDetailScreen(
     viewModel: MediaDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    // Composable-level dependencies — pulled once and reused by the inline
+    // navigation/search blocks below. Each is a singleton in the Koin graph
+    // so repeated lookups are cheap.
+    val watchHistoryDao = koinInject<WatchHistoryDao>()
+    val readingHistoryDao = koinInject<ReadingHistoryDao>()
+    val mangaDexParser = koinInject<MangaDexParser>()
+    val mangaPillParser = koinInject<MangaPillParser>()
+    val anilistRepository = koinInject<AnilistRepository>()
+    val mangaSourceRepository = koinInject<MangaSourceRepository>()
 
     if (state.isLoading) {
         Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
@@ -129,8 +145,7 @@ fun MediaDetailScreen(
     fun onEpisodeSelected(episodeNum: Int) {
         // Check watch history first — if source is saved, go directly
         scope.launch {
-            val historyDao = AppModule.watchHistoryDao()
-            val history = historyDao.getForMedia(mediaId)
+            val history = watchHistoryDao.getForMedia(mediaId)
             if (history != null && history.sourceSlug.isNotEmpty()) {
                 onNavigateToPlayer(episodeNum, history.sourceSlug)
                 return@launch
@@ -185,8 +200,7 @@ fun MediaDetailScreen(
 
     fun onChapterSelected(chapterNum: Int) {
         scope.launch {
-            val historyDao = AppModule.readingHistoryDao()
-            val history = historyDao.getForManga(mediaId)
+            val history = readingHistoryDao.getForManga(mediaId)
             if (history != null && history.sourceId.isNotEmpty()) {
                 onNavigateToReader(chapterNum, history.sourceId)
                 return@launch
@@ -197,9 +211,9 @@ fun MediaDetailScreen(
             val title = media.nameRomaji ?: media.name ?: media.displayTitle
 
             // Try MangaDex first, then MangaPill as fallback
-            var sources = AppModule.mangaDexParser().search(title)
+            var sources = mangaDexParser.search(title)
             if (sources.isEmpty()) {
-                sources = AppModule.mangaPillParser().search(title)
+                sources = mangaPillParser.search(title)
             }
             mangaSourceSearching = false
 
@@ -442,7 +456,7 @@ fun MediaDetailScreen(
             }
             IconButton(onClick = {
                 scope.launch {
-                    val user = AppModule.repository().getUserData()
+                    val user = anilistRepository.getUserData()
                     val bitmap = ShareCardGenerator.generateWatchingCard(
                         context = context,
                         title = media.displayTitle,
@@ -827,6 +841,8 @@ private fun ChaptersTab(
     var sourceChapterCount by remember { mutableStateOf<Int?>(null) }
     var loadingCount by remember { mutableStateOf(false) }
 
+    val mangaSourceRepo = koinInject<MangaSourceRepository>()
+
     // Always probe the sources, even when AniList has a chapter count, since
     // AniList sometimes reports a low/stale number for licensed or on-hiatus
     // titles (e.g. Vagabond shows 5 here while MangaPill has 327).
@@ -834,7 +850,7 @@ private fun ChaptersTab(
         if (mediaTitle != null && !loadingCount) {
             loadingCount = true
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val resolved = AppModule.mangaSourceRepository().resolveChapterCount(
+                val resolved = mangaSourceRepo.resolveChapterCount(
                     title = mediaTitle,
                     anilistTotal = totalChapters,
                 )

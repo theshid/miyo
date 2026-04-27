@@ -31,8 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ani.saikou.components.MarkdownText
 import ani.saikou.data.remote.OpenAiService
-import ani.saikou.di.AppModule
 import ani.saikou.domain.model.Media
+import org.koin.compose.koinInject
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -46,9 +46,9 @@ fun CatchMeUpSheet(
 ) {
     var summary by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    val openAi = koinInject<OpenAiService>()
 
     LaunchedEffect(media.id) {
-        val openAi = AppModule.openAiService()
 
         val progressType = if (media.type == "MANGA") "chapters" else "episodes"
         val progressNum = media.userProgress ?: 0

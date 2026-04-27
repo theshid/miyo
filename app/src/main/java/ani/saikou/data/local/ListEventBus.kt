@@ -9,7 +9,8 @@ import kotlinx.coroutines.flow.asSharedFlow
  * AniList data emits an event here; consuming ViewModels (Home, UserLists) collect
  * and refresh only when relevant events arrive.
  *
- * Lives as a singleton in [ani.saikou.di.AppModule].
+ * Process-lifetime `object` — no DI needed since it's stateless apart from the
+ * SharedFlow buffer.
  */
 object ListEventBus {
 

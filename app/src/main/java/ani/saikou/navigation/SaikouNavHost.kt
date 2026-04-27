@@ -11,6 +11,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import ani.saikou.data.local.TokenStorage
+import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.screens.anime.AnimeScreen
 import ani.saikou.screens.character.CharacterDetailScreen
 import ani.saikou.screens.detail.MediaDetailScreen
@@ -28,6 +30,7 @@ import ani.saikou.screens.seasonal.SeasonalCalendarScreen
 import ani.saikou.screens.stats.StatsScreen
 import ani.saikou.screens.ai.AiChatScreen
 import ani.saikou.screens.feedback.FeedbackScreen
+import org.koin.compose.koinInject
 import ani.saikou.screens.splash.SplashScreen
 import ani.saikou.screens.torrent.TorrentSearchScreen
 
@@ -51,7 +54,7 @@ fun SaikouNavHost(
             Screen.Splash.route,
             exitTransition = { fadeOut(animationSpec = tween(1000)) },
         ) {
-            val isLoggedIn = ani.saikou.di.AppModule.repository().isLoggedIn()
+            val isLoggedIn = koinInject<AnilistRepository>().isLoggedIn()
             SplashScreen(
                 onSplashComplete = {
                     val dest = if (isLoggedIn) Screen.Home.route else Screen.Login.route
@@ -75,6 +78,7 @@ fun SaikouNavHost(
 
         // ── Bottom Nav Screens ────────────────────────────────
         composable(Screen.Home.route) {
+            val tokenStorage = koinInject<TokenStorage>()
             HomeScreen(
                 onNavigateToAnimeList = { navController.navigate(Screen.UserLists.createRoute("ANIME")) },
                 onNavigateToMangaList = { navController.navigate(Screen.UserLists.createRoute("MANGA")) },
@@ -89,7 +93,7 @@ fun SaikouNavHost(
                 onNavigateToAiChat = { navController.navigate(Screen.AiChat.route) },
                 onNavigateToFeedback = { navController.navigate(Screen.Feedback.route) },
                 onLogout = {
-                    ani.saikou.di.AppModule.tokenStorage().clear()
+                    tokenStorage.clear()
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }

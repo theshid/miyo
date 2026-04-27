@@ -30,10 +30,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import ani.saikou.components.SaikouBottomBar
-import ani.saikou.di.AppModule
+import ani.saikou.data.local.ConnectivityObserver
 import ani.saikou.navigation.SaikouNavHost
 import ani.saikou.navigation.Screen
 import ani.saikou.navigation.bottomBarScreens
+import org.koin.compose.koinInject
 
 @Composable
 fun SaikouApp() {
@@ -50,8 +51,8 @@ fun SaikouApp() {
     // Observe connectivity for the non-blocking offline banner.
     // No longer auto-navigates to NoInternet — screens handle load failures
     // gracefully via their own empty/error states.
-    val isConnected by AppModule.connectivity().isConnected
-        .collectAsState(initial = true)
+    val connectivity = koinInject<ConnectivityObserver>()
+    val isConnected by connectivity.isConnected.collectAsState(initial = true)
 
     // Request notification permission on Android 13+
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

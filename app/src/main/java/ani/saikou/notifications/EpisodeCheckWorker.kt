@@ -5,13 +5,15 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import ani.saikou.di.AppModule
+import ani.saikou.domain.repository.AnilistRepository
 import io.github.theshid.prettylog.Log
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 /**
  * Periodic background worker that checks the user's CURRENT anime list for new
@@ -21,7 +23,9 @@ import kotlinx.coroutines.withContext
 class EpisodeCheckWorker(
     context: Context,
     params: WorkerParameters,
-) : CoroutineWorker(context, params) {
+) : CoroutineWorker(context, params), KoinComponent {
+
+    private val repository: AnilistRepository by inject()
 
     companion object {
         const val TAG = "EpisodeCheckWorker"
@@ -32,7 +36,6 @@ class EpisodeCheckWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
-            val repository = AppModule.repository()
             if (!repository.isLoggedIn()) {
                 // Cancel any alarms left over from a previous logged-in session
                 // and flip the boot receiver off.

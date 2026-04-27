@@ -15,13 +15,13 @@ import ani.saikou.R
 import ani.saikou.data.local.db.SaikouDatabase
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
-import ani.saikou.di.AppModule
 import ani.saikou.domain.model.MangaPage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 
 class DownloadService : Service() {
 
@@ -29,9 +29,12 @@ class DownloadService : Service() {
     private val scope = CoroutineScope(Dispatchers.IO + job)
     private var downloadJob: Job? = null
 
+    // Service is constructed by the Android framework; Koin's `by inject()`
+    // resolves through the Service-as-KoinComponent extension provided by
+    // koin-android — no explicit KoinComponent declaration needed.
+    private val mangaDex: MangaDexParser by inject()
+    private val mangaPill: MangaPillParser by inject()
     private lateinit var downloadManager: MangaDownloadManager
-    private lateinit var mangaDex: MangaDexParser
-    private lateinit var mangaPill: MangaPillParser
 
     companion object {
         const val CHANNEL_ID = "saikou_downloads"
@@ -55,8 +58,6 @@ class DownloadService : Service() {
         super.onCreate()
         createNotificationChannel()
         val dao = SaikouDatabase.getInstance(this).downloadDao()
-        mangaDex = AppModule.mangaDexParser()
-        mangaPill = AppModule.mangaPillParser()
         downloadManager = MangaDownloadManager(this, dao, mangaDex)
         startForeground(NOTIFICATION_ID, buildNotification("Preparing download..."))
     }

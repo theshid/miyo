@@ -61,7 +61,8 @@ import ani.saikou.components.TourOverlay
 import ani.saikou.components.TourTarget
 import ani.saikou.components.rememberTourState
 import ani.saikou.components.tourTarget
-import ani.saikou.di.AppModule
+import ani.saikou.data.local.OnboardingPrefs
+import org.koin.compose.koinInject
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -89,7 +90,7 @@ fun HomeScreen(
 
     val scrollState = rememberScrollState()
     val tourState = rememberTourState()
-    val onboardingPrefs = remember { AppModule.onboardingPrefs() }
+    val onboardingPrefs = koinInject<OnboardingPrefs>()
     var tourStep by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     var showTour by remember { mutableStateOf(false) }
 

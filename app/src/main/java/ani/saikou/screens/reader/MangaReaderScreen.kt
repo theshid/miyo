@@ -118,7 +118,8 @@ fun MangaReaderScreen(
     val readerState by viewModel.uiState.collectAsState()
 
     val settingsStorage = remember { ReaderSettingsStorage(context) }
-    val onboardingPrefs = remember { ani.saikou.di.AppModule.onboardingPrefs() }
+    val onboardingPrefs = org.koin.compose.koinInject<ani.saikou.data.local.OnboardingPrefs>()
+    val connectivity = org.koin.compose.koinInject<ani.saikou.data.local.ConnectivityObserver>()
     val tourState = rememberTourState()
     var showReaderTour by remember { mutableStateOf(false) }
     var showOverlay by remember { mutableStateOf(false) }
@@ -181,7 +182,7 @@ fun MangaReaderScreen(
     var showCellularConfirm by remember { mutableStateOf(false) }
     var estimatedBytes by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
     var downloadQueued by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
-    val isOnline by ani.saikou.di.AppModule.connectivity().isConnected.collectAsState(initial = true)
+    val isOnline by connectivity.isConnected.collectAsState(initial = true)
 
     val atEndOfChapter = !readerState.isLoading &&
         readerState.error == null &&
@@ -450,7 +451,7 @@ fun MangaReaderScreen(
                 count = batchSize,
                 estimateLabel = if (estimatedBytes > 0) viewModel.formatBytes(estimatedBytes) else null,
                 onDownload = {
-                    val unmetered = ani.saikou.di.AppModule.connectivity().isUnmetered()
+                    val unmetered = connectivity.isUnmetered()
                     if (unmetered) {
                         startBatchDownload()
                     } else {

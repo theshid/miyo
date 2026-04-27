@@ -3,7 +3,8 @@ package ani.saikou
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import ani.saikou.di.AppModule
+import ani.saikou.data.local.TokenStorage
+import org.koin.android.ext.android.inject
 
 /**
  * Receives the AniList OAuth callback (`miyo://anilist#access_token=...`),
@@ -13,6 +14,9 @@ import ani.saikou.di.AppModule
  * the browser tab and bring the app back to the foreground.
  */
 class LoginCallbackActivity : ComponentActivity() {
+
+    private val tokenStorage: TokenStorage by inject()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -24,7 +28,7 @@ class LoginCallbackActivity : ComponentActivity() {
             val token = Regex("""(?<=access_token=).+(?=&token_type)""").find(fullUri)?.value
 
             if (token != null) {
-                AppModule.tokenStorage().saveToken(token)
+                tokenStorage.saveToken(token)
             }
         }
 

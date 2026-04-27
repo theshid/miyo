@@ -12,8 +12,8 @@ import ani.saikou.data.android.di.dataAndroidModule
 import ani.saikou.data.di.dataModule
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
+import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ActivityEventEntity
-import ani.saikou.di.AppModule
 import ani.saikou.di.appModule
 import ani.saikou.notifications.EpisodeCheckWorker
 import ani.saikou.platform.android.di.platformAndroidModule
@@ -29,6 +29,7 @@ import io.sentry.Breadcrumb
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import kotlinx.coroutines.CoroutineScope
+import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -43,6 +44,7 @@ import java.util.concurrent.TimeUnit
 class MiyoApplication : Application() {
 
     private val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val activityEventDao: ActivityEventDao by inject()
 
     override fun onCreate() {
         super.onCreate()
@@ -61,9 +63,8 @@ class MiyoApplication : Application() {
             minLevel = LogLevel.Debug,
             custom = SentryBreadcrumbLoggingService(baseService),
         )
-        // Koin owns the DI graph now. AppModule is a thin facade over
-        // getKoin().get<T>() so existing call sites keep working while
-        // ViewModel migrations happen feature-by-feature.
+        // Koin owns the DI graph. Every consumer (ViewModels, Activities,
+        // Service, Worker, Composables) resolves through the modules below.
         startKoin {
             // ERROR keeps the noise floor low in release; DEBUG flips on
             // verbose binding traces in dev builds.
@@ -76,7 +77,6 @@ class MiyoApplication : Application() {
                 dataAndroidModule,
             )
         }
-        AppModule.init(this)
         installCrashBreadcrumbs()
         EpisodeNotificationChannel.createChannel(this)
         scheduleEpisodeCheck()
@@ -111,7 +111,7 @@ class MiyoApplication : Application() {
     }
 
     private fun logDailySession() {
-        val dao = AppModule.activityEventDao()
+        val dao = activityEventDao
         val startOfDayMs = LocalDate.now()
             .atStartOfDay(ZoneId.systemDefault())
             .toInstant()
