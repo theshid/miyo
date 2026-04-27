@@ -132,9 +132,9 @@ fun CharacterDetailScreen(
                     color = OnSurface,
                     fontWeight = FontWeight.Bold,
                 )
-                if (character.nativeName != null) {
+                character.nativeName?.let { native ->
                     Text(
-                        text = character.nativeName,
+                        text = native,
                         style = MaterialTheme.typography.bodyMedium,
                         color = OnSurfaceVariant,
                     )
@@ -151,7 +151,8 @@ fun CharacterDetailScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Biography
-                if (!character.description.isNullOrBlank()) {
+                val biography = character.description
+                if (!biography.isNullOrBlank()) {
                     Text(
                         text = "Biography",
                         style = MaterialTheme.typography.titleMedium,
@@ -160,7 +161,7 @@ fun CharacterDetailScreen(
                     )
                     var expanded by remember { mutableStateOf(false) }
                     Text(
-                        text = character.description
+                        text = biography
                             .replace("~!", "").replace("!~", "")
                             .replace("__", "").replace("**", "")
                             .replace("<br>", "\n").replace(Regex("<[^>]*>"), ""),

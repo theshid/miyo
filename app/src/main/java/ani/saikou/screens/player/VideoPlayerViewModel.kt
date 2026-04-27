@@ -131,13 +131,14 @@ class VideoPlayerViewModel(
     private suspend fun loadEpisodeFromSource(slug: String) {
         val episodes = gogoParser.getEpisodes(slug)
         val episode = episodes.find { it.number == episodeNum.toString() }
-        if (episode?.link == null) {
+        val link = episode?.link
+        if (link == null) {
             _uiState.value = _uiState.value.copy(isLoading = false, error = "Episode $episodeNum not found")
             reportPlayerError("Episode not found on source")
             return
         }
 
-        val links = gogoParser.getStreamLinks(episode.link)
+        val links = gogoParser.getStreamLinks(link)
         _uiState.value = _uiState.value.copy(
             streamLinks = links,
             selectedLink = links.firstOrNull(),

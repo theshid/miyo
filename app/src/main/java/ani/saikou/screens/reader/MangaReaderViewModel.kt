@@ -113,8 +113,9 @@ class MangaReaderViewModel(
                     val mdxChapters = if (mdx != null) {
                         runCatching { mangaDex.getChapters(mdx.id) }.getOrDefault(emptyList())
                     } else emptyList()
-                    val mdxCovers = mdx?.totalChapterHint == null ||
-                        mdxChapters.size >= (mdx.totalChapterHint * 0.9)
+                    val mdxHint = mdx?.totalChapterHint
+                    val mdxCovers = mdxHint == null ||
+                        mdxChapters.size >= (mdxHint * 0.9)
                     if (mdxChapters.isNotEmpty() && mdxCovers) {
                         activeParser = "MangaDex"
                         resolvedSourceId = mdx!!.id

@@ -107,9 +107,9 @@ fun MediaBannerCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (media.meanScore != null) {
+                    media.meanScore?.let { score ->
                         Text(
-                            text = "★ ${media.meanScore / 10.0}",
+                            text = "★ ${score / 10.0}",
                             style = MaterialTheme.typography.bodySmall,
                             color = Primary,
                         )

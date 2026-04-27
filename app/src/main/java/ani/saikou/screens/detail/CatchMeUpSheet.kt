@@ -64,15 +64,17 @@ fun CatchMeUpSheet(
             if (total != null) append(" out of $total")
             append(".\n\n")
 
-            if (!media.description.isNullOrBlank()) {
-                val cleanDesc = media.description
+            val description = media.description
+            if (!description.isNullOrBlank()) {
+                val cleanDesc = description
                     .replace("<br>", "\n")
                     .replace(Regex("<[^>]*>"), "")
                 append("Series synopsis: $cleanDesc\n\n")
             }
 
-            if (!media.genres.isNullOrEmpty()) {
-                append("Genres: ${media.genres.joinToString(", ")}\n\n")
+            val genres = media.genres
+            if (!genres.isNullOrEmpty()) {
+                append("Genres: ${genres.joinToString(", ")}\n\n")
             }
 
             append("Give them a snappy \"Catch Me Up\" recap up to $progressType $progressNum. ")

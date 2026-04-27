@@ -353,7 +353,7 @@ private fun SearchGridCard(
                 modifier = Modifier.fillMaxSize(),
             )
             // Score badge top-left
-            if (media.meanScore != null) {
+            media.meanScore?.let { score ->
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -362,7 +362,7 @@ private fun SearchGridCard(
                         .padding(horizontal = 6.dp, vertical = 3.dp),
                 ) {
                     Text(
-                        text = "★ ${media.meanScore / 10.0}",
+                        text = "★ ${score / 10.0}",
                         style = MaterialTheme.typography.labelSmall,
                         color = OnSurface,
                     )
@@ -395,9 +395,10 @@ private fun SearchGridCard(
             overflow = TextOverflow.Ellipsis,
         )
 
-        if (!media.genres.isNullOrEmpty()) {
+        val genres = media.genres
+        if (!genres.isNullOrEmpty()) {
             Text(
-                text = media.genres.take(2).joinToString(" • "),
+                text = genres.take(2).joinToString(" • "),
                 style = MaterialTheme.typography.bodySmall,
                 color = OnSurfaceVariant,
                 maxLines = 1,

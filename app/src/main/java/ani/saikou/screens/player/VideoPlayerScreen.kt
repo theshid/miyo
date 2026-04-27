@@ -986,7 +986,7 @@ private fun UpNextCard(
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-            if (media.meanScore != null && media.meanScore > 0) {
+            media.meanScore?.takeIf { it > 0 }?.let { score ->
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -995,7 +995,7 @@ private fun UpNextCard(
                         .padding(horizontal = 5.dp, vertical = 2.dp),
                 ) {
                     Text(
-                        text = "★ ${media.meanScore / 10.0}",
+                        text = "★ ${score / 10.0}",
                         style = MaterialTheme.typography.labelSmall,
                         color = Primary,
                     )

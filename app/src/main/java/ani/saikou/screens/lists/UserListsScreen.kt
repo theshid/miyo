@@ -231,8 +231,8 @@ private fun ListMediaCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (media.meanScore != null) {
-                            Text("★ ${media.meanScore / 10.0}", style = MaterialTheme.typography.bodySmall, color = Primary)
+                        media.meanScore?.let { score ->
+                            Text("★ ${score / 10.0}", style = MaterialTheme.typography.bodySmall, color = Primary)
                         }
                         media.format?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)

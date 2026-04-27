@@ -464,12 +464,12 @@ private fun TorrentDetailSheet(
             }
 
             // Quality badges
-            if (result.quality != null) {
+            result.quality?.let { quality ->
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    result.quality.resolution?.let { QualityBadge(it) }
-                    result.quality.videoSource?.let { QualityBadge(it) }
-                    result.quality.codec?.let { QualityBadge(it) }
-                    if (result.quality.isBatch) QualityBadge("Batch")
+                    quality.resolution?.let { QualityBadge(it) }
+                    quality.videoSource?.let { QualityBadge(it) }
+                    quality.codec?.let { QualityBadge(it) }
+                    if (quality.isBatch) QualityBadge("Batch")
                 }
             }
 

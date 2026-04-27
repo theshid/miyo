@@ -142,7 +142,7 @@ class HomeViewModel : ViewModel() {
             // future airing time, sorted soonest-first.
             val now = System.currentTimeMillis()
             val airing = watching
-                .filter { it.nextAiringEpisodeTime != null && it.nextAiringEpisodeTime > now }
+                .filter { entry -> entry.nextAiringEpisodeTime?.let { it > now } == true }
                 .sortedBy { it.nextAiringEpisodeTime }
 
             // Surface a load error only if every AniList call effectively
@@ -186,7 +186,7 @@ class HomeViewModel : ViewModel() {
             val watching = watchingDeferred.await()
             val now = System.currentTimeMillis()
             val airing = watching
-                .filter { it.nextAiringEpisodeTime != null && it.nextAiringEpisodeTime > now }
+                .filter { entry -> entry.nextAiringEpisodeTime?.let { it > now } == true }
                 .sortedBy { it.nextAiringEpisodeTime }
 
             _uiState.value = _uiState.value.copy(

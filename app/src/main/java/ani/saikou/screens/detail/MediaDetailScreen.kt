@@ -341,9 +341,10 @@ fun MediaDetailScreen(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (media.nameRomaji != null && media.nameRomaji != media.displayTitle) {
+                val romaji = media.nameRomaji
+                if (romaji != null && romaji != media.displayTitle) {
                     Text(
-                        text = media.nameRomaji,
+                        text = romaji,
                         style = MaterialTheme.typography.bodySmall,
                         color = OnSurfaceVariant,
                         maxLines = 1,
@@ -476,7 +477,8 @@ fun MediaDetailScreen(
                 }
             }
             // Catch Me Up — only shown when user has progress on this series
-            if (media.userProgress != null && media.userProgress > 0) {
+            val progress = media.userProgress
+            if (progress != null && progress > 0) {
                 IconButton(onClick = { showCatchMeUp = true }) {
                     Icon(
                         Icons.Default.AutoAwesome,
@@ -616,10 +618,11 @@ private fun InfoTab(media: Media) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // Description
-        if (!media.description.isNullOrBlank()) {
+        val description = media.description
+        if (!description.isNullOrBlank()) {
             var expanded by remember { mutableStateOf(false) }
             Text(
-                text = media.description.replace("<br>", "\n").replace(Regex("<[^>]*>"), ""),
+                text = description.replace("<br>", "\n").replace(Regex("<[^>]*>"), ""),
                 style = MaterialTheme.typography.bodyMedium,
                 color = OnSurfaceVariant,
                 maxLines = if (expanded) Int.MAX_VALUE else 4,
@@ -645,12 +648,13 @@ private fun InfoTab(media: Media) {
         }
 
         // Genres
-        if (!media.genres.isNullOrEmpty()) {
+        val genres = media.genres
+        if (!genres.isNullOrEmpty()) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                media.genres.forEach { genre ->
+                genres.forEach { genre ->
                     GenreChip(text = genre)
                 }
             }

@@ -131,9 +131,9 @@ fun TrendingCarousel(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    if (media.meanScore != null) {
+                    media.meanScore?.let { score ->
                         Text(
-                            text = "★ ${media.meanScore / 10.0}",
+                            text = "★ ${score / 10.0}",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.75f),
                         )

@@ -1,7 +1,5 @@
 package ani.saikou.domain.model
 
-import java.io.Serializable
-
 data class Media(
     val id: Int,
     val malId: Int? = null,
@@ -35,7 +33,7 @@ data class Media(
     val characters: List<Character>? = null,
     val relations: List<Media>? = null,
     val recommendations: List<Media>? = null,
-) : Serializable {
+) {
 
     val displayTitle: String
         get() = userPreferredName ?: name ?: nameRomaji ?: "Unknown"
@@ -59,7 +57,7 @@ data class Character(
     val name: String?,
     val image: String? = null,
     val role: String? = null,
-) : Serializable
+)
 
 data class CharacterDetail(
     val id: Int,
@@ -71,9 +69,9 @@ data class CharacterDetail(
     val age: String? = null,
     val favourites: Int = 0,
     val media: List<Media> = emptyList(),
-) : Serializable
+)
 
 data class Studio(
     val id: Int,
     val name: String?,
-) : Serializable
+)

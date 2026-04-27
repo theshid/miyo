@@ -281,7 +281,7 @@ private fun SeasonalAnimeCard(
             )
 
             // Score badge
-            if (media.meanScore != null && media.meanScore > 0) {
+            media.meanScore?.takeIf { it > 0 }?.let { score ->
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -293,7 +293,7 @@ private fun SeasonalAnimeCard(
                         .padding(horizontal = 5.dp, vertical = 2.dp),
                 ) {
                     Text(
-                        text = "★ ${media.meanScore / 10.0}",
+                        text = "★ ${score / 10.0}",
                         style = MaterialTheme.typography.labelSmall,
                         color = Primary,
                     )
@@ -330,8 +330,9 @@ private fun SeasonalAnimeCard(
         )
 
         // Episode count
+        val epCount = media.totalEpisodes
         val epText = when {
-            media.totalEpisodes != null && media.totalEpisodes > 0 -> "${media.totalEpisodes} eps"
+            epCount != null && epCount > 0 -> "$epCount eps"
             media.isOngoing -> "Airing"
             else -> null
         }

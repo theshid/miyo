@@ -77,6 +77,11 @@ android {
 }
 
 dependencies {
+    // Layered modules — domain currently owns the data models and the
+    // AnilistRepository interface. Source migration into the other layers
+    // (data, presentation, etc.) happens in subsequent commits.
+    implementation(project(":domain"))
+
     // PrettyLog — our extracted logging library (via JitPack)
     implementation("com.github.theshid:Pretty-Log:0.1.0")
 
