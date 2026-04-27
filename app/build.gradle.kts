@@ -74,6 +74,13 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    testOptions {
+        // Robolectric needs the merged Android resources on the JVM test
+        // classpath to instantiate its shadow Application. KoinGraphTest
+        // depends on this for ApplicationProvider.getApplicationContext().
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
@@ -163,6 +170,17 @@ dependencies {
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Test — JVM-side unit tests (Koin graph validation, future use case
+    // tests that need :app's bindings, etc.). Robolectric powers the
+    // androidContext() shim that Koin needs at startup.
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.koin.test)
+    testImplementation(libs.koin.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 }
 
 

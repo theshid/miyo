@@ -24,6 +24,18 @@ kotlin {
             // adding their own dep.
             api(libs.kotlinx.coroutines.core)
         }
+
+        // androidUnitTest hosts JVM-side use case unit tests. MockK lives
+        // here (JVM-only) — KMP-friendly mocking is a future concern when
+        // iOS targets land.
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.junit)
+                implementation(libs.mockk)
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.turbine)
+            }
+        }
     }
 }
 
