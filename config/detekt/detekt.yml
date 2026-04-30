@@ -1,0 +1,239 @@
+# Detekt configuration tuned for the Saikou codebase.
+#
+# Philosophy: keep the genuinely-useful rules (complexity, exceptions,
+# potential-bugs) on. Disable rules that consistently produce noise we
+# don't act on (MagicNumber for UI px values, ReturnCount in UI code).
+# Override only when defaults clash with the project's existing style.
+#
+# Run with: ./gradlew detekt
+# Auto-fix formatting: ./gradlew detekt --auto-correct (formatting rules only)
+
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: false
+  checkExhaustiveness: false
+
+processors:
+  active: true
+
+console-reports:
+  active: true
+  exclude:
+    - 'ProjectStatisticsReport'
+    - 'ComplexityReport'
+    - 'NotificationReport'
+    - 'FindingsReport'
+    - 'FileBasedFindingsReport'
+
+output-reports:
+  active: true
+  exclude: []
+
+# ─── Comments ────────────────────────────────────────────────────────────
+# Off by default — we don't enforce "every public class needs a KDoc".
+# Comments policy is in CLAUDE.md (write WHY, not WHAT) and reviewed manually.
+comments:
+  active: false
+
+# ─── Complexity ──────────────────────────────────────────────────────────
+complexity:
+  active: true
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 20  # Default 15. Some Compose screens with many `when` branches sit just above.
+  LongMethod:
+    active: true
+    threshold: 80  # Default 60. Compose screens are vertically tall by nature.
+  LongParameterList:
+    active: true
+    functionThreshold: 8     # ViewModel constructors after DI bloat the param list legitimately.
+    constructorThreshold: 10
+    ignoreDataClasses: true
+    ignoreDefaultParameters: true
+    ignoreAnnotated:
+      - 'Composable'  # Composable signatures are routinely 5–10 params. That's idiomatic.
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 30
+    thresholdInClasses: 25
+    thresholdInInterfaces: 15
+    thresholdInObjects: 25
+    ignorePrivate: true
+    ignoreOverridden: true
+  NestedBlockDepth:
+    active: true
+    threshold: 5  # Default 4. Coil/Ktor builder DSLs nest naturally.
+
+# ─── Coroutines ──────────────────────────────────────────────────────────
+coroutines:
+  active: true
+  GlobalCoroutineUsage:
+    active: true
+  RedundantSuspendModifier:
+    active: true
+  SuspendFunWithCoroutineScopeReceiver:
+    active: true
+
+# ─── Empty blocks ────────────────────────────────────────────────────────
+empty-blocks:
+  active: true
+  EmptyCatchBlock:
+    active: true
+    allowedExceptionNameRegex: '_|(ignore|expected).*'
+
+# ─── Exceptions ──────────────────────────────────────────────────────────
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: false  # We deliberately catch Exception in best-effort blocks (parsers, breadcrumbs).
+  SwallowedException:
+    active: false  # Same — best-effort logging frequently swallows.
+  InstanceOfCheckForException:
+    active: true
+  NotImplementedDeclaration:
+    active: true
+  PrintStackTrace:
+    active: true
+
+# ─── Naming ──────────────────────────────────────────────────────────────
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-z][a-zA-Z0-9]*'
+    ignoreAnnotated:
+      - 'Composable'  # Composable funs are PascalCase by convention.
+  TopLevelPropertyNaming:
+    active: true
+    constantPattern: '[A-Z][_A-Z0-9]*'
+    propertyPattern: '[a-z][A-Za-z0-9]*'
+    privatePropertyPattern: '_?[a-z][A-Za-z0-9]*'
+
+# ─── Performance ─────────────────────────────────────────────────────────
+performance:
+  active: true
+  ArrayPrimitive:
+    active: true
+  CouldBeSequence:
+    active: false  # Often a false positive in tiny collections.
+  ForEachOnRange:
+    active: true
+  SpreadOperator:
+    active: true
+  UnnecessaryTemporaryInstantiation:
+    active: true
+
+# ─── Potential bugs ──────────────────────────────────────────────────────
+potential-bugs:
+  active: true
+  AvoidReferentialEquality:
+    active: true
+  CastToNullableType:
+    active: true
+  EqualsAlwaysReturnsTrueOrFalse:
+    active: true
+  ExitOutsideMain:
+    active: true
+  ExplicitGarbageCollectionCall:
+    active: true
+  HasPlatformType:
+    active: true
+  IgnoredReturnValue:
+    active: true
+  ImplicitDefaultLocale:
+    active: true
+  LateinitUsage:
+    active: false  # Android Service/Worker init pattern uses lateinit legitimately.
+  MapGetWithNotNullAssertionOperator:
+    active: true
+  NullableToStringCall:
+    active: true
+  UnconditionalJumpStatementInLoop:
+    active: true
+  UnnecessaryNotNullCheck:
+    active: true
+  UnreachableCatchBlock:
+    active: true
+  UnreachableCode:
+    active: true
+  UselessPostfixExpression:
+    active: true
+
+# ─── Style ───────────────────────────────────────────────────────────────
+style:
+  active: true
+  MagicNumber:
+    active: false  # Generates massive false-positive volume in Compose dp/px values.
+  MaxLineLength:
+    active: true
+    maxLineLength: 140  # Matches existing source. Default 120 would flag thousands.
+    excludePackageStatements: true
+    excludeImportStatements: true
+    excludeCommentStatements: false
+  WildcardImport:
+    active: true
+    excludeImports: []
+  ReturnCount:
+    active: true
+    max: 4  # Default 2; UI flows often have 3–4 early returns for guard clauses.
+  ThrowsCount:
+    active: true
+    max: 3
+  UnusedImports:
+    active: true
+  UnusedPrivateMember:
+    active: true
+  UnnecessaryAbstractClass:
+    active: true
+  UnnecessaryApply:
+    active: true
+  UnnecessaryLet:
+    active: true
+  UseCheckOrError:
+    active: true
+  UseRequire:
+    active: true
+  UtilityClassWithPublicConstructor:
+    active: true
+  ForbiddenComment:
+    active: false  # We deliberately leave TODO/FIXME for follow-up work.
+  DataClassContainsFunctions:
+    active: false  # Domain models legitimately have computed properties.
+  NewLineAtEndOfFile:
+    active: true
+
+# ─── Formatting (ktlint wrapper) ─────────────────────────────────────────
+# Detekt's formatting rule set wraps ktlint. Most are autoCorrect-capable —
+# `./gradlew detekt --auto-correct` fixes them in place.
+formatting:
+  active: true
+  android: true
+  autoCorrect: true
+  MaximumLineLength:
+    active: false  # Conflicts with style/MaxLineLength above; keep one source of truth.
+  Indentation:
+    active: true
+    autoCorrect: true
+    indentSize: 4
+  Filename:
+    active: true
+  FinalNewline:
+    active: true
+    autoCorrect: true
+  ImportOrdering:
+    active: true
+    autoCorrect: true
+  NoWildcardImports:
+    active: true
+  TrailingCommaOnCallSite:
+    active: true
+    autoCorrect: true
+    useTrailingCommaOnCallSite: true
+  TrailingCommaOnDeclarationSite:
+    active: true
+    autoCorrect: true
+    useTrailingCommaOnDeclarationSite: true

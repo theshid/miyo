@@ -48,6 +48,11 @@ prettylog = "0.1.0"
 sentry = "7.18.1"
 sentry-plugin = "6.5.0"
 
+# Static analysis. Both versions are confirmed Kotlin 2.0.21-compatible:
+# ktlint-gradle 12.1+ supports Kotlin 2.0; detekt added 2.0 support in 1.23.6.
+ktlint-gradle = "12.1.1"
+detekt = "1.23.7"
+
 # Test
 junit = "4.13.2"
 mockk = "1.13.13"
@@ -136,6 +141,10 @@ turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
 
+# Detekt's formatting rule pack — wraps ktlint rules. Attached as a
+# `detektPlugins` dependency so the `detekt` task picks it up.
+detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -147,3 +156,5 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 sentry-android = { id = "io.sentry.android.gradle", version.ref = "sentry-plugin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
