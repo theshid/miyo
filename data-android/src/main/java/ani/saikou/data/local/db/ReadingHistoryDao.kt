@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReadingHistoryDao {
-
     @Query("SELECT * FROM reading_history ORDER BY lastReadAt DESC")
     fun getAll(): Flow<List<ReadingHistoryEntity>>
 
@@ -32,6 +31,8 @@ interface ReadingHistoryDao {
      * Counts chapters that reached ≥80% progress (last page near the end).
      * Emits a new value whenever reading_history changes.
      */
-    @Query("SELECT COALESCE(SUM(chapterNumber), 0) FROM reading_history WHERE totalPages > 0 AND ((lastPage + 1) * 1.0 / totalPages) >= 0.8")
+    @Query(
+        "SELECT COALESCE(SUM(chapterNumber), 0) FROM reading_history WHERE totalPages > 0 AND ((lastPage + 1) * 1.0 / totalPages) >= 0.8",
+    )
     fun getChaptersReadCount(): Flow<Int>
 }

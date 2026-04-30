@@ -15,11 +15,11 @@ data class WatchHistoryEntity(
     val mediaTitle: String,
     val coverUrl: String?,
     val episodeNumber: Int,
-    val sourceSlug: String,      // Gogo slug — skip search on resume
-    val sourceName: String,      // "Gogo"
-    val lastPositionMs: Long,    // playback position in millis
-    val durationMs: Long,        // total episode duration
-    val completedEpisodes: Int = 0,  // highest episode watched to ≥80% — only goes up
+    val sourceSlug: String, // Gogo slug — skip search on resume
+    val sourceName: String, // "Gogo"
+    val lastPositionMs: Long, // playback position in millis
+    val durationMs: Long, // total episode duration
+    val completedEpisodes: Int = 0, // highest episode watched to ≥80% — only goes up
     val lastWatchedAt: Long = System.currentTimeMillis(),
 ) {
     val progressFraction: Float

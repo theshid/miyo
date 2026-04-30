@@ -30,11 +30,15 @@ android {
         if (localProps.exists()) {
             localProps.inputStream().use { props.load(it) }
         }
-        val openAiKey = (props.getProperty("OPENAI_API_KEY") ?: "")
-            .trim().removeSurrounding("\"")
+        val openAiKey =
+            (props.getProperty("OPENAI_API_KEY") ?: "")
+                .trim()
+                .removeSurrounding("\"")
         buildConfigField("String", "OPENAI_API_KEY", "\"$openAiKey\"")
-        val discordFeedback = (props.getProperty("DISCORD_FEEDBACK_WEBHOOK") ?: "")
-            .trim().removeSurrounding("\"")
+        val discordFeedback =
+            (props.getProperty("DISCORD_FEEDBACK_WEBHOOK") ?: "")
+                .trim()
+                .removeSurrounding("\"")
         buildConfigField("String", "DISCORD_FEEDBACK_WEBHOOK", "\"$discordFeedback\"")
     }
 
@@ -43,7 +47,7 @@ android {
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -55,10 +59,11 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-        )
+        freeCompilerArgs +=
+            listOf(
+                "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+                "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            )
     }
 
     buildFeatures {
@@ -135,7 +140,7 @@ dependencies {
     // Network (Ktor — CMP-ready)
     val ktorVersion = "2.3.13"
     implementation("io.ktor:ktor-client-core:$ktorVersion")
-    implementation("io.ktor:ktor-client-okhttp:$ktorVersion")          // Android engine (swap to darwin for iOS)
+    implementation("io.ktor:ktor-client-okhttp:$ktorVersion") // Android engine (swap to darwin for iOS)
     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
     implementation("io.ktor:ktor-client-logging:$ktorVersion")
@@ -182,7 +187,6 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
 }
-
 
 sentry {
     org.set("shidji-inc")

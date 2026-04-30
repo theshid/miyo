@@ -39,51 +39,52 @@ import org.koin.dsl.module
  * and `…/data/remote` because the file moves are scheduled for later
  * commits. Each `single { ... }` here mirrors a slot AppModule used to fill.
  */
-val appModule = module {
-    // ─── Build config (consumed by :data-android's HttpClient binding) ─
-    single<Boolean>(named(IS_DEBUG_QUALIFIER)) { BuildConfig.DEBUG }
+val appModule =
+    module {
+        // ─── Build config (consumed by :data-android's HttpClient binding) ─
+        single<Boolean>(named(IS_DEBUG_QUALIFIER)) { BuildConfig.DEBUG }
 
-    // ─── Auth + AniList ────────────────────────────────────────────────
-    single { TokenStorage(androidContext()) }
-    single {
-        // AnilistApi takes a tokenProvider lambda — we wire it to the
-        // TokenStorage singleton so a token rotation is reflected in
-        // subsequent calls.
-        AnilistApi(tokenProvider = { get<TokenStorage>().getToken() })
+        // ─── Auth + AniList ────────────────────────────────────────────────
+        single { TokenStorage(androidContext()) }
+        single {
+            // AnilistApi takes a tokenProvider lambda — we wire it to the
+            // TokenStorage singleton so a token rotation is reflected in
+            // subsequent calls.
+            AnilistApi(tokenProvider = { get<TokenStorage>().getToken() })
+        }
+        single<AnilistRepository> { AnilistRepositoryImpl(get(), get()) }
+
+        // ─── Device / process services still living in :app ───────────────
+        single { ConnectivityObserver(androidContext()) }
+        single { OnboardingPrefs(androidContext()) }
+
+        // ─── Remote services ───────────────────────────────────────────────
+        single { OpenAiService(BuildConfig.OPENAI_API_KEY) }
+        singleOf(::FeedbackService)
+
+        // ─── Use cases ─────────────────────────────────────────────────────
+        // factoryOf — fresh instance per resolution. Use cases are stateless
+        // wrappers and don't benefit from singleton-ness; per-call alloc keeps
+        // the door open for parameterized state if a future use case needs it.
+        factoryOf(::QueueChapterDownloadUseCase)
+        factoryOf(::QueueNextChaptersUseCase)
+
+        // ─── ViewModels ────────────────────────────────────────────────────
+        // Every Compose-backed ViewModel resolves through Koin now.
+        // viewModelOf reflects against the constructor and pulls each param
+        // from the graph (including SavedStateHandle for VMs that take it).
+        viewModelOf(::AiChatViewModel)
+        viewModelOf(::AnimeViewModel)
+        viewModelOf(::CharacterDetailViewModel)
+        viewModelOf(::DownloadsViewModel)
+        viewModelOf(::FeedbackViewModel)
+        viewModelOf(::HomeViewModel)
+        viewModelOf(::MangaReaderViewModel)
+        viewModelOf(::MangaViewModel)
+        viewModelOf(::MediaDetailViewModel)
+        viewModelOf(::SearchViewModel)
+        viewModelOf(::SeasonalCalendarViewModel)
+        viewModelOf(::StatsViewModel)
+        viewModelOf(::UserListsViewModel)
+        viewModelOf(::VideoPlayerViewModel)
     }
-    single<AnilistRepository> { AnilistRepositoryImpl(get(), get()) }
-
-    // ─── Device / process services still living in :app ───────────────
-    single { ConnectivityObserver(androidContext()) }
-    single { OnboardingPrefs(androidContext()) }
-
-    // ─── Remote services ───────────────────────────────────────────────
-    single { OpenAiService(BuildConfig.OPENAI_API_KEY) }
-    singleOf(::FeedbackService)
-
-    // ─── Use cases ─────────────────────────────────────────────────────
-    // factoryOf — fresh instance per resolution. Use cases are stateless
-    // wrappers and don't benefit from singleton-ness; per-call alloc keeps
-    // the door open for parameterized state if a future use case needs it.
-    factoryOf(::QueueChapterDownloadUseCase)
-    factoryOf(::QueueNextChaptersUseCase)
-
-    // ─── ViewModels ────────────────────────────────────────────────────
-    // Every Compose-backed ViewModel resolves through Koin now.
-    // viewModelOf reflects against the constructor and pulls each param
-    // from the graph (including SavedStateHandle for VMs that take it).
-    viewModelOf(::AiChatViewModel)
-    viewModelOf(::AnimeViewModel)
-    viewModelOf(::CharacterDetailViewModel)
-    viewModelOf(::DownloadsViewModel)
-    viewModelOf(::FeedbackViewModel)
-    viewModelOf(::HomeViewModel)
-    viewModelOf(::MangaReaderViewModel)
-    viewModelOf(::MangaViewModel)
-    viewModelOf(::MediaDetailViewModel)
-    viewModelOf(::SearchViewModel)
-    viewModelOf(::SeasonalCalendarViewModel)
-    viewModelOf(::StatsViewModel)
-    viewModelOf(::UserListsViewModel)
-    viewModelOf(::VideoPlayerViewModel)
-}

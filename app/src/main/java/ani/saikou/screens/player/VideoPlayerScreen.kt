@@ -2,12 +2,13 @@ package ani.saikou.screens.player
 
 import android.app.Activity
 import android.net.Uri
-import android.util.Log
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,22 +22,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.filled.Forward10
-import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
@@ -44,16 +46,20 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -79,21 +85,25 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.exoplayer.source.SingleSampleMediaSource
+import androidx.media3.exoplayer.text.TextOutput
+import androidx.media3.exoplayer.text.TextRenderer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import androidx.compose.runtime.collectAsState
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.R
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.SurfaceContainer
+import io.github.theshid.prettylog.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * Tracks whether the branded intro has played this session.
@@ -101,6 +111,7 @@ import kotlinx.coroutines.launch
  */
 private var introShownThisSession = false
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoPlayerScreen(
     mediaId: Int,
@@ -113,6 +124,12 @@ fun VideoPlayerScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val playerState by viewModel.uiState.collectAsState()
+
+    // ── Settings sheet state ─────────────────────────────────
+    var showSettingsSheet by remember { mutableStateOf(false) }
+    var playbackSpeed by remember { mutableFloatStateOf(1f) }
+    var isMuted by remember { mutableStateOf(false) }
+    var aspectFill by remember { mutableStateOf(false) }
 
     // ── Intro state ──────────────────────────────────────────
     val shouldPlayIntro = !introShownThisSession
@@ -158,34 +175,37 @@ fun VideoPlayerScreen(
         }
     }
 
-
     // ── Intro ExoPlayer ──────────────────────────────────────
-    val introPlayer = remember {
-        if (shouldPlayIntro) {
-            ExoPlayer.Builder(context).build().apply {
-                val uri = Uri.parse("android.resource://${context.packageName}/${R.raw.splash_animation}")
-                setMediaItem(MediaItem.fromUri(uri))
-                prepare()
-                playWhenReady = true
-                volume = 1f
+    val introPlayer =
+        remember {
+            if (shouldPlayIntro) {
+                ExoPlayer.Builder(context).build().apply {
+                    val uri = Uri.parse("android.resource://${context.packageName}/${R.raw.splash_animation}")
+                    setMediaItem(MediaItem.fromUri(uri))
+                    prepare()
+                    playWhenReady = true
+                    volume = 1f
+                }
+            } else {
+                null
             }
-        } else null
-    }
+        }
 
     // When intro video ends → crossfade out
     if (introPlayer != null) {
         DisposableEffect(introPlayer) {
-            val listener = object : Player.Listener {
-                override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_ENDED) {
-                        scope.launch {
-                            introAlpha.animateTo(0f, animationSpec = tween(400))
-                            introActive = false
-                            introShownThisSession = true
+            val listener =
+                object : Player.Listener {
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_ENDED) {
+                            scope.launch {
+                                introAlpha.animateTo(0f, animationSpec = tween(400))
+                                introActive = false
+                                introShownThisSession = true
+                            }
                         }
                     }
                 }
-            }
             introPlayer.addListener(listener)
             onDispose {
                 introPlayer.removeListener(listener)
@@ -208,15 +228,41 @@ fun VideoPlayerScreen(
     // ── Main ExoPlayer ───────────────────────────────────────
     // Custom DataSource.Factory so we can send Referer headers
     // (stream servers return 403 without it)
-    val httpFactory = remember {
-        DefaultHttpDataSource.Factory()
-            .setUserAgent("Mozilla/5.0 (Linux; Android) AppleWebKit/537.36")
-    }
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
-            .build()
-    }
+    val httpFactory =
+        remember {
+            DefaultHttpDataSource
+                .Factory()
+                .setUserAgent("Mozilla/5.0 (Linux; Android) AppleWebKit/537.36")
+        }
+    val exoPlayer =
+        remember {
+            // Media3 1.4+ disables legacy text decoding by default — TextRenderer
+            // expects pre-parsed application/x-media3-cues samples. Sideloaded VTT
+            // via SingleSampleMediaSource ships raw text/vtt samples, so we have
+            // to re-enable legacy decoding or playback fails the moment a subtitle
+            // track is selected. The toggle is per-TextRenderer in 1.5.1 (no
+            // factory-level helper exists yet), so we subclass the factory.
+            val renderersFactory =
+                object : DefaultRenderersFactory(context) {
+                    override fun buildTextRenderers(
+                        context: android.content.Context,
+                        output: TextOutput,
+                        outputLooper: android.os.Looper,
+                        extensionRendererMode: Int,
+                        out: ArrayList<Renderer>,
+                    ) {
+                        out.add(
+                            TextRenderer(output, outputLooper).apply {
+                                experimentalSetLegacyDecodingEnabled(true)
+                            },
+                        )
+                    }
+                }
+            ExoPlayer
+                .Builder(context, renderersFactory)
+                .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
+                .build()
+        }
 
     // Load stream when available, seek to resume position
     LaunchedEffect(playerState.selectedLink) {
@@ -239,25 +285,32 @@ fun VideoPlayerScreen(
             if (link.subtitles.isNotEmpty()) {
                 // Separate factory for subtitle CDN — no Referer header
                 // (subtitle CDNs are different domains and reject the embed Referer)
-                val subtitleFactory = DefaultHttpDataSource.Factory()
-                    .setUserAgent("Mozilla/5.0 (Linux; Android) AppleWebKit/537.36")
+                val subtitleFactory =
+                    DefaultHttpDataSource
+                        .Factory()
+                        .setUserAgent("Mozilla/5.0 (Linux; Android) AppleWebKit/537.36")
 
-                val subtitleSources = link.subtitles.mapNotNull { sub ->
-                    try {
-                        val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(sub.url))
-                            .setMimeType(MimeTypes.TEXT_VTT)
-                            .setLanguage(sub.language)
-                            .setLabel(sub.label)
-                            .build()
-                        val source = SingleSampleMediaSource.Factory(subtitleFactory)
-                            .createMediaSource(subtitleConfig, C.TIME_UNSET)
-                        Log.d("VideoPlayer", "  ✓ Created subtitle source: ${sub.label} → ${sub.url}")
-                        source
-                    } catch (e: Exception) {
-                        Log.e("VideoPlayer", "  ✗ Failed subtitle source: ${sub.label}", e)
-                        null
+                val subtitleSources =
+                    link.subtitles.mapNotNull { sub ->
+                        try {
+                            val subtitleConfig =
+                                MediaItem.SubtitleConfiguration
+                                    .Builder(Uri.parse(sub.url))
+                                    .setMimeType(MimeTypes.TEXT_VTT)
+                                    .setLanguage(sub.language)
+                                    .setLabel(sub.label)
+                                    .build()
+                            val source =
+                                SingleSampleMediaSource
+                                    .Factory(subtitleFactory)
+                                    .createMediaSource(subtitleConfig, C.TIME_UNSET)
+                            Log.d("VideoPlayer", "  ✓ Created subtitle source: ${sub.label} → ${sub.url}")
+                            source
+                        } catch (e: Exception) {
+                            Log.e("VideoPlayer", "  ✗ Failed subtitle source: ${sub.label}", e)
+                            null
+                        }
                     }
-                }
                 if (subtitleSources.isNotEmpty()) {
                     Log.d("VideoPlayer", "  Merging ${subtitleSources.size} subtitle sources with video")
                     val merged = MergingMediaSource(videoSource, *subtitleSources.toTypedArray())
@@ -273,10 +326,12 @@ fun VideoPlayerScreen(
 
             // Enable subtitle rendering if tracks are present
             if (link.subtitles.isNotEmpty()) {
-                exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters.buildUpon()
-                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-                    .setPreferredTextLanguage("en")
-                    .build()
+                exoPlayer.trackSelectionParameters =
+                    exoPlayer.trackSelectionParameters
+                        .buildUpon()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                        .setPreferredTextLanguage("en")
+                        .build()
                 Log.d("VideoPlayer", "  Text tracks enabled, preferred language: en")
             }
 
@@ -347,52 +402,58 @@ fun VideoPlayerScreen(
 
     // Listen to player state + handle errors
     DisposableEffect(exoPlayer) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(playing: Boolean) {
-                isPlaying = playing
-            }
+        val listener =
+            object : Player.Listener {
+                override fun onIsPlayingChanged(playing: Boolean) {
+                    isPlaying = playing
+                }
 
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                isBuffering = playbackState == Player.STATE_BUFFERING
-            }
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    isBuffering = playbackState == Player.STATE_BUFFERING
+                }
 
-            override fun onPlayWhenReadyChanged(value: Boolean, reason: Int) {
-                playWhenReady = value
-            }
+                override fun onPlayWhenReadyChanged(
+                    value: Boolean,
+                    reason: Int,
+                ) {
+                    playWhenReady = value
+                }
 
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                val link = playerState.selectedLink ?: return
-                // If we had subtitles merged and haven't retried yet, retry video-only
-                if (!retriedWithoutSubs && link.subtitles.isNotEmpty()) {
-                    Log.w("VideoPlayer", "Playback error with subtitles — retrying video-only", error)
-                    retriedWithoutSubs = true
-                    httpFactory.setDefaultRequestProperties(link.headers)
-                    val fallback = DefaultMediaSourceFactory(httpFactory)
-                        .createMediaSource(MediaItem.fromUri(link.url))
-                    exoPlayer.setMediaSource(fallback)
-                    exoPlayer.prepare()
-                    exoPlayer.play()
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    val link = playerState.selectedLink ?: return
+                    // If we had subtitles merged and haven't retried yet, retry video-only
+                    if (!retriedWithoutSubs && link.subtitles.isNotEmpty()) {
+                        Log.e("VideoPlayer", "Playback error with subtitles — retrying video-only", error)
+                        retriedWithoutSubs = true
+                        httpFactory.setDefaultRequestProperties(link.headers)
+                        val fallback =
+                            DefaultMediaSourceFactory(httpFactory)
+                                .createMediaSource(MediaItem.fromUri(link.url))
+                        exoPlayer.setMediaSource(fallback)
+                        exoPlayer.prepare()
+                        exoPlayer.play()
+                    }
                 }
             }
-        }
         exoPlayer.addListener(listener)
         onDispose { exoPlayer.removeListener(listener) }
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) {
-                if (introActive) {
-                    skipIntro()
-                } else {
-                    showControls = !showControls
-                }
-            },
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    if (introActive) {
+                        skipIntro()
+                    } else {
+                        showControls = !showControls
+                    }
+                },
     ) {
         // Poster background — shows while stream is loading
         if (playerState.selectedLink == null && playerState.coverUrl != null) {
@@ -411,11 +472,20 @@ fun VideoPlayerScreen(
                 PlayerView(ctx).apply {
                     player = exoPlayer
                     useController = false
-                    layoutParams = FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                    )
+                    layoutParams =
+                        FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                        )
                 }
+            },
+            update = { view ->
+                view.resizeMode =
+                    if (aspectFill) {
+                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    } else {
+                        AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    }
             },
             modifier = Modifier.fillMaxSize(),
         )
@@ -423,9 +493,10 @@ fun VideoPlayerScreen(
         // ── Branded Intro Overlay ────────────────────────────
         if (introActive && introPlayer != null) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .alpha(introAlpha.value),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .alpha(introAlpha.value),
             ) {
                 AndroidView(
                     factory = { ctx ->
@@ -435,10 +506,11 @@ fun VideoPlayerScreen(
                             setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
                             resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                             setBackgroundColor(android.graphics.Color.BLACK)
-                            layoutParams = FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                            )
+                            layoutParams =
+                                FrameLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                )
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
@@ -449,9 +521,10 @@ fun VideoPlayerScreen(
                     text = "Tap to skip",
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(24.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(24.dp),
                 )
             }
         }
@@ -473,9 +546,10 @@ fun VideoPlayerScreen(
         // Error UI — shown whenever there's an error, regardless of loading state
         if (playerState.error != null && !introActive) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.92f)),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.92f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
@@ -486,9 +560,10 @@ fun VideoPlayerScreen(
                     coil.compose.AsyncImage(
                         model = ani.saikou.R.drawable.error_samurai,
                         contentDescription = "Error",
-                        modifier = Modifier
-                            .fillMaxWidth(0.7f)
-                            .heightIn(max = 320.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth(0.7f)
+                                .heightIn(max = 320.dp),
                         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                     )
                     Text(
@@ -499,20 +574,22 @@ fun VideoPlayerScreen(
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(
-                            modifier = Modifier
-                                .clip(MaterialTheme.shapes.small)
-                                .background(SurfaceContainer)
-                                .clickable(onClick = onBack)
-                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            modifier =
+                                Modifier
+                                    .clip(MaterialTheme.shapes.small)
+                                    .background(SurfaceContainer)
+                                    .clickable(onClick = onBack)
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
                         ) {
                             Text("Go Back", color = OnSurface, fontWeight = FontWeight.Medium)
                         }
                         Box(
-                            modifier = Modifier
-                                .clip(MaterialTheme.shapes.small)
-                                .background(Primary)
-                                .clickable { viewModel.retry() }
-                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            modifier =
+                                Modifier
+                                    .clip(MaterialTheme.shapes.small)
+                                    .background(Primary)
+                                    .clickable { viewModel.retry() }
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
                         ) {
                             Text("Retry", color = Color.White, fontWeight = FontWeight.Bold)
                         }
@@ -528,21 +605,22 @@ fun VideoPlayerScreen(
             exit = fadeOut(),
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f)),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f)),
             ) {
                 // ── Top bar ──────────────────────────────────
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)
-                            )
-                        )
-                        .padding(horizontal = 8.dp, vertical = 12.dp)
-                        .align(Alignment.TopCenter),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent),
+                                ),
+                            ).padding(horizontal = 8.dp, vertical = 12.dp)
+                            .align(Alignment.TopCenter),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -564,7 +642,7 @@ fun VideoPlayerScreen(
                             )
                         }
                     }
-                    IconButton(onClick = { /* settings */ }) {
+                    IconButton(onClick = { showSettingsSheet = true }) {
                         Icon(Icons.Default.Settings, "Settings", tint = OnSurface)
                     }
                 }
@@ -585,9 +663,10 @@ fun VideoPlayerScreen(
                                 exoPlayer.stop()
                                 onNextEpisode?.invoke(episodeNum - 1)
                             },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(SurfaceContainer.copy(alpha = 0.6f), CircleShape),
+                            modifier =
+                                Modifier
+                                    .size(40.dp)
+                                    .background(SurfaceContainer.copy(alpha = 0.6f), CircleShape),
                         ) {
                             Icon(Icons.Default.SkipPrevious, "Previous episode", tint = OnSurface, modifier = Modifier.size(22.dp))
                         }
@@ -596,9 +675,10 @@ fun VideoPlayerScreen(
                     // Rewind 10s
                     IconButton(
                         onClick = { exoPlayer.seekBack() },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(SurfaceContainer.copy(alpha = 0.6f), CircleShape),
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .background(SurfaceContainer.copy(alpha = 0.6f), CircleShape),
                     ) {
                         Icon(Icons.Default.Replay10, "Rewind", tint = OnSurface, modifier = Modifier.size(28.dp))
                     }
@@ -608,9 +688,10 @@ fun VideoPlayerScreen(
                         onClick = {
                             if (exoPlayer.playWhenReady) exoPlayer.pause() else exoPlayer.play()
                         },
-                        modifier = Modifier
-                            .size(64.dp)
-                            .background(Primary, CircleShape),
+                        modifier =
+                            Modifier
+                                .size(64.dp)
+                                .background(Primary, CircleShape),
                     ) {
                         if (isBuffering) {
                             CircularProgressIndicator(
@@ -631,9 +712,10 @@ fun VideoPlayerScreen(
                     // Forward 10s
                     IconButton(
                         onClick = { exoPlayer.seekForward() },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(SurfaceContainer.copy(alpha = 0.6f), CircleShape),
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .background(SurfaceContainer.copy(alpha = 0.6f), CircleShape),
                     ) {
                         Icon(Icons.Default.Forward10, "Forward", tint = OnSurface, modifier = Modifier.size(28.dp))
                     }
@@ -645,9 +727,10 @@ fun VideoPlayerScreen(
                                 exoPlayer.stop()
                                 onNextEpisode?.invoke(episodeNum + 1)
                             },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(SurfaceContainer.copy(alpha = 0.6f), CircleShape),
+                            modifier =
+                                Modifier
+                                    .size(40.dp)
+                                    .background(SurfaceContainer.copy(alpha = 0.6f), CircleShape),
                         ) {
                             Icon(Icons.Default.SkipNext, "Next episode", tint = OnSurface, modifier = Modifier.size(22.dp))
                         }
@@ -656,15 +739,15 @@ fun VideoPlayerScreen(
 
                 // ── Bottom controls ──────────────────────────
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f))
-                            )
-                        )
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                        .align(Alignment.BottomCenter),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                                ),
+                            ).padding(horizontal = 16.dp, vertical = 12.dp)
+                            .align(Alignment.BottomCenter),
                 ) {
                     // Seekbar
                     Slider(
@@ -672,11 +755,12 @@ fun VideoPlayerScreen(
                         onValueChange = { fraction ->
                             exoPlayer.seekTo((fraction * duration).toLong())
                         },
-                        colors = SliderDefaults.colors(
-                            thumbColor = Primary,
-                            activeTrackColor = Primary,
-                            inactiveTrackColor = OnSurfaceVariant.copy(alpha = 0.3f),
-                        ),
+                        colors =
+                            SliderDefaults.colors(
+                                thumbColor = Primary,
+                                activeTrackColor = Primary,
+                                inactiveTrackColor = OnSurfaceVariant.copy(alpha = 0.3f),
+                            ),
                         modifier = Modifier.fillMaxWidth(),
                     )
 
@@ -699,34 +783,69 @@ fun VideoPlayerScreen(
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            IconButton(onClick = { /* volume */ }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Default.VolumeUp, "Volume", tint = OnSurface, modifier = Modifier.size(20.dp))
-                            }
                             IconButton(
                                 onClick = {
-                                    // Toggle subtitle track on/off
-                                    val trackParams = exoPlayer.trackSelectionParameters
-                                    val currentlyEnabled = trackParams.overrides.none { (_, override) ->
-                                        override.trackIndices.isEmpty()
-                                    }
-                                    // Simple toggle: if text tracks exist, enable/disable them
-                                    val hasTextTracks = playerState.selectedLink?.subtitles?.isNotEmpty() == true
-                                    if (hasTextTracks) {
-                                        val builder = trackParams.buildUpon()
-                                        builder.setTrackTypeDisabled(
-                                            androidx.media3.common.C.TRACK_TYPE_TEXT,
-                                            currentlyEnabled,
-                                        )
-                                        exoPlayer.trackSelectionParameters = builder.build()
-                                    }
+                                    isMuted = !isMuted
+                                    exoPlayer.volume = if (isMuted) 0f else 1f
                                 },
                                 modifier = Modifier.size(32.dp),
                             ) {
-                                val hasSubs = playerState.selectedLink?.subtitles?.isNotEmpty() == true
-                                Icon(Icons.Default.Subtitles, "Subtitles", tint = if (hasSubs) Primary else OnSurface, modifier = Modifier.size(20.dp))
+                                Icon(
+                                    imageVector =
+                                        if (isMuted) {
+                                            Icons.AutoMirrored.Filled.VolumeOff
+                                        } else {
+                                            Icons.AutoMirrored.Filled.VolumeUp
+                                        },
+                                    contentDescription = if (isMuted) "Unmute" else "Mute",
+                                    tint = if (isMuted) Primary else OnSurface,
+                                    modifier = Modifier.size(20.dp),
+                                )
                             }
-                            IconButton(onClick = { /* fullscreen */ }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Default.Fullscreen, "Fullscreen", tint = OnSurface, modifier = Modifier.size(20.dp))
+                            val hasSubs = playerState.selectedLink?.subtitles?.isNotEmpty() == true
+                            IconButton(
+                                onClick = {
+                                    if (!hasSubs) {
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                "No subtitles available for this episode",
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        return@IconButton
+                                    }
+                                    // Toggle text-track rendering on/off
+                                    val trackParams = exoPlayer.trackSelectionParameters
+                                    val currentlyEnabled =
+                                        trackParams.overrides.none { (_, override) ->
+                                            override.trackIndices.isEmpty()
+                                        }
+                                    val builder = trackParams.buildUpon()
+                                    builder.setTrackTypeDisabled(
+                                        androidx.media3.common.C.TRACK_TYPE_TEXT,
+                                        currentlyEnabled,
+                                    )
+                                    exoPlayer.trackSelectionParameters = builder.build()
+                                },
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Subtitles,
+                                    "Subtitles",
+                                    tint = if (hasSubs) Primary else OnSurfaceVariant.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                            IconButton(
+                                onClick = { aspectFill = !aspectFill },
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AspectRatio,
+                                    contentDescription = if (aspectFill) "Fit to screen" else "Zoom to fill",
+                                    tint = if (aspectFill) Primary else OnSurface,
+                                    modifier = Modifier.size(20.dp),
+                                )
                             }
                         }
                     }
@@ -739,10 +858,16 @@ fun VideoPlayerScreen(
         // with a countdown progress bar. Tap skips to end of OP/ED.
         val skipTimes = playerState.skipTimes
         val currentSec = currentPosition / 1000f
-        val inOpRange = skipTimes.opStartSec != null && skipTimes.opEndSec != null &&
-            currentSec >= skipTimes.opStartSec && currentSec < skipTimes.opEndSec
-        val inEdRange = skipTimes.edStartSec != null && skipTimes.edEndSec != null &&
-            currentSec >= skipTimes.edStartSec && currentSec < skipTimes.edEndSec
+        val inOpRange =
+            skipTimes.opStartSec != null &&
+                skipTimes.opEndSec != null &&
+                currentSec >= skipTimes.opStartSec &&
+                currentSec < skipTimes.opEndSec
+        val inEdRange =
+            skipTimes.edStartSec != null &&
+                skipTimes.edEndSec != null &&
+                currentSec >= skipTimes.edStartSec &&
+                currentSec < skipTimes.edEndSec
         // Only activate skip when video is actually playing (not during intro or buffering)
         val inSkipRange = (inOpRange || inEdRange) && !introActive && isPlaying
 
@@ -780,56 +905,62 @@ fun VideoPlayerScreen(
             visible = skipVisible,
             enter = fadeIn() + slideInHorizontally { it },
             exit = fadeOut() + slideOutHorizontally { it },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 24.dp, bottom = 100.dp),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 24.dp, bottom = 100.dp),
         ) {
             val label = if (inOpRange) "Skip Opening" else "Next Episode"
             Box(
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
-                    .clickable {
-                        skipVisible = false
-                        if (inOpRange) {
-                            // Skip opening → seek to end of OP
-                            exoPlayer.seekTo((skipTimes.opEndSec!! * 1000).toLong())
-                            skipDismissedForOp = true
-                        } else {
-                            // Skip ending → navigate to next episode
-                            skipDismissedForEd = true
-                            val nextEp = episodeNum + 1
-                            if (onNextEpisode != null) {
-                                exoPlayer.stop()
-                                onNextEpisode(nextEp)
+                modifier =
+                    Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable {
+                            skipVisible = false
+                            if (inOpRange) {
+                                // Skip opening → seek to end of OP
+                                exoPlayer.seekTo((skipTimes.opEndSec!! * 1000).toLong())
+                                skipDismissedForOp = true
                             } else {
-                                exoPlayer.seekTo((skipTimes.edEndSec!! * 1000).toLong())
+                                // Skip ending → navigate to next episode
+                                skipDismissedForEd = true
+                                val nextEp = episodeNum + 1
+                                if (onNextEpisode != null) {
+                                    exoPlayer.stop()
+                                    onNextEpisode(nextEp)
+                                } else {
+                                    exoPlayer.seekTo((skipTimes.edEndSec!! * 1000).toLong())
+                                }
                             }
-                        }
-                        showControls = false
-                    },
+                            showControls = false
+                        },
             ) {
                 // Button with fixed intrinsic size from the text content
                 Box(
-                    modifier = Modifier
-                        .background(Primary, MaterialTheme.shapes.small),
+                    modifier =
+                        Modifier
+                            .background(Primary, MaterialTheme.shapes.small),
                 ) {
                     // Countdown progress overlay
                     Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(MaterialTheme.shapes.small)
-                            .background(Color.Black.copy(alpha = 0.3f)),
+                        modifier =
+                            Modifier
+                                .matchParentSize()
+                                .clip(MaterialTheme.shapes.small)
+                                .background(Color.Black.copy(alpha = 0.3f)),
                     )
                     Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(MaterialTheme.shapes.small),
+                        modifier =
+                            Modifier
+                                .matchParentSize()
+                                .clip(MaterialTheme.shapes.small),
                     ) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(skipProgress.value)
-                                .background(Color.White.copy(alpha = 0.15f)),
+                            modifier =
+                                Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(skipProgress.value)
+                                    .background(Color.White.copy(alpha = 0.15f)),
                         )
                     }
                     // Label — this drives the button size
@@ -848,8 +979,13 @@ fun VideoPlayerScreen(
         // Appears in the final 15% of the last episode — like Netflix post-play.
         val isLastEpisode = playerState.totalEpisodes > 0 && episodeNum >= playerState.totalEpisodes
         val nearEnd = duration > 0 && (currentPosition.toFloat() / duration) >= 0.85f
-        val showUpNext = isLastEpisode && nearEnd && isPlaying &&
-            playerState.recommendations.isNotEmpty() && !introActive && !upNextDismissed
+        val showUpNext =
+            isLastEpisode &&
+                nearEnd &&
+                isPlaying &&
+                playerState.recommendations.isNotEmpty() &&
+                !introActive &&
+                !upNextDismissed
 
         AnimatedVisibility(
             visible = showUpNext,
@@ -880,6 +1016,62 @@ fun VideoPlayerScreen(
             onDismiss = { viewModel.dismissSourceSelector() },
         )
     }
+
+    // Player settings sheet (currently: playback speed)
+    if (showSettingsSheet) {
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(
+            onDismissRequest = { showSettingsSheet = false },
+            sheetState = sheetState,
+            containerColor = SurfaceContainer,
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Playback speed",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = OnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                val speeds = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    speeds.forEach { speed ->
+                        val selected = speed == playbackSpeed
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (selected) Primary.copy(alpha = 0.18f) else Color.Transparent,
+                                    ).clickable {
+                                        playbackSpeed = speed
+                                        exoPlayer.setPlaybackSpeed(speed)
+                                        scope.launch {
+                                            sheetState.hide()
+                                            showSettingsSheet = false
+                                        }
+                                    }.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = if (speed == 1f) "1x (Normal)" else "${speed}x",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (selected) Primary else OnSurface,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
 }
 
 private fun formatTime(ms: Long): String {
@@ -897,27 +1089,30 @@ private fun UpNextOverlay(
     onDismiss: () -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                androidx.compose.ui.graphics.Brush.verticalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.Black.copy(alpha = 0.85f),
-                        Color.Black.copy(alpha = 0.95f),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors =
+                            listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.85f),
+                                Color.Black.copy(alpha = 0.95f),
+                            ),
+                        startY = 0f,
                     ),
-                    startY = 0f,
-                )
-            ),
+                ),
     ) {
         // Close button — sits in the bottom-area gradient (top of screen has playback
         // controls, so a corner X up there would conflict with them).
         IconButton(
             onClick = onDismiss,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 56.dp, end = 16.dp)
-                .background(Color.Black.copy(alpha = 0.6f), CircleShape),
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 56.dp, end = 16.dp)
+                    .background(Color.Black.copy(alpha = 0.6f), CircleShape),
         ) {
             Icon(
                 Icons.Default.Close,
@@ -927,10 +1122,11 @@ private fun UpNextOverlay(
         }
 
         Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 20.dp),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -970,16 +1166,18 @@ private fun UpNextCard(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .width(130.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .width(130.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .clickable(onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
-            modifier = Modifier
-                .size(width = 130.dp, height = 180.dp)
-                .clip(MaterialTheme.shapes.medium),
+            modifier =
+                Modifier
+                    .size(width = 130.dp, height = 180.dp)
+                    .clip(MaterialTheme.shapes.medium),
         ) {
             coil.compose.AsyncImage(
                 model = media.cover,
@@ -989,11 +1187,12 @@ private fun UpNextCard(
             )
             media.meanScore?.takeIf { it > 0 }?.let { score ->
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall)
-                        .padding(horizontal = 5.dp, vertical = 2.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                            .background(Color.Black.copy(alpha = 0.7f), MaterialTheme.shapes.extraSmall)
+                            .padding(horizontal = 5.dp, vertical = 2.dp),
                 ) {
                     Text(
                         text = "★ ${score / 10.0}",

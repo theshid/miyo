@@ -19,7 +19,6 @@ import kotlinx.coroutines.launch
 class TorrentSearchViewModel(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-
     private val sources: List<TorrentSource> = listOf(NyaaSource(), BTDiggSource(), AniDexSource())
 
     private val _uiState = MutableStateFlow(TorrentUiState())
@@ -71,10 +70,11 @@ class TorrentSearchViewModel(
 
     private fun debounceSearch() {
         searchJob?.cancel()
-        searchJob = viewModelScope.launch {
-            delay(500)
-            search()
-        }
+        searchJob =
+            viewModelScope.launch {
+                delay(500)
+                search()
+            }
     }
 
     private fun search() {
@@ -88,15 +88,18 @@ class TorrentSearchViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            val results = sources.map { source ->
-                async {
-                    try {
-                        source.search(query)
-                    } catch (e: Exception) {
-                        emptyList()
-                    }
-                }
-            }.awaitAll().flatten()
+            val results =
+                sources
+                    .map { source ->
+                        async {
+                            try {
+                                source.search(query)
+                            } catch (e: Exception) {
+                                emptyList()
+                            }
+                        }
+                    }.awaitAll()
+                    .flatten()
 
             allResults = results
             _uiState.value = _uiState.value.copy(isLoading = false)
@@ -119,11 +122,12 @@ class TorrentSearchViewModel(
         }
 
         // Sort
-        filtered = when (state.sortBy) {
-            SortOption.SEEDERS -> filtered.sortedByDescending { it.seeders }
-            SortOption.SIZE -> filtered.sortedByDescending { parseSizeToBytes(it.size) }
-            SortOption.DATE -> filtered.sortedByDescending { it.date }
-        }
+        filtered =
+            when (state.sortBy) {
+                SortOption.SEEDERS -> filtered.sortedByDescending { it.seeders }
+                SortOption.SIZE -> filtered.sortedByDescending { parseSizeToBytes(it.size) }
+                SortOption.DATE -> filtered.sortedByDescending { it.date }
+            }
 
         _uiState.value = state.copy(results = filtered)
     }

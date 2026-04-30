@@ -10,13 +10,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -37,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,9 +48,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.MediaBannerCard
 import ani.saikou.domain.model.Media
@@ -63,6 +60,7 @@ import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.SurfaceContainer
 import ani.saikou.ui.theme.SurfaceVariant
 import coil.compose.AsyncImage
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -84,15 +82,17 @@ fun SearchScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background),
     ) {
         // ── Top Bar: Back + Search Input ─────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 4.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
@@ -107,9 +107,10 @@ fun SearchScreen(
 
         // ── Filter Dropdowns ─────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             FilterDropdown(
@@ -149,9 +150,10 @@ fun SearchScreen(
         // ── Results Header ───────────────────────────────────
         if (state.results.isNotEmpty()) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -171,14 +173,16 @@ fun SearchScreen(
                 Row {
                     IconButton(onClick = { if (!state.isGridView) viewModel.toggleGridView() }) {
                         Icon(
-                            Icons.Default.GridView, "Grid",
+                            Icons.Default.GridView,
+                            "Grid",
                             tint = if (state.isGridView) Primary else OnSurfaceVariant.copy(alpha = 0.4f),
                             modifier = Modifier.size(20.dp),
                         )
                     }
                     IconButton(onClick = { if (state.isGridView) viewModel.toggleGridView() }) {
                         Icon(
-                            Icons.Default.ViewList, "List",
+                            Icons.Default.ViewList,
+                            "List",
                             tint = if (!state.isGridView) Primary else OnSurfaceVariant.copy(alpha = 0.4f),
                             modifier = Modifier.size(20.dp),
                         )
@@ -244,15 +248,17 @@ private fun SearchInput(
     val shape = MaterialTheme.shapes.extraLarge
 
     Row(
-        modifier = modifier
-            .clip(shape)
-            .background(SurfaceVariant.copy(alpha = 0.4f))
-            .border(1.dp, GhostBorder, shape)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            modifier
+                .clip(shape)
+                .background(SurfaceVariant.copy(alpha = 0.4f))
+                .border(1.dp, GhostBorder, shape)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            Icons.Default.Search, "Search",
+            Icons.Default.Search,
+            "Search",
             tint = OnSurfaceVariant.copy(alpha = 0.6f),
             modifier = Modifier.size(20.dp),
         )
@@ -262,9 +268,10 @@ private fun SearchInput(
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = OnSurface),
             cursorBrush = SolidColor(Primary),
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 12.dp),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp),
             decorationBox = { innerTextField ->
                 if (query.isEmpty()) {
                     Text(
@@ -278,11 +285,13 @@ private fun SearchInput(
         )
         if (query.isNotEmpty()) {
             Icon(
-                Icons.Default.Close, "Clear",
+                Icons.Default.Close,
+                "Clear",
                 tint = OnSurfaceVariant,
-                modifier = Modifier
-                    .size(18.dp)
-                    .clickable { onQueryChange("") },
+                modifier =
+                    Modifier
+                        .size(18.dp)
+                        .clickable { onQueryChange("") },
             )
         }
     }
@@ -302,12 +311,13 @@ private fun FilterDropdown(
             text = "$label ▾",
             style = MaterialTheme.typography.labelMedium,
             color = OnSurfaceVariant,
-            modifier = Modifier
-                .clip(shape)
-                .background(SurfaceVariant.copy(alpha = 0.3f))
-                .border(1.dp, GhostBorder, shape)
-                .clickable { expanded = true }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .clip(shape)
+                    .background(SurfaceVariant.copy(alpha = 0.3f))
+                    .border(1.dp, GhostBorder, shape)
+                    .clickable { expanded = true }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
         )
         DropdownMenu(
             expanded = expanded,
@@ -335,17 +345,19 @@ private fun SearchGridCard(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // Cover with score badge and format tag
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .clip(MaterialTheme.shapes.medium),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(MaterialTheme.shapes.medium),
         ) {
             AsyncImage(
                 model = media.cover,
@@ -356,11 +368,12 @@ private fun SearchGridCard(
             // Score badge top-left
             media.meanScore?.let { score ->
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .background(Primary.copy(alpha = 0.85f), MaterialTheme.shapes.extraSmall)
-                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .background(Primary.copy(alpha = 0.85f), MaterialTheme.shapes.extraSmall)
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
                 ) {
                     Text(
                         text = "★ ${score / 10.0}",
@@ -372,11 +385,12 @@ private fun SearchGridCard(
             // Format badge bottom-right
             media.format?.let { format ->
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                        .background(SurfaceContainer.copy(alpha = 0.85f), MaterialTheme.shapes.extraSmall)
-                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                            .background(SurfaceContainer.copy(alpha = 0.85f), MaterialTheme.shapes.extraSmall)
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
                 ) {
                     Text(
                         text = format,

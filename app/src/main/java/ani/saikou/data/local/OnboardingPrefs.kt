@@ -3,10 +3,12 @@ package ani.saikou.data.local
 import android.content.Context
 import androidx.core.content.edit
 
-class OnboardingPrefs(context: Context) {
-
-    private val prefs = context.applicationContext
-        .getSharedPreferences("onboarding", Context.MODE_PRIVATE)
+class OnboardingPrefs(
+    context: Context,
+) {
+    private val prefs =
+        context.applicationContext
+            .getSharedPreferences("onboarding", Context.MODE_PRIVATE)
 
     fun hasSeenHomeTour(): Boolean = prefs.getBoolean(KEY_HOME_TOUR, false)
 

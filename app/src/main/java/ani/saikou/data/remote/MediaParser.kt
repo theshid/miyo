@@ -14,7 +14,6 @@ import kotlinx.serialization.json.jsonPrimitive
  * Centralizes all the JSON → Media/Character conversion logic.
  */
 object MediaParser {
-
     fun parseMedia(json: JsonObject): Media {
         val title = json["title"]!!.jsonObject
         val listEntry = json["mediaListEntry"]
@@ -48,7 +47,10 @@ object MediaParser {
         )
     }
 
-    fun parseMediaFromListEntry(json: JsonObject, type: String): Media {
+    fun parseMediaFromListEntry(
+        json: JsonObject,
+        type: String,
+    ): Media {
         val media = json["media"]!!.jsonObject
         val title = media["title"]!!.jsonObject
         val nextAiringObj = media["nextAiringEpisode"]?.takeIf { it != JsonNull }?.jsonObject
@@ -91,41 +93,77 @@ object MediaParser {
         val season = json.strOrNull("season")
         val seasonYear = json.intOrNull("seasonYear")
         val duration = json.intOrNull("duration")
-        val genres = json["genres"]?.takeIf { it != JsonNull }
-            ?.jsonArray?.mapNotNull { it.jsonPrimitive.content.takeIf { s -> s != "null" } }
+        val genres =
+            json["genres"]
+                ?.takeIf { it != JsonNull }
+                ?.jsonArray
+                ?.mapNotNull { it.jsonPrimitive.content.takeIf { s -> s != "null" } }
 
-        val startDate = json["startDate"]?.takeIf { it != JsonNull }?.jsonObject?.let { d ->
-            formatDate(d.intOrNull("year"), d.intOrNull("month"), d.intOrNull("day"))
-        }
-        val endDate = json["endDate"]?.takeIf { it != JsonNull }?.jsonObject?.let { d ->
-            formatDate(d.intOrNull("year"), d.intOrNull("month"), d.intOrNull("day"))
-        }
+        val startDate =
+            json["startDate"]?.takeIf { it != JsonNull }?.jsonObject?.let { d ->
+                formatDate(d.intOrNull("year"), d.intOrNull("month"), d.intOrNull("day"))
+            }
+        val endDate =
+            json["endDate"]?.takeIf { it != JsonNull }?.jsonObject?.let { d ->
+                formatDate(d.intOrNull("year"), d.intOrNull("month"), d.intOrNull("day"))
+            }
 
         // ── Studio ───────────────────────────────────────────
-        val mainStudio = json["studios"]?.takeIf { it != JsonNull }
-            ?.jsonObject?.get("nodes")?.jsonArray
-            ?.firstOrNull()?.jsonObject?.str("name")
+        val mainStudio =
+            json["studios"]
+                ?.takeIf { it != JsonNull }
+                ?.jsonObject
+                ?.get("nodes")
+                ?.jsonArray
+                ?.firstOrNull()
+                ?.jsonObject
+                ?.str("name")
 
         // ── Characters ───────────────────────────────────────
-        val characters = json["characters"]?.takeIf { it != JsonNull }
-            ?.jsonObject?.get("edges")?.jsonArray?.mapNotNull { edge ->
-                try { parseCharacter(edge.jsonObject) } catch (_: Exception) { null }
-            }
+        val characters =
+            json["characters"]
+                ?.takeIf { it != JsonNull }
+                ?.jsonObject
+                ?.get("edges")
+                ?.jsonArray
+                ?.mapNotNull { edge ->
+                    try {
+                        parseCharacter(edge.jsonObject)
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
 
         // ── Relations ────────────────────────────────────────
-        val relations = json["relations"]?.takeIf { it != JsonNull }
-            ?.jsonObject?.get("edges")?.jsonArray?.mapNotNull { edge ->
-                try { parseMedia(edge.jsonObject["node"]!!.jsonObject) } catch (_: Exception) { null }
-            }
+        val relations =
+            json["relations"]
+                ?.takeIf { it != JsonNull }
+                ?.jsonObject
+                ?.get("edges")
+                ?.jsonArray
+                ?.mapNotNull { edge ->
+                    try {
+                        parseMedia(edge.jsonObject["node"]!!.jsonObject)
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
 
         // ── Recommendations ──────────────────────────────────
-        val recommendations = json["recommendations"]?.takeIf { it != JsonNull }
-            ?.jsonObject?.get("nodes")?.jsonArray?.mapNotNull { node ->
-                try {
-                    val rec = node.jsonObject["mediaRecommendation"]
-                    if (rec != null && rec != JsonNull) parseMedia(rec.jsonObject) else null
-                } catch (_: Exception) { null }
-            }
+        val recommendations =
+            json["recommendations"]
+                ?.takeIf { it != JsonNull }
+                ?.jsonObject
+                ?.get("nodes")
+                ?.jsonArray
+                ?.mapNotNull { node ->
+                    try {
+                        val rec = node.jsonObject["mediaRecommendation"]
+                        if (rec != null && rec != JsonNull) parseMedia(rec.jsonObject) else null
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
 
         return base.copy(
             description = description,
@@ -143,7 +181,11 @@ object MediaParser {
         )
     }
 
-    private fun formatDate(year: Int?, month: Int?, day: Int?): String? {
+    private fun formatDate(
+        year: Int?,
+        month: Int?,
+        day: Int?,
+    ): String? {
         if (year == null) return null
         return buildString {
             append(year)
@@ -152,15 +194,17 @@ object MediaParser {
         }
     }
 
-    fun parseMediaList(data: JsonArray, type: String): List<Media> {
-        return data.mapNotNull { entry ->
+    fun parseMediaList(
+        data: JsonArray,
+        type: String,
+    ): List<Media> =
+        data.mapNotNull { entry ->
             try {
                 parseMedia(entry.jsonObject)
             } catch (e: Exception) {
                 null
             }
         }
-    }
 
     fun parseCharacter(json: JsonObject): Character {
         val node = json["node"]!!.jsonObject

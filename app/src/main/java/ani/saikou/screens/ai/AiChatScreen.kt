@@ -50,7 +50,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.MarkdownText
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
@@ -58,6 +57,7 @@ import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.SurfaceContainer
 import ani.saikou.ui.theme.SurfaceContainerHigh
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun AiChatScreen(
@@ -76,18 +76,20 @@ fun AiChatScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .navigationBarsPadding()
-            .imePadding(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background)
+                .navigationBarsPadding()
+                .imePadding(),
     ) {
         // ── Top Bar ──────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(SurfaceContainer)
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(SurfaceContainer)
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
@@ -114,9 +116,10 @@ fun AiChatScreen(
         // ── Messages ─────────────────────────────────────────
         LazyColumn(
             state = listState,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -146,10 +149,11 @@ fun AiChatScreen(
 
         // ── Input Bar ────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(SurfaceContainer)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(SurfaceContainer)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextField(
@@ -159,25 +163,27 @@ fun AiChatScreen(
                 placeholder = {
                     Text("Ask about anime, manga...", color = OnSurfaceVariant.copy(alpha = 0.5f))
                 },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = SurfaceContainerHigh,
-                    unfocusedContainerColor = SurfaceContainerHigh,
-                    focusedTextColor = OnSurface,
-                    unfocusedTextColor = OnSurface,
-                    cursorColor = Primary,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
+                colors =
+                    TextFieldDefaults.colors(
+                        focusedContainerColor = SurfaceContainerHigh,
+                        unfocusedContainerColor = SurfaceContainerHigh,
+                        focusedTextColor = OnSurface,
+                        unfocusedTextColor = OnSurface,
+                        cursorColor = Primary,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
                 shape = RoundedCornerShape(24.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(
-                    onSend = {
-                        if (inputText.isNotBlank() && !state.isLoading) {
-                            viewModel.sendMessage(inputText)
-                            inputText = ""
-                        }
-                    },
-                ),
+                keyboardActions =
+                    KeyboardActions(
+                        onSend = {
+                            if (inputText.isNotBlank() && !state.isLoading) {
+                                viewModel.sendMessage(inputText)
+                                inputText = ""
+                            }
+                        },
+                    ),
                 singleLine = false,
                 maxLines = 4,
             )
@@ -191,10 +197,11 @@ fun AiChatScreen(
                         inputText = ""
                     }
                 },
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(if (inputText.isNotBlank()) Primary else Primary.copy(alpha = 0.3f)),
+                modifier =
+                    Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (inputText.isNotBlank()) Primary else Primary.copy(alpha = 0.3f)),
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
@@ -212,11 +219,12 @@ private fun ChatBubbleRow(bubble: ChatBubble) {
     val alignment = if (bubble.isUser) Alignment.CenterEnd else Alignment.CenterStart
     val bubbleColor = if (bubble.isUser) Primary.copy(alpha = 0.15f) else SurfaceContainerHigh
     val textColor = if (bubble.isUser) OnSurface else OnSurface
-    val shape = if (bubble.isUser) {
-        RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)
-    } else {
-        RoundedCornerShape(18.dp, 18.dp, 18.dp, 4.dp)
-    }
+    val shape =
+        if (bubble.isUser) {
+            RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)
+        } else {
+            RoundedCornerShape(18.dp, 18.dp, 18.dp, 4.dp)
+        }
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -224,11 +232,12 @@ private fun ChatBubbleRow(bubble: ChatBubble) {
     ) {
         AnimatedVisibility(visible = true, enter = fadeIn()) {
             Box(
-                modifier = Modifier
-                    .widthIn(max = 300.dp)
-                    .clip(shape)
-                    .background(bubbleColor)
-                    .padding(12.dp),
+                modifier =
+                    Modifier
+                        .widthIn(max = 300.dp)
+                        .clip(shape)
+                        .background(bubbleColor)
+                        .padding(12.dp),
             ) {
                 if (bubble.isUser) {
                     Text(
@@ -270,9 +279,10 @@ private fun TypingIndicator() {
 @Composable
 private fun WelcomeCard(onSuggestionClick: (String) -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 48.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -290,12 +300,13 @@ private fun WelcomeCard(onSuggestionClick: (String) -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Suggestion chips
-        val suggestions = listOf(
-            "Find me something like Attack on Titan",
-            "Catch me up on One Piece",
-            "What should I watch next?",
-            "Best romance manga of 2024",
-        )
+        val suggestions =
+            listOf(
+                "Find me something like Attack on Titan",
+                "Catch me up on One Piece",
+                "What should I watch next?",
+                "Best romance manga of 2024",
+            )
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -308,13 +319,17 @@ private fun WelcomeCard(onSuggestionClick: (String) -> Unit) {
 }
 
 @Composable
-private fun SuggestionChip(text: String, onClick: () -> Unit) {
+private fun SuggestionChip(
+    text: String,
+    onClick: () -> Unit,
+) {
     Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceContainerHigh)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(SurfaceContainerHigh)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
         Text(
             text = text,

@@ -13,10 +13,10 @@ import kotlinx.coroutines.flow.asSharedFlow
  * SharedFlow buffer.
  */
 object ListEventBus {
-
-    private val _events = MutableSharedFlow<ListEvent>(
-        extraBufferCapacity = 10,  // buffer events even if no one is collecting yet
-    )
+    private val _events =
+        MutableSharedFlow<ListEvent>(
+            extraBufferCapacity = 10, // buffer events even if no one is collecting yet
+        )
     val events: SharedFlow<ListEvent> = _events.asSharedFlow()
 
     suspend fun emit(event: ListEvent) {
@@ -30,14 +30,25 @@ object ListEventBus {
 
 sealed class ListEvent {
     /** User added/changed/removed an anime or manga from their list. */
-    data class ListEntryChanged(val mediaId: Int, val newStatus: String?) : ListEvent()
+    data class ListEntryChanged(
+        val mediaId: Int,
+        val newStatus: String?,
+    ) : ListEvent()
 
     /** Episode progress was synced to AniList. */
-    data class ProgressUpdated(val mediaId: Int, val episode: Int) : ListEvent()
+    data class ProgressUpdated(
+        val mediaId: Int,
+        val episode: Int,
+    ) : ListEvent()
 
     /** Chapter progress was synced to AniList. */
-    data class ReadingProgressUpdated(val mediaId: Int, val chapter: Int) : ListEvent()
+    data class ReadingProgressUpdated(
+        val mediaId: Int,
+        val chapter: Int,
+    ) : ListEvent()
 
     /** Favorite toggled. */
-    data class FavoriteToggled(val mediaId: Int) : ListEvent()
+    data class FavoriteToggled(
+        val mediaId: Int,
+    ) : ListEvent()
 }

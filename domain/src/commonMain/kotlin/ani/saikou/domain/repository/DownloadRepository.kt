@@ -35,20 +35,29 @@ interface DownloadRepository {
      * Find a previously-completed download by chapter NUMBER. Returns null
      * when the chapter isn't on disk. Used by the reader's offline path.
      */
-    suspend fun getCompletedChapter(mangaId: Int, chapterNumber: Int): Download?
+    suspend fun getCompletedChapter(
+        mangaId: Int,
+        chapterNumber: Int,
+    ): Download?
 
     /**
      * Materialize the on-disk pages for a previously-completed download
      * into the domain [MangaPage] shape (file:// URIs). Empty list when
      * files are missing or the download doesn't exist.
      */
-    suspend fun getLocalPages(mangaId: Int, chapterKey: String): List<MangaPage>
+    suspend fun getLocalPages(
+        mangaId: Int,
+        chapterKey: String,
+    ): List<MangaPage>
 
     /**
      * Estimate bytes required to download [count] more chapters of [mangaId].
      * Backed by per-series and global running averages of completed downloads.
      */
-    suspend fun estimateBytesForNext(mangaId: Int, count: Int): Long
+    suspend fun estimateBytesForNext(
+        mangaId: Int,
+        count: Int,
+    ): Long
 
     /**
      * Add a chapter to the queue. Idempotent — no-op if a row already exists

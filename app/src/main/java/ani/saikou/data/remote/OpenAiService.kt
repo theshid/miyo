@@ -1,6 +1,6 @@
 package ani.saikou.data.remote
 
-import android.util.Log
+import io.github.theshid.prettylog.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.header
@@ -17,14 +17,16 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
-class OpenAiService(private val apiKey: String) {
-
+class OpenAiService(
+    private val apiKey: String,
+) {
     companion object {
         private const val TAG = "OpenAiService"
         private const val ENDPOINT = "https://api.openai.com/v1/chat/completions"
         private const val MODEL = "gpt-4o"
 
-        val SYSTEM_PROMPT = """
+        val SYSTEM_PROMPT =
+            """
             You are Miyo AI, a friendly and knowledgeable anime & manga assistant built into the Miyo app.
 
             You can help users with:
@@ -40,19 +42,20 @@ class OpenAiService(private val apiKey: String) {
             - Format lists with bullet points for readability
             - If you don't know something, say so rather than guessing
             - Keep responses under 300 words unless the user asks for more detail
-        """.trimIndent()
+            """.trimIndent()
     }
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private val client = HttpClient(OkHttp) {
-        engine {
-            config {
-                connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+    private val client =
+        HttpClient(OkHttp) {
+            engine {
+                config {
+                    connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                }
             }
         }
-    }
 
     data class ChatMessage(
         val role: String, // "system", "user", or "assistant"
@@ -60,26 +63,33 @@ class OpenAiService(private val apiKey: String) {
     )
 
     suspend fun chat(messages: List<ChatMessage>): String {
-        val body = buildJsonObject {
-            put("model", MODEL)
-            put("messages", buildJsonArray {
-                for (msg in messages) {
-                    add(buildJsonObject {
-                        put("role", msg.role)
-                        put("content", msg.content)
-                    })
-                }
-            })
-            put("max_tokens", 1024)
-            put("temperature", 0.7)
-        }
+        val body =
+            buildJsonObject {
+                put("model", MODEL)
+                put(
+                    "messages",
+                    buildJsonArray {
+                        for (msg in messages) {
+                            add(
+                                buildJsonObject {
+                                    put("role", msg.role)
+                                    put("content", msg.content)
+                                },
+                            )
+                        }
+                    },
+                )
+                put("max_tokens", 1024)
+                put("temperature", 0.7)
+            }
 
         return try {
-            val response = client.post(ENDPOINT) {
-                contentType(ContentType.Application.Json)
-                header("Authorization", "Bearer $apiKey")
-                setBody(body.toString())
-            }
+            val response =
+                client.post(ENDPOINT) {
+                    contentType(ContentType.Application.Json)
+                    header("Authorization", "Bearer $apiKey")
+                    setBody(body.toString())
+                }
 
             val responseText = response.bodyAsText()
             val responseJson = json.parseToJsonElement(responseText).jsonObject

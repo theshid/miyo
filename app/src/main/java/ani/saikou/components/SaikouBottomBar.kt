@@ -37,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -63,16 +62,19 @@ fun SaikouBottomBar(
     modifier: Modifier = Modifier,
 ) {
     val items = bottomBarScreens
-    val selectedIndex = items.indexOfFirst { it.route == currentRoute }
-        .takeIf { it >= 0 } ?: 0
+    val selectedIndex =
+        items
+            .indexOfFirst { it.route == currentRoute }
+            .takeIf { it >= 0 } ?: 0
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .background(Primary)
-            .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .background(Primary)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val slotWidth = maxWidth / items.size
@@ -83,32 +85,34 @@ fun SaikouBottomBar(
             // stiffness gives the "pop" feel expressive anime UIs use.
             val pillOffset by animateDpAsState(
                 targetValue = slotWidth * selectedIndex + pillInset,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMedium,
-                ),
+                animationSpec =
+                    spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    ),
                 label = "pill_offset",
             )
 
             // Dark pill, underneath the item row so icons sit on top of it.
             Box(
-                modifier = Modifier
-                    .offset(x = pillOffset)
-                    .width(pillWidth)
-                    .height(48.dp)
-                    .shadow(
-                        elevation = 6.dp,
-                        shape = RoundedCornerShape(24.dp),
-                    )
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Background),
+                modifier =
+                    Modifier
+                        .offset(x = pillOffset)
+                        .width(pillWidth)
+                        .height(48.dp)
+                        .shadow(
+                            elevation = 6.dp,
+                            shape = RoundedCornerShape(24.dp),
+                        ).clip(RoundedCornerShape(24.dp))
+                        .background(Background),
             )
 
             // Items row — each slot takes equal width so slotWidth math lines up.
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 items.forEachIndexed { index, screen ->
@@ -116,9 +120,10 @@ fun SaikouBottomBar(
                         screen = screen,
                         selected = index == selectedIndex,
                         onClick = { onNavigate(screen) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(48.dp),
                     )
                 }
             }
@@ -142,14 +147,14 @@ private fun BottomBarItem(
     )
 
     Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .selectable(
-                selected = selected,
-                onClick = onClick,
-                role = Role.Tab,
-            )
-            .padding(horizontal = 12.dp),
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(24.dp))
+                .selectable(
+                    selected = selected,
+                    onClick = onClick,
+                    role = Role.Tab,
+                ).padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -160,9 +165,10 @@ private fun BottomBarItem(
                 // Idle icons sit on the purple bar at reduced opacity so the
                 // selected white-on-black icon is the clear focal point.
                 tint = if (selected) Color.White else Color.White.copy(alpha = 0.7f),
-                modifier = Modifier
-                    .size(22.dp)
-                    .scale(iconScale),
+                modifier =
+                    Modifier
+                        .size(22.dp)
+                        .scale(iconScale),
             )
         }
         // Label only visible in the selected state — expands horizontally
@@ -170,10 +176,12 @@ private fun BottomBarItem(
         // pill "growing" its label rather than a pop-in.
         AnimatedVisibility(
             visible = selected,
-            enter = expandHorizontally(animationSpec = tween(220)) +
-                fadeIn(animationSpec = tween(220)),
-            exit = shrinkHorizontally(animationSpec = tween(160)) +
-                fadeOut(animationSpec = tween(120)),
+            enter =
+                expandHorizontally(animationSpec = tween(220)) +
+                    fadeIn(animationSpec = tween(220)),
+            exit =
+                shrinkHorizontally(animationSpec = tween(160)) +
+                    fadeOut(animationSpec = tween(120)),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(8.dp))

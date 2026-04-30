@@ -11,6 +11,7 @@ import org.koin.dsl.module
  * device-service abstractions declared in :platform. Consumed by the app's
  * `startKoin { modules(...) }` block.
  */
-val platformAndroidModule = module {
-    singleOf(::SentryLogger) bind Logger::class
-}
+val platformAndroidModule =
+    module {
+        singleOf(::SentryLogger) bind Logger::class
+    }

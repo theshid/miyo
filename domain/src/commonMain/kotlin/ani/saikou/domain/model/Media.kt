@@ -34,7 +34,6 @@ data class Media(
     val relations: List<Media>? = null,
     val recommendations: List<Media>? = null,
 ) {
-
     val displayTitle: String
         get() = userPreferredName ?: name ?: nameRomaji ?: "Unknown"
 

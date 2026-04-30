@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import ani.saikou.components.ChapterDownloadState
 import ani.saikou.data.local.ListEvent
 import ani.saikou.data.local.ListEventBus
-import ani.saikou.domain.model.Character
 import ani.saikou.domain.model.DownloadRequest
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.repository.AnilistRepository
@@ -23,31 +22,33 @@ class MediaDetailViewModel(
     private val repository: AnilistRepository,
     private val downloadRepo: DownloadRepository,
 ) : ViewModel() {
-
     private val mediaId: Int = savedStateHandle["id"] ?: 0
 
     private val _uiState = MutableStateFlow(MediaDetailUiState())
     val uiState: StateFlow<MediaDetailUiState> = _uiState
 
     /** Map of chapter number → download status. */
-    val chapterDownloads: StateFlow<Map<Int, ChapterDownloadState>> = downloadRepo
-        .observeDownloadsForManga(mediaId)
-        .map { downloads ->
-            downloads.mapValues { (_, d) ->
-                ChapterDownloadState(
-                    status = d.status.name,
-                    downloadedPages = d.downloadedPages,
-                    totalPages = d.totalPages,
-                )
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+    val chapterDownloads: StateFlow<Map<Int, ChapterDownloadState>> =
+        downloadRepo
+            .observeDownloadsForManga(mediaId)
+            .map { downloads ->
+                downloads.mapValues { (_, d) ->
+                    ChapterDownloadState(
+                        status = d.status.name,
+                        downloadedPages = d.downloadedPages,
+                        totalPages = d.totalPages,
+                    )
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     init {
         loadMedia()
     }
 
-    fun queueChapterDownload(chapterNumber: Int, onQueued: (() -> Unit)? = null) {
+    fun queueChapterDownload(
+        chapterNumber: Int,
+        onQueued: (() -> Unit)? = null,
+    ) {
         val media = _uiState.value.media ?: return
         viewModelScope.launch {
             // totalPages and sourceId are placeholders — DownloadService re-resolves
@@ -79,10 +80,11 @@ class MediaDetailViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val media = repository.getMedia(mediaId)
-            _uiState.value = MediaDetailUiState(
-                media = media,
-                isLoading = false,
-            )
+            _uiState.value =
+                MediaDetailUiState(
+                    media = media,
+                    isLoading = false,
+                )
         }
     }
 
@@ -91,9 +93,10 @@ class MediaDetailViewModel(
         viewModelScope.launch {
             val isAnime = media.type == "ANIME"
             repository.toggleFavorite(media.id, isAnime)
-            _uiState.value = _uiState.value.copy(
-                media = media.copy(isFav = !media.isFav),
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    media = media.copy(isFav = !media.isFav),
+                )
             ListEventBus.emit(ListEvent.FavoriteToggled(media.id))
         }
     }
@@ -102,9 +105,10 @@ class MediaDetailViewModel(
         val media = _uiState.value.media ?: return
         viewModelScope.launch {
             repository.editListEntry(mediaId = media.id, progress = progress)
-            _uiState.value = _uiState.value.copy(
-                media = media.copy(userProgress = progress),
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    media = media.copy(userProgress = progress),
+                )
             ListEventBus.emit(ListEvent.ProgressUpdated(media.id, progress))
         }
     }
@@ -113,9 +117,10 @@ class MediaDetailViewModel(
         val media = _uiState.value.media ?: return
         viewModelScope.launch {
             repository.editListEntry(mediaId = media.id, status = status)
-            _uiState.value = _uiState.value.copy(
-                media = media.copy(userStatus = status),
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    media = media.copy(userStatus = status),
+                )
             ListEventBus.emit(ListEvent.ListEntryChanged(media.id, status))
         }
     }
@@ -125,14 +130,16 @@ class MediaDetailViewModel(
         val listId = media.userListEntryId ?: return
         viewModelScope.launch {
             repository.deleteListEntry(listId)
-            _uiState.value = _uiState.value.copy(
-                media = media.copy(
-                    userStatus = null,
-                    userListEntryId = null,
-                    userProgress = null,
-                    userScore = 0,
-                ),
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    media =
+                        media.copy(
+                            userStatus = null,
+                            userListEntryId = null,
+                            userProgress = null,
+                            userScore = 0,
+                        ),
+                )
             ListEventBus.emit(ListEvent.ListEntryChanged(media.id, null))
         }
     }

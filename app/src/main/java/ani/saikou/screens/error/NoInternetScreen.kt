@@ -17,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import ani.saikou.components.GlassCard
 import ani.saikou.components.PillButton
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
@@ -25,13 +24,12 @@ import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.SurfaceContainerHigh
 
 @Composable
-fun NoInternetScreen(
-    onRetry: () -> Unit,
-) {
+fun NoInternetScreen(onRetry: () -> Unit) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -40,9 +38,10 @@ fun NoInternetScreen(
         ) {
             // Icon in a circle
             Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .background(SurfaceContainerHigh, MaterialTheme.shapes.extraLarge),
+                modifier =
+                    Modifier
+                        .size(80.dp)
+                        .background(SurfaceContainerHigh, MaterialTheme.shapes.extraLarge),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

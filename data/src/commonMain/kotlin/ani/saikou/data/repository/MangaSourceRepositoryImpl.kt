@@ -24,10 +24,10 @@ class MangaSourceRepositoryImpl(
     private val mangaDex: MangaSource,
     private val mangaPill: MangaSource,
 ) : MangaSourceRepository {
-
     private companion object {
         const val SOURCE_MANGA_DEX = "MangaDex"
         const val SOURCE_MANGA_PILL = "MangaPill"
+
         /** MangaDex's hosted count must cover at least this fraction of its
          *  own `lastChapter` hint to count as "complete enough". */
         const val MANGADEX_COVERAGE_THRESHOLD = 0.9
@@ -43,9 +43,17 @@ class MangaSourceRepositoryImpl(
         return dex + pill
     }
 
-    override suspend fun resolveChapterCount(title: String, anilistTotal: Int?): Int? {
+    override suspend fun resolveChapterCount(
+        title: String,
+        anilistTotal: Int?,
+    ): Int? {
         val dex = probe(mangaDex, title)
-        val dexCount = dex?.chapters?.lastOrNull()?.number?.toInt() ?: 0
+        val dexCount =
+            dex
+                ?.chapters
+                ?.lastOrNull()
+                ?.number
+                ?.toInt() ?: 0
         val dexHint = dex?.hint ?: 0
 
         val mangaDexLooksPartial = dexHint > 0 && dexCount < (dexHint * MANGADEX_COVERAGE_THRESHOLD)
@@ -53,9 +61,16 @@ class MangaSourceRepositoryImpl(
         val anilistMissing = anilistTotal == null || anilistTotal == 0
         val needsPill = dexCount == 0 || mangaDexLooksPartial || anilistFarAboveDex || anilistMissing
 
-        val pillCount = if (needsPill) {
-            probe(mangaPill, title)?.chapters?.lastOrNull()?.number?.toInt() ?: 0
-        } else 0
+        val pillCount =
+            if (needsPill) {
+                probe(mangaPill, title)
+                    ?.chapters
+                    ?.lastOrNull()
+                    ?.number
+                    ?.toInt() ?: 0
+            } else {
+                0
+            }
 
         return listOf(dexCount, dexHint, pillCount).max().takeIf { it > 0 }
     }
@@ -63,8 +78,12 @@ class MangaSourceRepositoryImpl(
     override suspend fun resolveChapters(title: String): ResolvedChapters? {
         val dex = probe(mangaDex, title)
         if (dex != null && dex.chapters.isNotEmpty()) {
-            val coverage = if (dex.hint == null || dex.hint == 0) 1.0
-                else dex.chapters.size.toDouble() / dex.hint
+            val coverage =
+                if (dex.hint == null || dex.hint == 0) {
+                    1.0
+                } else {
+                    dex.chapters.size.toDouble() / dex.hint
+                }
             if (coverage >= MANGADEX_COVERAGE_THRESHOLD) {
                 return ResolvedChapters(SOURCE_MANGA_DEX, dex.sourceMangaId, dex.chapters)
             }
@@ -91,11 +110,15 @@ class MangaSourceRepositoryImpl(
      * coloured version), then fetch its chapter list. Returns null when
      * the source has no hits.
      */
-    private suspend fun probe(source: MangaSource, title: String): SourceProbe? {
+    private suspend fun probe(
+        source: MangaSource,
+        title: String,
+    ): SourceProbe? {
         val results = runCatching { source.search(title) }.getOrDefault(emptyList())
-        val picked = results.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
-            ?: results.firstOrNull()
-            ?: return null
+        val picked =
+            results.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
+                ?: results.firstOrNull()
+                ?: return null
         val chapters = runCatching { source.getChapters(picked.id) }.getOrDefault(emptyList())
         return SourceProbe(picked.id, picked.totalChapterHint, chapters)
     }

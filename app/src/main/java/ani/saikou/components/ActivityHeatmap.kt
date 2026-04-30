@@ -90,8 +90,9 @@ fun ActivityHeatmap(
     val totalDays = ChronoUnit.DAYS.between(gridStart, gridEnd).toInt() + 1
     val rows = totalDays / 7
 
-    val monthLabel = displayedMonth.month
-        .getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + displayedMonth.year
+    val monthLabel =
+        displayedMonth.month
+            .getDisplayName(TextStyle.FULL, Locale.ENGLISH) + " " + displayedMonth.year
 
     // Bound month navigation to the current calendar year so users can only
     // browse between Jan and Dec of LocalDate.now().year — keeps the UI scoped.
@@ -151,9 +152,10 @@ fun ActivityHeatmap(
             ) {
                 listOf("M", "T", "W", "T", "F", "S", "S").forEach { label ->
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(1f),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .aspectRatio(1f),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -179,17 +181,30 @@ fun ActivityHeatmap(
                                 date = date,
                                 today = today,
                                 inMonth = inDisplayedMonth,
-                                count = if (inDisplayedMonth && !date.isAfter(today))
-                                    countsByDay[date] ?: 0 else 0,
-                                airings = if (inDisplayedMonth)
-                                    airingsByDay[date].orEmpty() else emptyList(),
-                                activities = if (inDisplayedMonth)
-                                    activitiesByDay[date].orEmpty() else emptyList(),
+                                count =
+                                    if (inDisplayedMonth && !date.isAfter(today)) {
+                                        countsByDay[date] ?: 0
+                                    } else {
+                                        0
+                                    },
+                                airings =
+                                    if (inDisplayedMonth) {
+                                        airingsByDay[date].orEmpty()
+                                    } else {
+                                        emptyList()
+                                    },
+                                activities =
+                                    if (inDisplayedMonth) {
+                                        activitiesByDay[date].orEmpty()
+                                    } else {
+                                        emptyList()
+                                    },
                                 onAiringClick = onAiringClick,
                                 onActivityClick = onActivityClick,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .aspectRatio(1f),
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .aspectRatio(1f),
                             )
                         }
                     }
@@ -208,10 +223,11 @@ fun ActivityHeatmap(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .border(1.dp, Secondary, CircleShape),
+                            modifier =
+                                Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .border(1.dp, Secondary, CircleShape),
                         )
                         Text(
                             "Airing",
@@ -229,10 +245,11 @@ fun ActivityHeatmap(
                     Text("Less", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
                     listOf(0, 1, 3, 6, 11).forEach { sample ->
                         Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(cellColor(sample, inMonth = true, isFuture = false))
+                            modifier =
+                                Modifier
+                                    .size(10.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(cellColor(sample, inMonth = true, isFuture = false)),
                         )
                     }
                     Text("More", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
@@ -260,17 +277,21 @@ private fun HeatmapCell(
     val hasContent = airings.isNotEmpty() || activities.isNotEmpty()
 
     val cover = airings.firstOrNull()?.coverUrl
-    val cellMod = modifier
-        .clip(RoundedCornerShape(4.dp))
-        .background(cellColor(count, inMonth, isFuture))
-        .let { base ->
-            if (isToday) base.border(1.5.dp, Primary, RoundedCornerShape(4.dp))
-            else if (cover != null) base.border(1.dp, Secondary, RoundedCornerShape(4.dp))
-            else base
-        }
-        .let { base ->
-            if (hasContent) base.clickable { menuOpen = true } else base
-        }
+    val cellMod =
+        modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(cellColor(count, inMonth, isFuture))
+            .let { base ->
+                if (isToday) {
+                    base.border(1.5.dp, Primary, RoundedCornerShape(4.dp))
+                } else if (cover != null) {
+                    base.border(1.dp, Secondary, RoundedCornerShape(4.dp))
+                } else {
+                    base
+                }
+            }.let { base ->
+                if (hasContent) base.clickable { menuOpen = true } else base
+            }
 
     Box(modifier = cellMod) {
         if (cover != null) {
@@ -278,16 +299,18 @@ private fun HeatmapCell(
                 model = cover,
                 contentDescription = "Episode airing",
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(RoundedCornerShape(4.dp)),
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(4.dp)),
             )
             // Dark scrim so the day number stays legible over any cover.
             Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.Black.copy(alpha = 0.4f))
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.Black.copy(alpha = 0.4f)),
             )
         }
         if (inMonth) {
@@ -367,7 +390,10 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun AiringMenuRow(airing: AiringInfo, onClick: () -> Unit) {
+private fun AiringMenuRow(
+    airing: AiringInfo,
+    onClick: () -> Unit,
+) {
     DropdownMenuItem(
         text = {
             Column(modifier = Modifier.width(220.dp)) {
@@ -399,9 +425,10 @@ private fun AiringMenuRow(airing: AiringInfo, onClick: () -> Unit) {
                 model = airing.coverUrl,
                 contentDescription = airing.title,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                modifier = Modifier
-                    .size(width = 32.dp, height = 44.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                modifier =
+                    Modifier
+                        .size(width = 32.dp, height = 44.dp)
+                        .clip(RoundedCornerShape(4.dp)),
             )
         },
         onClick = onClick,
@@ -409,11 +436,15 @@ private fun AiringMenuRow(airing: AiringInfo, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ActivityMenuRow(activity: DayActivity, onClick: () -> Unit) {
-    val unitLabel = when (activity.kind) {
-        DayActivity.Kind.WATCHED -> "Ep ${activity.number}"
-        DayActivity.Kind.READ -> "Ch. ${activity.number}"
-    }
+private fun ActivityMenuRow(
+    activity: DayActivity,
+    onClick: () -> Unit,
+) {
+    val unitLabel =
+        when (activity.kind) {
+            DayActivity.Kind.WATCHED -> "Ep ${activity.number}"
+            DayActivity.Kind.READ -> "Ch. ${activity.number}"
+        }
     DropdownMenuItem(
         text = {
             Column(modifier = Modifier.width(220.dp)) {
@@ -436,16 +467,21 @@ private fun ActivityMenuRow(activity: DayActivity, onClick: () -> Unit) {
                 model = activity.coverUrl,
                 contentDescription = activity.title,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                modifier = Modifier
-                    .size(width = 32.dp, height = 44.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                modifier =
+                    Modifier
+                        .size(width = 32.dp, height = 44.dp)
+                        .clip(RoundedCornerShape(4.dp)),
             )
         },
         onClick = onClick,
     )
 }
 
-private fun cellColor(count: Int, inMonth: Boolean, isFuture: Boolean): Color {
+private fun cellColor(
+    count: Int,
+    inMonth: Boolean,
+    isFuture: Boolean,
+): Color {
     if (!inMonth) return Color.Transparent
     if (isFuture) return SurfaceContainer.copy(alpha = 0.35f)
     return when {
@@ -457,7 +493,10 @@ private fun cellColor(count: Int, inMonth: Boolean, isFuture: Boolean): Color {
     }
 }
 
-private fun dayTextColor(count: Int, isFuture: Boolean): Color {
+private fun dayTextColor(
+    count: Int,
+    isFuture: Boolean,
+): Color {
     if (isFuture) return OnSurfaceVariant.copy(alpha = 0.35f)
     return if (count > 5) Color.White else OnSurfaceVariant
 }

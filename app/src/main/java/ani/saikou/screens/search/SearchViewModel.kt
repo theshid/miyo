@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 class SearchViewModel(
     private val repository: AnilistRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState
 
@@ -47,10 +46,11 @@ class SearchViewModel(
     }
 
     fun clearFilters() {
-        _uiState.value = _uiState.value.copy(
-            selectedGenres = emptyList(),
-            sort = null,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                selectedGenres = emptyList(),
+                sort = null,
+            )
         search()
     }
 
@@ -69,10 +69,11 @@ class SearchViewModel(
             _uiState.value = state.copy(results = emptyList(), totalFound = 0, isLoading = false)
             return
         }
-        searchJob = viewModelScope.launch {
-            delay(400)
-            search()
-        }
+        searchJob =
+            viewModelScope.launch {
+                delay(400)
+                search()
+            }
     }
 
     fun search() {
@@ -90,33 +91,36 @@ class SearchViewModel(
 
         // Serve from cache immediately if hit
         searchCache[cacheKey]?.let { cached ->
-            _uiState.value = state.copy(
-                results = cached,
-                totalFound = cached.size,
-                isLoading = false,
-            )
+            _uiState.value =
+                state.copy(
+                    results = cached,
+                    totalFound = cached.size,
+                    isLoading = false,
+                )
             return
         }
 
         viewModelScope.launch {
             _uiState.value = state.copy(isLoading = true)
-            val results = repository.search(
-                query = query,
-                type = state.type,
-                genres = state.selectedGenres.ifEmpty { null },
-                sort = state.sort,
-                page = currentPage,
-            )
+            val results =
+                repository.search(
+                    query = query,
+                    type = state.type,
+                    genres = state.selectedGenres.ifEmpty { null },
+                    sort = state.sort,
+                    page = currentPage,
+                )
             searchCache[cacheKey] = results
             // Keep cache bounded
             if (searchCache.size > MAX_CACHE_ENTRIES) {
                 searchCache.remove(searchCache.keys.first())
             }
-            _uiState.value = _uiState.value.copy(
-                results = results,
-                totalFound = results.size,
-                isLoading = false,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    results = results,
+                    totalFound = results.size,
+                    isLoading = false,
+                )
         }
     }
 
@@ -125,44 +129,59 @@ class SearchViewModel(
         if (state.isLoading || !hasAnyFilter(state)) return
         viewModelScope.launch {
             currentPage++
-            val more = repository.search(
-                query = state.query,
-                type = state.type,
-                genres = state.selectedGenres.ifEmpty { null },
-                sort = state.sort,
-                page = currentPage,
-            )
-            _uiState.value = _uiState.value.copy(
-                results = _uiState.value.results + more,
-                totalFound = _uiState.value.results.size + more.size,
-            )
+            val more =
+                repository.search(
+                    query = state.query,
+                    type = state.type,
+                    genres = state.selectedGenres.ifEmpty { null },
+                    sort = state.sort,
+                    page = currentPage,
+                )
+            _uiState.value =
+                _uiState.value.copy(
+                    results = _uiState.value.results + more,
+                    totalFound = _uiState.value.results.size + more.size,
+                )
         }
     }
 
     /** True iff there's something to search by — typed query, picked genre, or sort. */
-    private fun hasAnyFilter(state: SearchUiState): Boolean {
-        return state.query.trim().length >= MIN_QUERY_LENGTH ||
+    private fun hasAnyFilter(state: SearchUiState): Boolean =
+        state.query.trim().length >= MIN_QUERY_LENGTH ||
             state.selectedGenres.isNotEmpty() ||
             state.sort != null
-    }
 
     companion object {
         private const val MIN_QUERY_LENGTH = 1
         private const val MAX_CACHE_ENTRIES = 50
 
-        val GENRES = listOf(
-            "Action", "Adventure", "Comedy", "Drama", "Fantasy",
-            "Horror", "Mecha", "Music", "Mystery", "Psychological",
-            "Romance", "Sci-Fi", "Slice of Life", "Sports",
-            "Supernatural", "Thriller",
-        )
-        val SORT_OPTIONS = mapOf(
-            "Popularity" to "POPULARITY_DESC",
-            "Score" to "SCORE_DESC",
-            "Trending" to "TRENDING_DESC",
-            "A-Z" to "TITLE_ENGLISH",
-            "Z-A" to "TITLE_ENGLISH_DESC",
-        )
+        val GENRES =
+            listOf(
+                "Action",
+                "Adventure",
+                "Comedy",
+                "Drama",
+                "Fantasy",
+                "Horror",
+                "Mecha",
+                "Music",
+                "Mystery",
+                "Psychological",
+                "Romance",
+                "Sci-Fi",
+                "Slice of Life",
+                "Sports",
+                "Supernatural",
+                "Thriller",
+            )
+        val SORT_OPTIONS =
+            mapOf(
+                "Popularity" to "POPULARITY_DESC",
+                "Score" to "SCORE_DESC",
+                "Trending" to "TRENDING_DESC",
+                "A-Z" to "TITLE_ENGLISH",
+                "Z-A" to "TITLE_ENGLISH_DESC",
+            )
     }
 }
 

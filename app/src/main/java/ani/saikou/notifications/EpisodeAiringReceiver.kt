@@ -5,10 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
-import io.github.theshid.prettylog.Log
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import io.github.theshid.prettylog.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
  * round-trip — we trust the airing time that was stored at schedule time.
  */
 class EpisodeAiringReceiver : BroadcastReceiver() {
-
     companion object {
         private const val TAG = "EpisodeAiringReceiver"
         const val EXTRA_MEDIA_ID = "media_id"
@@ -29,7 +28,10 @@ class EpisodeAiringReceiver : BroadcastReceiver() {
         const val EXTRA_COVER_URL = "cover_url"
     }
 
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         val mediaId = intent.getIntExtra(EXTRA_MEDIA_ID, -1)
         val episode = intent.getIntExtra(EXTRA_EPISODE, -1)
         val title = intent.getStringExtra(EXTRA_TITLE) ?: return
@@ -62,14 +64,19 @@ class EpisodeAiringReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun loadCoverBitmap(context: Context, url: String?): Bitmap? {
+    private suspend fun loadCoverBitmap(
+        context: Context,
+        url: String?,
+    ): Bitmap? {
         if (url.isNullOrEmpty()) return null
         return try {
-            val request = ImageRequest.Builder(context)
-                .data(url)
-                .allowHardware(false)
-                .size(128, 128)
-                .build()
+            val request =
+                ImageRequest
+                    .Builder(context)
+                    .data(url)
+                    .allowHardware(false)
+                    .size(128, 128)
+                    .build()
             val result = ImageLoader(context).execute(request)
             (result as? SuccessResult)?.drawable?.let { (it as? BitmapDrawable)?.bitmap }
         } catch (_: Exception) {

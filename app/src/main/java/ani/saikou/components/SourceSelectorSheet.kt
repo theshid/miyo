@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,7 +27,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.SurfaceBright
 import ani.saikou.ui.theme.SurfaceContainer
 import coil.compose.AsyncImage
@@ -53,9 +51,10 @@ fun SourceSelectorSheet(
         containerColor = SurfaceBright,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
         ) {
             Text(
                 text = title,
@@ -77,12 +76,13 @@ fun SourceSelectorSheet(
             ) {
                 items(sources) { source ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(SurfaceContainer)
-                            .clickable { onSelect(source) }
-                            .padding(12.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(SurfaceContainer)
+                                .clickable { onSelect(source) }
+                                .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
@@ -90,9 +90,10 @@ fun SourceSelectorSheet(
                             model = source.coverUrl,
                             contentDescription = source.title,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(48.dp, 68.dp)
-                                .clip(MaterialTheme.shapes.small),
+                            modifier =
+                                Modifier
+                                    .size(48.dp, 68.dp)
+                                    .clip(MaterialTheme.shapes.small),
                         )
                         Text(
                             text = source.title,

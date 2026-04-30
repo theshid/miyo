@@ -12,13 +12,13 @@ class AiChatViewModel(
     private val openAiService: OpenAiService,
     private val repository: AnilistRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(AiChatUiState())
     val uiState: StateFlow<AiChatUiState> = _uiState
 
-    private val conversationHistory = mutableListOf(
-        OpenAiService.ChatMessage(role = "system", content = OpenAiService.SYSTEM_PROMPT),
-    )
+    private val conversationHistory =
+        mutableListOf(
+            OpenAiService.ChatMessage(role = "system", content = OpenAiService.SYSTEM_PROMPT),
+        )
 
     init {
         loadUserContext()
@@ -36,16 +36,18 @@ class AiChatViewModel(
                 user?.let { contextParts.add("User: ${it.name}") }
 
                 if (animeList.isNotEmpty()) {
-                    val watching = animeList.take(15).joinToString(", ") {
-                        "${it.displayTitle} (${it.episodeProgress ?: "?"})"
-                    }
+                    val watching =
+                        animeList.take(15).joinToString(", ") {
+                            "${it.displayTitle} (${it.episodeProgress ?: "?"})"
+                        }
                     contextParts.add("Currently watching: $watching")
                 }
 
                 if (mangaList.isNotEmpty()) {
-                    val reading = mangaList.take(15).joinToString(", ") {
-                        "${it.displayTitle} (${it.episodeProgress ?: "?"})"
-                    }
+                    val reading =
+                        mangaList.take(15).joinToString(", ") {
+                            "${it.displayTitle} (${it.episodeProgress ?: "?"})"
+                        }
                     contextParts.add("Currently reading: $reading")
                 }
 
@@ -71,10 +73,11 @@ class AiChatViewModel(
 
         conversationHistory.add(OpenAiService.ChatMessage(role = "user", content = trimmed))
 
-        _uiState.value = _uiState.value.copy(
-            messages = _uiState.value.messages + userMessage,
-            isLoading = true,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                messages = _uiState.value.messages + userMessage,
+                isLoading = true,
+            )
 
         viewModelScope.launch {
             val response = openAiService.chat(conversationHistory)
@@ -82,10 +85,11 @@ class AiChatViewModel(
             conversationHistory.add(OpenAiService.ChatMessage(role = "assistant", content = response))
 
             val aiMessage = ChatBubble(text = response, isUser = false)
-            _uiState.value = _uiState.value.copy(
-                messages = _uiState.value.messages + aiMessage,
-                isLoading = false,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    messages = _uiState.value.messages + aiMessage,
+                    isLoading = false,
+                )
         }
     }
 }

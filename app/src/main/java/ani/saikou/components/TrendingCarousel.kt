@@ -31,7 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ani.saikou.domain.model.Media
-import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import coil.compose.AsyncImage
@@ -65,16 +64,18 @@ fun TrendingCarousel(
     ) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(280.dp),
             pageSpacing = 0.dp,
         ) { page ->
             val media = items[page]
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable { onItemClick(media.id) },
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clickable { onItemClick(media.id) },
             ) {
                 // Full-bleed banner image
                 AsyncImage(
@@ -86,28 +87,31 @@ fun TrendingCarousel(
 
                 // Deep gradient overlay — bottom half fades to black
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.3f),
-                                    Color.Black.copy(alpha = 0.85f),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors =
+                                        listOf(
+                                            Color.Transparent,
+                                            Color.Black.copy(alpha = 0.3f),
+                                            Color.Black.copy(alpha = 0.85f),
+                                        ),
+                                    startY = 0f,
+                                    endY = Float.POSITIVE_INFINITY,
                                 ),
-                                startY = 0f,
-                                endY = Float.POSITIVE_INFINITY,
-                            )
-                        ),
+                            ),
                 )
 
                 // "TRENDING" badge — top start
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(14.dp)
-                        .background(Primary.copy(alpha = 0.92f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopStart)
+                            .padding(14.dp)
+                            .background(Primary.copy(alpha = 0.92f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
                     Text(
                         text = "TRENDING",
@@ -119,9 +123,10 @@ fun TrendingCarousel(
 
                 // Title + score — bottom start
                 Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 16.dp, end = 80.dp, bottom = 16.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 16.dp, end = 80.dp, bottom = 16.dp),
                 ) {
                     Text(
                         text = media.displayTitle,
@@ -142,11 +147,12 @@ fun TrendingCarousel(
 
                 // Page counter — bottom end
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(12.dp)
-                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(12.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
                     Text(
                         text = "${page + 1} / ${items.size}",
@@ -166,14 +172,15 @@ fun TrendingCarousel(
             repeat(dotCount) { index ->
                 val isSelected = index == pagerState.currentPage % dotCount
                 Box(
-                    modifier = Modifier
-                        .padding(horizontal = 3.dp)
-                        .height(4.dp)
-                        .width(if (isSelected) 20.dp else 6.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isSelected) Primary else OnSurfaceVariant.copy(alpha = 0.3f)
-                        ),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 3.dp)
+                            .height(4.dp)
+                            .width(if (isSelected) 20.dp else 6.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) Primary else OnSurfaceVariant.copy(alpha = 0.3f),
+                            ),
                 )
             }
         }

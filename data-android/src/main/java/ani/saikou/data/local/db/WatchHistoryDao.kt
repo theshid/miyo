@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WatchHistoryDao {
-
     /** Continue Watching: in-progress entries (not completed), most recent first. */
     @Query("SELECT * FROM watch_history WHERE (lastPositionMs * 1.0 / durationMs) < 0.9 ORDER BY lastWatchedAt DESC LIMIT :limit")
     fun getInProgress(limit: Int = 10): Flow<List<WatchHistoryEntity>>

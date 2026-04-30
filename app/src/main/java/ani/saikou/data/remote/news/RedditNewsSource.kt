@@ -16,40 +16,52 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.net.URLEncoder
 
 class RedditNewsSource : NewsSource {
-
     override val name = "Reddit"
     private val client = HttpClient(OkHttp)
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
     private val ua = "android:ani.saikou.v2:v2.0 (by /u/saikou_app)"
 
-    override suspend fun getLatestNews(page: Int): List<NewsItem> = withContext(Dispatchers.IO) {
-        val animeNews = fetchSubreddit("anime", 15)
-        val mangaNews = fetchSubreddit("manga", 10)
-        (animeNews + mangaNews).sortedByDescending { it.date }
-    }
+    override suspend fun getLatestNews(page: Int): List<NewsItem> =
+        withContext(Dispatchers.IO) {
+            val animeNews = fetchSubreddit("anime", 15)
+            val mangaNews = fetchSubreddit("manga", 10)
+            (animeNews + mangaNews).sortedByDescending { it.date }
+        }
 
-    override suspend fun getNewsForMedia(title: String, malId: Int?): List<NewsItem> = withContext(Dispatchers.IO) {
+    override suspend fun getNewsForMedia(
+        title: String,
+        malId: Int?,
+    ): List<NewsItem> =
+        withContext(Dispatchers.IO) {
+            try {
+                val encoded = URLEncoder.encode(title, "UTF-8")
+                val response =
+                    client.get("https://www.reddit.com/r/anime/search.json?q=$encoded&restrict_sr=on&sort=new&limit=15") {
+                        header("User-Agent", ua)
+                    }
+                parseRedditResponse(response.bodyAsText())
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+
+    private suspend fun fetchSubreddit(
+        sub: String,
+        limit: Int,
+    ): List<NewsItem> =
         try {
-            val encoded = URLEncoder.encode(title, "UTF-8")
-            val response = client.get("https://www.reddit.com/r/anime/search.json?q=$encoded&restrict_sr=on&sort=new&limit=15") {
-                header("User-Agent", ua)
-            }
+            val response =
+                client.get("https://www.reddit.com/r/$sub/hot.json?limit=$limit") {
+                    header("User-Agent", ua)
+                }
             parseRedditResponse(response.bodyAsText())
         } catch (e: Exception) {
             emptyList()
         }
-    }
-
-    private suspend fun fetchSubreddit(sub: String, limit: Int): List<NewsItem> {
-        return try {
-            val response = client.get("https://www.reddit.com/r/$sub/hot.json?limit=$limit") {
-                header("User-Agent", ua)
-            }
-            parseRedditResponse(response.bodyAsText())
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
 
     private fun parseRedditResponse(body: String): List<NewsItem> {
         return try {
@@ -69,12 +81,13 @@ class RedditNewsSource : NewsSource {
                     val imageUrl = if (thumbnail != null && thumbnail.startsWith("http")) thumbnail else null
                     val sub = data["subreddit"]?.jsonPrimitive?.content ?: "anime"
 
-                    val category = when {
-                        flair.contains("Episode", true) || flair.contains("Discussion", true) -> NewsCategory.DISCUSSION
-                        flair.contains("News", true) -> NewsCategory.INDUSTRY_NEWS
-                        flair.contains("Chapter", true) -> NewsCategory.CHAPTER_RELEASE
-                        else -> NewsCategory.DISCUSSION
-                    }
+                    val category =
+                        when {
+                            flair.contains("Episode", true) || flair.contains("Discussion", true) -> NewsCategory.DISCUSSION
+                            flair.contains("News", true) -> NewsCategory.INDUSTRY_NEWS
+                            flair.contains("Chapter", true) -> NewsCategory.CHAPTER_RELEASE
+                            else -> NewsCategory.DISCUSSION
+                        }
 
                     NewsItem(
                         title = title,

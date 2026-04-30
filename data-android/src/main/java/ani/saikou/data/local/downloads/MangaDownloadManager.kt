@@ -6,7 +6,6 @@ import ani.saikou.data.local.db.DownloadEntity
 import ani.saikou.data.local.db.DownloadedMangaEntity
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.domain.model.MangaPage
-import io.github.theshid.prettylog.Log as PLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +14,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URL
+import io.github.theshid.prettylog.Log as PLog
 
 class MangaDownloadManager(
     private val context: Context,
@@ -47,7 +47,7 @@ class MangaDownloadManager(
         if (existing?.status == "COMPLETED") return // Already downloaded
 
         dao.insertDownloadedManga(
-            DownloadedMangaEntity(mangaId = mangaId, title = mangaTitle, coverUrl = coverUrl, sourceId = sourceId)
+            DownloadedMangaEntity(mangaId = mangaId, title = mangaTitle, coverUrl = coverUrl, sourceId = sourceId),
         )
 
         dao.insertDownload(
@@ -62,7 +62,7 @@ class MangaDownloadManager(
                 status = "QUEUED",
                 totalPages = totalPages,
                 downloadedPages = existing?.downloadedPages ?: 0,
-            )
+            ),
         )
     }
 
@@ -73,79 +73,91 @@ class MangaDownloadManager(
         downloadId: String,
         pages: List<MangaPage>,
         onProgress: (downloaded: Int, total: Int) -> Unit,
-    ): Boolean = withContext(Dispatchers.IO) {
-        val download = dao.getDownload(downloadId) ?: return@withContext false
-        _activeDownloadId.value = downloadId
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val download = dao.getDownload(downloadId) ?: return@withContext false
+            _activeDownloadId.value = downloadId
 
-        val chapterDir = File(downloadDir, "${download.mangaId}/${download.chapterKey}")
-        chapterDir.mkdirs()
+            val chapterDir = File(downloadDir, "${download.mangaId}/${download.chapterKey}")
+            chapterDir.mkdirs()
 
-        dao.updateStatus(downloadId, "DOWNLOADING")
-        // Reflects how many of `pages.size` are actually on disk. Starts at 0
-        // so resumed runs don't double-count: the loop below increments for
-        // both skipped (already-on-disk) and newly-fetched pages.
-        var downloadedCount = 0
-        var success = true
+            dao.updateStatus(downloadId, "DOWNLOADING")
+            // Reflects how many of `pages.size` are actually on disk. Starts at 0
+            // so resumed runs don't double-count: the loop below increments for
+            // both skipped (already-on-disk) and newly-fetched pages.
+            var downloadedCount = 0
+            var success = true
 
-        for (page in pages) {
-            // Skip already downloaded pages
-            val pageFile = File(chapterDir, "%03d.jpg".format(page.index + 1))
-            if (pageFile.exists() && pageFile.length() > 0) {
-                downloadedCount++
-                continue
-            }
-
-            // Check if paused/cancelled
-            val current = dao.getDownload(downloadId)
-            if (current?.status == "PAUSED" || current == null) {
-                _activeDownloadId.value = null
-                return@withContext false
-            }
-
-            try {
-                concurrencySemaphore.withPermit {
-                    downloadPage(page.imageUrl, pageFile, page.headers)
+            for (page in pages) {
+                // Skip already downloaded pages
+                val pageFile = File(chapterDir, "%03d.jpg".format(page.index + 1))
+                if (pageFile.exists() && pageFile.length() > 0) {
+                    downloadedCount++
+                    continue
                 }
-                downloadedCount++
-                dao.updateProgress(downloadId, downloadedCount, "DOWNLOADING")
-                onProgress(downloadedCount, pages.size)
-            } catch (e: Exception) {
-                PLog.e(
-                    tag = "Download",
-                    message = "Page ${page.index + 1}/${pages.size} of '${download.mangaTitle}' ch ${download.chapterNumber} failed after retries: ${e.javaClass.simpleName}: ${e.message}",
-                    throwable = e,
-                )
-                dao.updateStatus(downloadId, "ERROR")
-                success = false
-                break
+
+                // Check if paused/cancelled
+                val current = dao.getDownload(downloadId)
+                if (current?.status == "PAUSED" || current == null) {
+                    _activeDownloadId.value = null
+                    return@withContext false
+                }
+
+                try {
+                    concurrencySemaphore.withPermit {
+                        downloadPage(page.imageUrl, pageFile, page.headers)
+                    }
+                    downloadedCount++
+                    dao.updateProgress(downloadId, downloadedCount, "DOWNLOADING")
+                    onProgress(downloadedCount, pages.size)
+                } catch (e: Exception) {
+                    val pageNum = page.index + 1
+                    val errorClass = e.javaClass.simpleName
+                    PLog.e(
+                        tag = "Download",
+                        message =
+                            "Page $pageNum/${pages.size} of '${download.mangaTitle}' " +
+                                "ch ${download.chapterNumber} failed after retries: $errorClass: ${e.message}",
+                        throwable = e,
+                    )
+                    dao.updateStatus(downloadId, "ERROR")
+                    success = false
+                    break
+                }
             }
-        }
 
-        if (success) {
-            dao.updateProgress(downloadId, pages.size, "COMPLETED")
-            // Measure the actual bytes written so the reader's "Download next N"
-            // estimate is based on real data instead of a fixed guess.
-            val totalBytes = chapterDir.walkBottomUp()
-                .filter { it.isFile }
-                .sumOf { it.length() }
-            dao.updateFileSize(downloadId, totalBytes)
-        }
+            if (success) {
+                dao.updateProgress(downloadId, pages.size, "COMPLETED")
+                // Measure the actual bytes written so the reader's "Download next N"
+                // estimate is based on real data instead of a fixed guess.
+                val totalBytes =
+                    chapterDir
+                        .walkBottomUp()
+                        .filter { it.isFile }
+                        .sumOf { it.length() }
+                dao.updateFileSize(downloadId, totalBytes)
+            }
 
-        _activeDownloadId.value = null
-        success
-    }
+            _activeDownloadId.value = null
+            success
+        }
 
     /**
      * Get chapter pages from local storage if downloaded.
      */
-    fun getLocalPages(mangaId: Int, chapterKey: String): List<MangaPage>? {
+    fun getLocalPages(
+        mangaId: Int,
+        chapterKey: String,
+    ): List<MangaPage>? {
         val chapterDir = File(downloadDir, "$mangaId/$chapterKey")
         if (!chapterDir.exists()) return null
 
-        val files = chapterDir.listFiles()
-            ?.filter { it.extension in listOf("jpg", "png", "webp") }
-            ?.sortedBy { it.name }
-            ?: return null
+        val files =
+            chapterDir
+                .listFiles()
+                ?.filter { it.extension in listOf("jpg", "png", "webp") }
+                ?.sortedBy { it.name }
+                ?: return null
 
         if (files.isEmpty()) return null
 
@@ -157,7 +169,10 @@ class MangaDownloadManager(
     /**
      * Check if a chapter is fully downloaded.
      */
-    suspend fun isChapterDownloaded(mangaId: Int, chapterKey: String): Boolean {
+    suspend fun isChapterDownloaded(
+        mangaId: Int,
+        chapterKey: String,
+    ): Boolean {
         val download = dao.getDownloadByChapter(mangaId, chapterKey)
         return download?.status == "COMPLETED"
     }
@@ -184,15 +199,15 @@ class MangaDownloadManager(
         File(downloadDir, "$mangaId").deleteRecursively()
     }
 
-    fun getStorageUsed(): Long {
-        return downloadDir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
-    }
+    fun getStorageUsed(): Long = downloadDir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
 
-    fun getAvailableSpace(): Long {
-        return downloadDir.freeSpace
-    }
+    fun getAvailableSpace(): Long = downloadDir.freeSpace
 
-    private suspend fun downloadPage(url: String, destination: File, headers: Map<String, String> = emptyMap()) {
+    private suspend fun downloadPage(
+        url: String,
+        destination: File,
+        headers: Map<String, String> = emptyMap(),
+    ) {
         // Manga CDNs (mangap, mgcdn, etc.) periodically reset connections —
         // either via load-balancer churn or rate-limit drops. Without a retry,
         // a single SocketException kills the whole chapter download. 3 attempts
@@ -218,7 +233,11 @@ class MangaDownloadManager(
         throw lastException ?: java.io.IOException("Failed after $maxAttempts attempts")
     }
 
-    private fun fetchPage(url: String, destination: File, headers: Map<String, String>) {
+    private fun fetchPage(
+        url: String,
+        destination: File,
+        headers: Map<String, String>,
+    ) {
         val connection = URL(url).openConnection()
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Android) Miyo/2.0")
         // MangaPill's CDN refuses requests without a Referer header; passing

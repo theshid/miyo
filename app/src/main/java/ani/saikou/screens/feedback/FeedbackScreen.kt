@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,9 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.data.remote.FeedbackService
 import ani.saikou.ui.theme.Background
@@ -47,6 +45,7 @@ import ani.saikou.ui.theme.SurfaceContainer
 import ani.saikou.ui.theme.SurfaceContainerHigh
 import ani.saikou.ui.theme.SurfaceVariant
 import kotlinx.coroutines.delay
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun FeedbackScreen(
@@ -66,15 +65,17 @@ fun FeedbackScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background),
     ) {
         // ── Top bar ──────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 4.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
@@ -93,10 +94,11 @@ fun FeedbackScreen(
         // stays pinned even when the keyboard pushes things up or the screen
         // is small.
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
@@ -123,13 +125,14 @@ fun FeedbackScreen(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Message", style = MaterialTheme.typography.labelLarge, color = OnSurface)
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 160.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(SurfaceVariant.copy(alpha = 0.4f))
-                        .border(1.dp, GhostBorder, MaterialTheme.shapes.medium)
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 160.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(SurfaceVariant.copy(alpha = 0.4f))
+                            .border(1.dp, GhostBorder, MaterialTheme.shapes.medium)
+                            .padding(16.dp),
                 ) {
                     BasicTextField(
                         value = state.message,
@@ -156,11 +159,12 @@ fun FeedbackScreen(
 
             if (state.didSubmit) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(SurfaceContainer)
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(SurfaceContainer)
+                            .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -176,17 +180,22 @@ fun FeedbackScreen(
 
         // Pinned submit button — always visible regardless of scroll/keyboard.
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(if (state.isSubmitting) SurfaceContainerHigh else Primary)
-                .clickable(enabled = !state.isSubmitting && !state.didSubmit) { viewModel.submit() }
-                .padding(vertical = 14.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(if (state.isSubmitting) SurfaceContainerHigh else Primary)
+                    .clickable(enabled = !state.isSubmitting && !state.didSubmit) { viewModel.submit() }
+                    .padding(vertical = 14.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (state.isSubmitting) {
-                CircularProgressIndicator(color = androidx.compose.ui.graphics.Color.White, strokeWidth = 2.dp, modifier = Modifier.height(24.dp))
+                CircularProgressIndicator(
+                    color = androidx.compose.ui.graphics.Color.White,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.height(24.dp),
+                )
             } else {
                 Text(
                     "Send feedback",

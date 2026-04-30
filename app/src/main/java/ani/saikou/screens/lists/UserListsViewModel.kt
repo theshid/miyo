@@ -22,7 +22,6 @@ class UserListsViewModel(
     private val repository: AnilistRepository,
     private val mangaSourceRepo: MangaSourceRepository,
 ) : ViewModel() {
-
     private val type: String = savedStateHandle["type"] ?: "ANIME"
 
     private val _uiState = MutableStateFlow(UserListsUiState(type = type))
@@ -44,7 +43,8 @@ class UserListsViewModel(
                 when (event) {
                     is ListEvent.ListEntryChanged,
                     is ListEvent.ProgressUpdated,
-                    is ListEvent.ReadingProgressUpdated -> refresh()
+                    is ListEvent.ReadingProgressUpdated,
+                    -> refresh()
                     is ListEvent.FavoriteToggled -> {
                         if (_uiState.value.selectedTab == FAVORITES_TAB) refresh()
                     }
@@ -64,7 +64,12 @@ class UserListsViewModel(
         loadList(_uiState.value.selectedTab)
     }
 
-    fun updateEntry(mediaId: Int, progress: Int?, score: Int?, status: String?) {
+    fun updateEntry(
+        mediaId: Int,
+        progress: Int?,
+        score: Int?,
+        status: String?,
+    ) {
         viewModelScope.launch {
             repository.editListEntry(mediaId, progress, score, status)
             ListEventBus.emit(ListEvent.ListEntryChanged(mediaId, status))
@@ -75,20 +80,22 @@ class UserListsViewModel(
     private fun loadList(tab: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val items = if (tab == FAVORITES_TAB) {
-                repository.getUserFavorites(type)
-            } else {
-                val anilistStatus = statusMap[tab] ?: "CURRENT"
-                if (type == "ANIME") {
-                    repository.getUserAnimeList(anilistStatus)
+            val items =
+                if (tab == FAVORITES_TAB) {
+                    repository.getUserFavorites(type)
                 } else {
-                    repository.getUserMangaList(anilistStatus)
+                    val anilistStatus = statusMap[tab] ?: "CURRENT"
+                    if (type == "ANIME") {
+                        repository.getUserAnimeList(anilistStatus)
+                    } else {
+                        repository.getUserMangaList(anilistStatus)
+                    }
                 }
-            }
-            _uiState.value = _uiState.value.copy(
-                items = items,
-                isLoading = false,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    items = items,
+                    isLoading = false,
+                )
             // For manga whose AniList chapter count is null/0, kick off a
             // background source probe and stash the real number in the cache.
             // Subsequent renders pick it up reactively via MangaChapterCountCache.counts.
@@ -97,13 +104,15 @@ class UserListsViewModel(
     }
 
     private fun probeMissingChapterCounts(entries: List<Media>) {
-        val targets = entries.filter { entry ->
-            entry.totalChapters == null || entry.totalChapters == 0
-        }.filter { entry ->
-            // Skip ones we already know — same-session cache hits, or a
-            // probe currently in flight from another tab/screen.
-            MangaChapterCountCache.get(entry.id) == null && entry.id !in probesInFlight
-        }
+        val targets =
+            entries
+                .filter { entry ->
+                    entry.totalChapters == null || entry.totalChapters == 0
+                }.filter { entry ->
+                    // Skip ones we already know — same-session cache hits, or a
+                    // probe currently in flight from another tab/screen.
+                    MangaChapterCountCache.get(entry.id) == null && entry.id !in probesInFlight
+                }
         if (targets.isEmpty()) return
         for (entry in targets) {
             probesInFlight += entry.id
@@ -120,21 +129,24 @@ class UserListsViewModel(
         }
     }
 
-    private suspend fun resolveChapterCount(title: String): Int? = withContext(Dispatchers.IO) {
-        mangaSourceRepo.resolveChapterCount(title)
-    }
+    private suspend fun resolveChapterCount(title: String): Int? =
+        withContext(Dispatchers.IO) {
+            mangaSourceRepo.resolveChapterCount(title)
+        }
 
     companion object {
         const val FAVORITES_TAB = "Favorites"
         val tabs = listOf("Watching", "Completed", "Paused", "Planning", "Dropped", FAVORITES_TAB)
+
         // Only the list-status tabs — excludes Favorites, which isn't a MediaListStatus.
-        val statusMap = mapOf(
-            "Watching" to "CURRENT",
-            "Completed" to "COMPLETED",
-            "Paused" to "PAUSED",
-            "Planning" to "PLANNING",
-            "Dropped" to "DROPPED",
-        )
+        val statusMap =
+            mapOf(
+                "Watching" to "CURRENT",
+                "Completed" to "COMPLETED",
+                "Paused" to "PAUSED",
+                "Planning" to "PLANNING",
+                "Dropped" to "DROPPED",
+            )
     }
 }
 

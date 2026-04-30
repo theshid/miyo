@@ -13,7 +13,6 @@ class CharacterDetailViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: AnilistRepository,
 ) : ViewModel() {
-
     private val characterId: Int = savedStateHandle["id"] ?: 0
 
     private val _uiState = MutableStateFlow(CharacterUiState())
@@ -27,10 +26,11 @@ class CharacterDetailViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val character = repository.getCharacter(characterId)
-            _uiState.value = CharacterUiState(
-                character = character,
-                isLoading = false,
-            )
+            _uiState.value =
+                CharacterUiState(
+                    character = character,
+                    isLoading = false,
+                )
         }
     }
 }

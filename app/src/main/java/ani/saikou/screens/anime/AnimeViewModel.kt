@@ -17,7 +17,6 @@ class AnimeViewModel(
     private val repository: AnilistRepository,
     private val api: AnilistApi,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(AnimeUiState())
     val uiState: StateFlow<AnimeUiState> = _uiState
 
@@ -44,17 +43,21 @@ class AnimeViewModel(
             // fired AND we got nothing from the network, surface it to the user.
             val networkFailure = api.lastFailure.value
             val allEmpty = trending.isEmpty() && updated.isEmpty() && popular.isEmpty()
-            val errorMessage = if (networkFailure != null && allEmpty) {
-                friendlyMessage(networkFailure)
-            } else null
+            val errorMessage =
+                if (networkFailure != null && allEmpty) {
+                    friendlyMessage(networkFailure)
+                } else {
+                    null
+                }
 
-            _uiState.value = AnimeUiState(
-                trending = trending,
-                recentlyUpdated = updated,
-                popular = popular,
-                isLoading = false,
-                error = errorMessage,
-            )
+            _uiState.value =
+                AnimeUiState(
+                    trending = trending,
+                    recentlyUpdated = updated,
+                    popular = popular,
+                    isLoading = false,
+                    error = errorMessage,
+                )
 
             // AniList always has trending/popular/recently-updated anime, so
             // three empty lists with no network failure flag still means
@@ -69,11 +72,12 @@ class AnimeViewModel(
         loadAnimeData()
     }
 
-    private fun friendlyMessage(failure: AnilistFailure): String = when (failure) {
-        is AnilistFailure.Network -> "Couldn't reach AniList. Check your connection."
-        is AnilistFailure.Server -> "AniList is having issues (HTTP ${failure.httpStatus})."
-        is AnilistFailure.Other -> "Something went wrong loading this page."
-    }
+    private fun friendlyMessage(failure: AnilistFailure): String =
+        when (failure) {
+            is AnilistFailure.Network -> "Couldn't reach AniList. Check your connection."
+            is AnilistFailure.Server -> "AniList is having issues (HTTP ${failure.httpStatus})."
+            is AnilistFailure.Other -> "Something went wrong loading this page."
+        }
 
     private fun reportEmptyAnimeTab() {
         try {
@@ -82,7 +86,9 @@ class AnimeViewModel(
                 scope.setTag("area", "AnimeTab")
                 Sentry.captureMessage("Anime tab rendered empty (all 3 AniList sections returned 0 results)")
             }
-        } catch (_: Exception) { /* best-effort */ }
+        } catch (_: Exception) {
+            // best-effort
+        }
     }
 
     fun loadMorePopular() {
@@ -91,13 +97,13 @@ class AnimeViewModel(
         viewModelScope.launch {
             popularPage++
             val more = repository.getPopularAnime(page = popularPage)
-            _uiState.value = _uiState.value.copy(
-                popular = _uiState.value.popular + more,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    popular = _uiState.value.popular + more,
+                )
             isLoadingMore = false
         }
     }
-
 }
 
 data class AnimeUiState(

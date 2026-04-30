@@ -11,16 +11,18 @@ enum class DownloadStatus {
     DOWNLOADING,
     PAUSED,
     COMPLETED,
-    ERROR;
+    ERROR,
+    ;
 
     companion object {
-        fun fromString(value: String?): DownloadStatus? = when (value) {
-            "QUEUED" -> QUEUED
-            "DOWNLOADING" -> DOWNLOADING
-            "PAUSED" -> PAUSED
-            "COMPLETED" -> COMPLETED
-            "ERROR" -> ERROR
-            else -> null
-        }
+        fun fromString(value: String?): DownloadStatus? =
+            when (value) {
+                "QUEUED" -> QUEUED
+                "DOWNLOADING" -> DOWNLOADING
+                "PAUSED" -> PAUSED
+                "COMPLETED" -> COMPLETED
+                "ERROR" -> ERROR
+                else -> null
+            }
     }
 }

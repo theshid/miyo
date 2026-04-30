@@ -6,16 +6,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.HourglassEmpty
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -73,10 +72,11 @@ fun ChapterRow(
     onDeleteClick: () -> Unit = onCancelDownloadClick,
 ) {
     GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
+                .clickable(onClick = onClick),
         contentPadding = 12.dp,
     ) {
         Row(
@@ -84,26 +84,28 @@ fun ChapterRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        when {
-                            isCurrent -> Primary.copy(alpha = 0.25f)
-                            read -> Secondary.copy(alpha = 0.2f)
-                            else -> SurfaceContainer
-                        },
-                        MaterialTheme.shapes.small,
-                    ),
+                modifier =
+                    Modifier
+                        .size(40.dp)
+                        .background(
+                            when {
+                                isCurrent -> Primary.copy(alpha = 0.25f)
+                                read -> Secondary.copy(alpha = 0.2f)
+                                else -> SurfaceContainer
+                            },
+                            MaterialTheme.shapes.small,
+                        ),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "$chapterNumber",
                     style = MaterialTheme.typography.titleSmall,
-                    color = when {
-                        isCurrent -> Primary
-                        read -> Secondary
-                        else -> OnSurface
-                    },
+                    color =
+                        when {
+                            isCurrent -> Primary
+                            read -> Secondary
+                            else -> OnSurface
+                        },
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -183,9 +185,10 @@ fun ChapterDownloadButton(
         }
         "DOWNLOADING" -> {
             Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clickable(onClick = onCancel),
+                modifier =
+                    Modifier
+                        .size(36.dp)
+                        .clickable(onClick = onCancel),
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(

@@ -29,6 +29,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -38,16 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GenreChip
-import ani.saikou.components.GlassCard
 import ani.saikou.components.PillButton
 import ani.saikou.domain.model.Media
 import ani.saikou.ui.theme.Background
@@ -58,6 +55,7 @@ import ani.saikou.ui.theme.Secondary
 import ani.saikou.ui.theme.SurfaceBright
 import ani.saikou.ui.theme.SurfaceContainer
 import coil.compose.AsyncImage
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,17 +68,18 @@ fun UserListsScreen(
     val state by viewModel.uiState.collectAsState()
     var editingMedia by remember { mutableStateOf<Media?>(null) }
 
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background),
     ) {
         // ── Top Bar ──────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 4.dp, end = 16.dp, top = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 16.dp, top = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
@@ -175,12 +174,13 @@ private fun ListMediaCard(
     onLongClick: () -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(120.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .background(SurfaceContainer)
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(SurfaceContainer)
+                .clickable(onClick = onClick),
     ) {
         // Banner background
         AsyncImage(
@@ -196,14 +196,15 @@ private fun ListMediaCard(
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(SurfaceContainer.copy(alpha = 0.95f), SurfaceContainer.copy(alpha = 0.7f)),
-                    )
-                )
+                    ),
+                ),
         )
 
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Poster
@@ -211,10 +212,11 @@ private fun ListMediaCard(
                 model = media.cover,
                 contentDescription = media.displayTitle,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .width(64.dp)
-                    .height(96.dp)
-                    .clip(MaterialTheme.shapes.small),
+                modifier =
+                    Modifier
+                        .width(64.dp)
+                        .height(96.dp)
+                        .clip(MaterialTheme.shapes.small),
             )
 
             // Info
@@ -250,14 +252,16 @@ private fun ListMediaCard(
                     val label = if (type == "ANIME") "EPISODE PROGRESS" else "CHAPTER PROGRESS"
                     Text(label, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
 
-                    val cachedCounts by ani.saikou.data.local.MangaChapterCountCache.counts.collectAsState()
+                    val cachedCounts by ani.saikou.data.local.MangaChapterCountCache.counts
+                        .collectAsState()
                     val progress = media.userProgress ?: 0
                     // Prefer AniList's count; fall back to the source-derived
                     // count we cached after the user opened the detail screen
                     // (covers Vagabond and other AniList-null cases).
-                    val total = media.totalEpisodes
-                        ?: media.totalChapters
-                        ?: cachedCounts[media.id]
+                    val total =
+                        media.totalEpisodes
+                            ?: media.totalChapters
+                            ?: cachedCounts[media.id]
                     Text(
                         text = if (total != null && total > 0) "$progress / $total" else "$progress",
                         style = MaterialTheme.typography.labelLarge,
@@ -271,16 +275,18 @@ private fun ListMediaCard(
         // Progress bar at bottom — same source-cache fallback as above. When
         // even that comes back empty we render 0 (vs the old fallback of 1f,
         // which made any progress > 0 look like the user finished the series).
-        val cachedCountsForBar by ani.saikou.data.local.MangaChapterCountCache.counts.collectAsState()
+        val cachedCountsForBar by ani.saikou.data.local.MangaChapterCountCache.counts
+            .collectAsState()
         val progress = media.userProgress?.toFloat() ?: 0f
         val total = (media.totalEpisodes ?: media.totalChapters ?: cachedCountsForBar[media.id])?.toFloat()
         val fraction = if (total != null && total > 0) (progress / total).coerceIn(0f, 1f) else 0f
         Box(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth(fraction)
-                .height(3.dp)
-                .background(Primary),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth(fraction)
+                    .height(3.dp)
+                    .background(Primary),
         )
     }
 }
@@ -306,9 +312,10 @@ private fun EditBottomSheet(
         containerColor = SurfaceBright,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
@@ -357,11 +364,12 @@ private fun EditBottomSheet(
                     onValueChange = { progressValue = it },
                     valueRange = 0f..maxProgress,
                     steps = maxProgress.toInt().coerceAtMost(100),
-                    colors = SliderDefaults.colors(
-                        thumbColor = Primary,
-                        activeTrackColor = Primary,
-                        inactiveTrackColor = SurfaceContainer,
-                    ),
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = Primary,
+                            activeTrackColor = Primary,
+                            inactiveTrackColor = SurfaceContainer,
+                        ),
                 )
             }
 
@@ -382,11 +390,12 @@ private fun EditBottomSheet(
                     value = scoreValue,
                     onValueChange = { scoreValue = it },
                     valueRange = 0f..100f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = Secondary,
-                        activeTrackColor = Secondary,
-                        inactiveTrackColor = SurfaceContainer,
-                    ),
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = Secondary,
+                            activeTrackColor = Secondary,
+                            inactiveTrackColor = SurfaceContainer,
+                        ),
                 )
             }
 

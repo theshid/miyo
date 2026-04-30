@@ -34,40 +34,40 @@ import kotlinx.coroutines.launch
  * then navigates forward.
  */
 @Composable
-fun SplashScreen(
-    onSplashComplete: () -> Unit,
-) {
+fun SplashScreen(onSplashComplete: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val fadeAlpha = remember { Animatable(1f) }
     var videoEnded by remember { mutableStateOf(false) }
 
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            val uri = Uri.parse("android.resource://${context.packageName}/${R.raw.splash_animation}")
-            setMediaItem(MediaItem.fromUri(uri))
-            prepare()
-            playWhenReady = true
-            volume = 1f
+    val exoPlayer =
+        remember {
+            ExoPlayer.Builder(context).build().apply {
+                val uri = Uri.parse("android.resource://${context.packageName}/${R.raw.splash_animation}")
+                setMediaItem(MediaItem.fromUri(uri))
+                prepare()
+                playWhenReady = true
+                volume = 1f
+            }
         }
-    }
 
     // When video ends, fade out then navigate
     DisposableEffect(exoPlayer) {
-        val listener = object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_ENDED && !videoEnded) {
-                    videoEnded = true
-                    scope.launch {
-                        fadeAlpha.animateTo(
-                            0f,
-                            animationSpec = tween(durationMillis = 600),
-                        )
-                        onSplashComplete()
+        val listener =
+            object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED && !videoEnded) {
+                        videoEnded = true
+                        scope.launch {
+                            fadeAlpha.animateTo(
+                                0f,
+                                animationSpec = tween(durationMillis = 600),
+                            )
+                            onSplashComplete()
+                        }
                     }
                 }
             }
-        }
         exoPlayer.addListener(listener)
         onDispose {
             exoPlayer.removeListener(listener)
@@ -76,9 +76,10 @@ fun SplashScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
         AndroidView(
@@ -89,15 +90,17 @@ fun SplashScreen(
                     setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     setBackgroundColor(android.graphics.Color.BLACK)
-                    layoutParams = FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                    )
+                    layoutParams =
+                        FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                        )
                 }
             },
-            modifier = Modifier
-                .fillMaxSize()
-                .alpha(fadeAlpha.value),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .alpha(fadeAlpha.value),
         )
     }
 }

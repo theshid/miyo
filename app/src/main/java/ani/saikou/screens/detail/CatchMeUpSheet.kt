@@ -32,12 +32,11 @@ import androidx.compose.ui.unit.dp
 import ani.saikou.components.MarkdownText
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.domain.model.Media
-import org.koin.compose.koinInject
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.SurfaceContainerHigh
+import org.koin.compose.koinInject
 
 @Composable
 fun CatchMeUpSheet(
@@ -49,67 +48,72 @@ fun CatchMeUpSheet(
     val openAi = koinInject<OpenAiService>()
 
     LaunchedEffect(media.id) {
-
         val progressType = if (media.type == "MANGA") "chapters" else "episodes"
         val progressNum = media.userProgress ?: 0
         val total = media.totalEpisodes ?: media.totalChapters
 
-        val prompt = buildString {
-            append("The user is ${if (media.type == "MANGA") "reading" else "watching"} ")
-            append("\"${media.displayTitle}\"")
-            if (media.nameRomaji != null && media.nameRomaji != media.displayTitle) {
-                append(" (${media.nameRomaji})")
+        val prompt =
+            buildString {
+                append("The user is ${if (media.type == "MANGA") "reading" else "watching"} ")
+                append("\"${media.displayTitle}\"")
+                if (media.nameRomaji != null && media.nameRomaji != media.displayTitle) {
+                    append(" (${media.nameRomaji})")
+                }
+                append(". They are on $progressType $progressNum")
+                if (total != null) append(" out of $total")
+                append(".\n\n")
+
+                val description = media.description
+                if (!description.isNullOrBlank()) {
+                    val cleanDesc =
+                        description
+                            .replace("<br>", "\n")
+                            .replace(Regex("<[^>]*>"), "")
+                    append("Series synopsis: $cleanDesc\n\n")
+                }
+
+                val genres = media.genres
+                if (!genres.isNullOrEmpty()) {
+                    append("Genres: ${genres.joinToString(", ")}\n\n")
+                }
+
+                append("Give them a snappy \"Catch Me Up\" recap up to $progressType $progressNum. ")
+                append("Format strictly:\n")
+                append("- One short hook sentence (max 25 words) describing where the story stands RIGHT NOW.\n")
+                append("- Then exactly 3 bullet points covering the most important arcs or developments that got them here.\n")
+                append("- Each bullet: one sentence, max 30 words.\n\n")
+                append("Do NOT spoil anything beyond $progressType $progressNum. ")
+                append("No headings, no preamble, no closing remarks — just the hook line and the 3 bullets.")
             }
-            append(". They are on $progressType $progressNum")
-            if (total != null) append(" out of $total")
-            append(".\n\n")
 
-            val description = media.description
-            if (!description.isNullOrBlank()) {
-                val cleanDesc = description
-                    .replace("<br>", "\n")
-                    .replace(Regex("<[^>]*>"), "")
-                append("Series synopsis: $cleanDesc\n\n")
-            }
-
-            val genres = media.genres
-            if (!genres.isNullOrEmpty()) {
-                append("Genres: ${genres.joinToString(", ")}\n\n")
-            }
-
-            append("Give them a snappy \"Catch Me Up\" recap up to $progressType $progressNum. ")
-            append("Format strictly:\n")
-            append("- One short hook sentence (max 25 words) describing where the story stands RIGHT NOW.\n")
-            append("- Then exactly 3 bullet points covering the most important arcs or developments that got them here.\n")
-            append("- Each bullet: one sentence, max 30 words.\n\n")
-            append("Do NOT spoil anything beyond $progressType $progressNum. ")
-            append("No headings, no preamble, no closing remarks — just the hook line and the 3 bullets.")
-        }
-
-        val messages = listOf(
-            OpenAiService.ChatMessage(
-                role = "system",
-                content = "You are Miyo AI, an anime & manga assistant. You provide accurate, spoiler-aware recaps. " +
-                    "Only summarize up to the point the user has reached. Never reveal future plot points.",
-            ),
-            OpenAiService.ChatMessage(role = "user", content = prompt),
-        )
+        val messages =
+            listOf(
+                OpenAiService.ChatMessage(
+                    role = "system",
+                    content =
+                        "You are Miyo AI, an anime & manga assistant. You provide accurate, spoiler-aware recaps. " +
+                            "Only summarize up to the point the user has reached. Never reveal future plot points.",
+                ),
+                OpenAiService.ChatMessage(role = "user", content = prompt),
+            )
 
         summary = openAi.chat(messages)
         isLoading = false
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Background)
-            .padding(top = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(Background)
+                .padding(top = 8.dp),
     ) {
         // Header
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -146,11 +150,12 @@ fun CatchMeUpSheet(
             color = OnSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
-        val progressLabel = if (media.type == "MANGA") {
-            "Ch. ${media.userProgress ?: 0}"
-        } else {
-            "Ep. ${media.userProgress ?: 0}"
-        }
+        val progressLabel =
+            if (media.type == "MANGA") {
+                "Ch. ${media.userProgress ?: 0}"
+            } else {
+                "Ep. ${media.userProgress ?: 0}"
+            }
         Text(
             text = "Progress: $progressLabel",
             style = MaterialTheme.typography.labelSmall,
@@ -163,9 +168,10 @@ fun CatchMeUpSheet(
         // Content
         if (isLoading) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(48.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(48.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -182,11 +188,12 @@ fun CatchMeUpSheet(
             }
         } else {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 32.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 32.dp),
             ) {
                 MarkdownText(
                     text = summary ?: "Couldn't generate a summary. Please try again.",

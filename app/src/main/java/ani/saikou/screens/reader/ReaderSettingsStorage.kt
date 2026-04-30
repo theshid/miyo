@@ -5,10 +5,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 
-class ReaderSettingsStorage(context: Context) {
-
-    private val prefs = context.applicationContext
-        .getSharedPreferences("reader_settings", Context.MODE_PRIVATE)
+class ReaderSettingsStorage(
+    context: Context,
+) {
+    private val prefs =
+        context.applicationContext
+            .getSharedPreferences("reader_settings", Context.MODE_PRIVATE)
 
     fun load(): ReaderSettings {
         val modeOrdinal = prefs.getInt(KEY_MODE, ReadingMode.WEBTOON.ordinal)

@@ -29,7 +29,6 @@ class HomeViewModel(
     private val activityDao: ActivityEventDao,
     private val api: AnilistApi,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
 
@@ -47,53 +46,61 @@ class HomeViewModel(
             val zone = ZoneId.systemDefault()
             // Fetch the whole current year so the user can browse any month
             // via the heatmap's navigation arrows without a second round-trip.
-            val sinceMs = LocalDate.now()
-                .withDayOfYear(1)
-                .atStartOfDay(zone)
-                .toInstant()
-                .toEpochMilli()
+            val sinceMs =
+                LocalDate
+                    .now()
+                    .withDayOfYear(1)
+                    .atStartOfDay(zone)
+                    .toInstant()
+                    .toEpochMilli()
             activityDao.getSince(sinceMs).collect { events ->
-                val byDay = events.groupBy { event ->
-                    Instant.ofEpochMilli(event.timestampMs).atZone(zone).toLocalDate()
-                }
+                val byDay =
+                    events.groupBy { event ->
+                        Instant.ofEpochMilli(event.timestampMs).atZone(zone).toLocalDate()
+                    }
                 val counts = byDay.mapValues { (_, list) -> list.size }
                 // Build the per-day list of "what you actually did" for the
                 // heatmap menu. Drop session events and rows missing media
                 // context (pre-v8 schema rows have NULLs).
-                val activities = byDay.mapValues { (_, list) ->
-                    list.mapNotNull { event ->
-                        val title = event.mediaTitle ?: return@mapNotNull null
-                        val mediaId = event.mediaId ?: return@mapNotNull null
-                        when (event.type) {
-                            "watch" -> ani.saikou.components.DayActivity(
-                                mediaId = mediaId,
-                                title = title,
-                                coverUrl = event.coverUrl,
-                                kind = ani.saikou.components.DayActivity.Kind.WATCHED,
-                                number = event.episodeNumber ?: 0,
-                                timestampMs = event.timestampMs,
-                            )
-                            "read" -> ani.saikou.components.DayActivity(
-                                mediaId = mediaId,
-                                title = title,
-                                coverUrl = event.coverUrl,
-                                kind = ani.saikou.components.DayActivity.Kind.READ,
-                                number = event.chapterNumber ?: 0,
-                                timestampMs = event.timestampMs,
-                            )
-                            else -> null
-                        }
+                val activities =
+                    byDay.mapValues { (_, list) ->
+                        list
+                            .mapNotNull { event ->
+                                val title = event.mediaTitle ?: return@mapNotNull null
+                                val mediaId = event.mediaId ?: return@mapNotNull null
+                                when (event.type) {
+                                    "watch" ->
+                                        ani.saikou.components.DayActivity(
+                                            mediaId = mediaId,
+                                            title = title,
+                                            coverUrl = event.coverUrl,
+                                            kind = ani.saikou.components.DayActivity.Kind.WATCHED,
+                                            number = event.episodeNumber ?: 0,
+                                            timestampMs = event.timestampMs,
+                                        )
+                                    "read" ->
+                                        ani.saikou.components.DayActivity(
+                                            mediaId = mediaId,
+                                            title = title,
+                                            coverUrl = event.coverUrl,
+                                            kind = ani.saikou.components.DayActivity.Kind.READ,
+                                            number = event.chapterNumber ?: 0,
+                                            timestampMs = event.timestampMs,
+                                        )
+                                    else -> null
+                                }
+                            }
+                            // De-duplicate: a single chapter/episode can fire
+                            // multiple events as the user swaps pages or replays;
+                            // we only want one row per (media, kind, number).
+                            .distinctBy { Triple(it.mediaId, it.kind, it.number) }
+                            .sortedByDescending { it.timestampMs }
                     }
-                        // De-duplicate: a single chapter/episode can fire
-                        // multiple events as the user swaps pages or replays;
-                        // we only want one row per (media, kind, number).
-                        .distinctBy { Triple(it.mediaId, it.kind, it.number) }
-                        .sortedByDescending { it.timestampMs }
-                }
-                _uiState.value = _uiState.value.copy(
-                    activityByDay = counts,
-                    activitiesByDay = activities,
-                )
+                _uiState.value =
+                    _uiState.value.copy(
+                        activityByDay = counts,
+                        activitiesByDay = activities,
+                    )
             }
         }
     }
@@ -145,9 +152,10 @@ class HomeViewModel(
             // Derive airing schedule: shows on user's CURRENT list that have a
             // future airing time, sorted soonest-first.
             val now = System.currentTimeMillis()
-            val airing = watching
-                .filter { entry -> entry.nextAiringEpisodeTime?.let { it > now } == true }
-                .sortedBy { it.nextAiringEpisodeTime }
+            val airing =
+                watching
+                    .filter { entry -> entry.nextAiringEpisodeTime?.let { it > now } == true }
+                    .sortedBy { it.nextAiringEpisodeTime }
 
             // Surface a load error only if every AniList call effectively
             // returned nothing AND the api recorded a network failure. A user
@@ -155,15 +163,16 @@ class HomeViewModel(
             val networkFailure = api.lastFailure.value
             val nothingLoaded = user == null && watching.isEmpty() && reading.isEmpty() && recommendations.isEmpty()
 
-            _uiState.value = _uiState.value.copy(
-                user = user,
-                continueWatching = watching,
-                continueReading = reading,
-                recommendations = recommendations,
-                airingSchedule = airing,
-                isLoading = false,
-                error = if (networkFailure != null && nothingLoaded) friendlyMessage(networkFailure) else null,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    user = user,
+                    continueWatching = watching,
+                    continueReading = reading,
+                    recommendations = recommendations,
+                    airingSchedule = airing,
+                    isLoading = false,
+                    error = if (networkFailure != null && nothingLoaded) friendlyMessage(networkFailure) else null,
+                )
         }
     }
 
@@ -171,11 +180,12 @@ class HomeViewModel(
         loadHomeData()
     }
 
-    private fun friendlyMessage(failure: AnilistFailure): String = when (failure) {
-        is AnilistFailure.Network -> "Couldn't reach AniList. Check your connection."
-        is AnilistFailure.Server -> "AniList is having issues (HTTP ${failure.httpStatus})."
-        is AnilistFailure.Other -> "Something went wrong loading your home feed."
-    }
+    private fun friendlyMessage(failure: AnilistFailure): String =
+        when (failure) {
+            is AnilistFailure.Network -> "Couldn't reach AniList. Check your connection."
+            is AnilistFailure.Server -> "AniList is having issues (HTTP ${failure.httpStatus})."
+            is AnilistFailure.Other -> "Something went wrong loading your home feed."
+        }
 
     /**
      * Lightweight refresh — only re-fetches AniList lists + user stats.
@@ -189,16 +199,18 @@ class HomeViewModel(
 
             val watching = watchingDeferred.await()
             val now = System.currentTimeMillis()
-            val airing = watching
-                .filter { entry -> entry.nextAiringEpisodeTime?.let { it > now } == true }
-                .sortedBy { it.nextAiringEpisodeTime }
+            val airing =
+                watching
+                    .filter { entry -> entry.nextAiringEpisodeTime?.let { it > now } == true }
+                    .sortedBy { it.nextAiringEpisodeTime }
 
-            _uiState.value = _uiState.value.copy(
-                user = userDeferred.await(),
-                continueWatching = watching,
-                continueReading = readingDeferred.await(),
-                airingSchedule = airing,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    user = userDeferred.await(),
+                    continueWatching = watching,
+                    continueReading = readingDeferred.await(),
+                    airingSchedule = airing,
+                )
         }
     }
 

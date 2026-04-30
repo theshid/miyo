@@ -10,8 +10,9 @@ import ani.saikou.data.local.db.DownloadDao
  * The fallback matters only for a user's very first download. Everything
  * after that is driven by measured bytes written by [MangaDownloadManager].
  */
-class ChapterSizeEstimator(private val dao: DownloadDao) {
-
+class ChapterSizeEstimator(
+    private val dao: DownloadDao,
+) {
     companion object {
         // Typical B&W manga chapter (~25 pages × ~400 KB) lands near this.
         // Color webtoons are 3-5× bigger but quickly replace this value with
@@ -40,11 +41,15 @@ class ChapterSizeEstimator(private val dao: DownloadDao) {
      * @return estimated bytes for `count` chapters, or the conservative
      *   fallback × count if we have no history at all.
      */
-    suspend fun estimateBytes(mangaId: Int, count: Int): Long {
+    suspend fun estimateBytes(
+        mangaId: Int,
+        count: Int,
+    ): Long {
         if (count <= 0) return 0L
-        val perChapter = dao.getAverageSizeForManga(mangaId)?.toLong()
-            ?: dao.getGlobalAverageSize()?.toLong()
-            ?: DEFAULT_CHAPTER_BYTES
+        val perChapter =
+            dao.getAverageSizeForManga(mangaId)?.toLong()
+                ?: dao.getGlobalAverageSize()?.toLong()
+                ?: DEFAULT_CHAPTER_BYTES
         return perChapter * count
     }
 }

@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.components.SourceItem
+import ani.saikou.data.local.ListEvent
+import ani.saikou.data.local.ListEventBus
 import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ActivityEventEntity
 import ani.saikou.data.local.db.WatchHistoryDao
@@ -11,8 +13,6 @@ import ani.saikou.data.local.db.WatchHistoryEntity
 import ani.saikou.data.remote.AniSkipApi
 import ani.saikou.data.remote.SkipTimes
 import ani.saikou.data.remote.parsers.GogoParser
-import ani.saikou.data.local.ListEvent
-import ani.saikou.data.local.ListEventBus
 import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.StreamLink
@@ -34,7 +34,6 @@ class VideoPlayerViewModel(
     private val watchHistoryDao: WatchHistoryDao,
     private val activityDao: ActivityEventDao,
 ) : ViewModel() {
-
     private val gogoParser = GogoParser()
     private val aniSkipApi = AniSkipApi()
 
@@ -64,13 +63,14 @@ class VideoPlayerViewModel(
             val media = repository.getMedia(mediaId)
             val title = media?.nameRomaji ?: media?.name ?: "Unknown"
 
-            _uiState.value = _uiState.value.copy(
-                title = title,
-                episodeTitle = "Episode $episodeNum",
-                coverUrl = media?.banner ?: media?.cover,
-                totalEpisodes = media?.totalEpisodes ?: 0,
-                recommendations = media?.recommendations.orEmpty().take(10),
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    title = title,
+                    episodeTitle = "Episode $episodeNum",
+                    coverUrl = media?.banner ?: media?.cover,
+                    totalEpisodes = media?.totalEpisodes ?: 0,
+                    recommendations = media?.recommendations.orEmpty().take(10),
+                )
 
             // Fetch skip times from AniSkip (non-blocking — runs concurrently)
             media?.malId?.let { malId ->
@@ -111,13 +111,15 @@ class VideoPlayerViewModel(
             if (animeSources.size == 1) {
                 selectSource(animeSources.first())
             } else {
-                _uiState.value = _uiState.value.copy(
-                    showSourceSelector = true,
-                    availableSources = animeSources.map {
-                        SourceItem(id = it.slug, title = it.name, coverUrl = it.cover)
-                    },
-                    isLoading = false,
-                )
+                _uiState.value =
+                    _uiState.value.copy(
+                        showSourceSelector = true,
+                        availableSources =
+                            animeSources.map {
+                                SourceItem(id = it.slug, title = it.name, coverUrl = it.cover)
+                            },
+                        isLoading = false,
+                    )
             }
         }
     }
@@ -141,11 +143,12 @@ class VideoPlayerViewModel(
         }
 
         val links = gogoParser.getStreamLinks(link)
-        _uiState.value = _uiState.value.copy(
-            streamLinks = links,
-            selectedLink = links.firstOrNull(),
-            isLoading = false,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                streamLinks = links,
+                selectedLink = links.firstOrNull(),
+                isLoading = false,
+            )
     }
 
     fun selectSourceById(id: String) {
@@ -174,7 +177,10 @@ class VideoPlayerViewModel(
      * Called from the player screen periodically with current playback position.
      * Local history save is debounced (5s). AniList sync fires immediately at 80%.
      */
-    fun onPositionChanged(positionMs: Long, durationMs: Long) {
+    fun onPositionChanged(
+        positionMs: Long,
+        durationMs: Long,
+    ) {
         lastPositionMs = positionMs
         lastDurationMs = durationMs
 
@@ -214,19 +220,23 @@ class VideoPlayerViewModel(
                         mediaTitle = state.title,
                         coverUrl = state.coverUrl,
                         episodeNumber = episodeNum,
-                    )
+                    ),
                 )
                 saveLocalProgress(positionMs, durationMs)
             }
         } else {
-            saveJob = viewModelScope.launch {
-                delay(5000)
-                saveLocalProgress(positionMs, durationMs)
-            }
+            saveJob =
+                viewModelScope.launch {
+                    delay(5000)
+                    saveLocalProgress(positionMs, durationMs)
+                }
         }
     }
 
-    private suspend fun saveLocalProgress(positionMs: Long, durationMs: Long) {
+    private suspend fun saveLocalProgress(
+        positionMs: Long,
+        durationMs: Long,
+    ) {
         val state = _uiState.value
         val slug = resolvedSourceSlug ?: return
         if (durationMs <= 0) return
@@ -236,11 +246,12 @@ class VideoPlayerViewModel(
         val prevCompleted = existing?.completedEpisodes ?: 0
 
         val fraction = positionMs.toFloat() / durationMs
-        val completed = if (fraction >= 0.80f) {
-            maxOf(prevCompleted, episodeNum)
-        } else {
-            prevCompleted
-        }
+        val completed =
+            if (fraction >= 0.80f) {
+                maxOf(prevCompleted, episodeNum)
+            } else {
+                prevCompleted
+            }
 
         watchHistoryDao.upsert(
             WatchHistoryEntity(
@@ -254,7 +265,7 @@ class VideoPlayerViewModel(
                 durationMs = durationMs,
                 completedEpisodes = completed,
                 lastWatchedAt = System.currentTimeMillis(),
-            )
+            ),
         )
     }
 
@@ -269,7 +280,9 @@ class VideoPlayerViewModel(
             GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     saveLocalProgress(pos, dur)
-                } catch (_: Exception) { /* best-effort */ }
+                } catch (_: Exception) {
+                    // best-effort
+                }
             }
         }
         saveJob?.cancel()
@@ -288,7 +301,9 @@ class VideoPlayerViewModel(
                 scope.setExtra("resolvedSourceSlug", resolvedSourceSlug ?: "")
                 Sentry.captureMessage(message)
             }
-        } catch (_: Exception) { /* best-effort */ }
+        } catch (_: Exception) {
+            // best-effort
+        }
     }
 }
 

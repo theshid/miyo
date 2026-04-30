@@ -29,11 +29,12 @@ fun GlassCard(
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(
-        modifier = modifier
-            .clip(shape)
-            .background(SurfaceContainer.copy(alpha = 0.6f))
-            .border(width = 1.dp, color = GhostBorder, shape = shape)
-            .padding(contentPadding),
+        modifier =
+            modifier
+                .clip(shape)
+                .background(SurfaceContainer.copy(alpha = 0.6f))
+                .border(width = 1.dp, color = GhostBorder, shape = shape)
+                .padding(contentPadding),
         content = content,
     )
 }

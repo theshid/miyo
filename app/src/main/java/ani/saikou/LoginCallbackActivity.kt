@@ -14,7 +14,6 @@ import org.koin.android.ext.android.inject
  * the browser tab and bring the app back to the foreground.
  */
 class LoginCallbackActivity : ComponentActivity() {
-
     private val tokenStorage: TokenStorage by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,9 +32,10 @@ class LoginCallbackActivity : ComponentActivity() {
         }
 
         // Relaunch MainActivity (clears the Custom Tab from the back stack)
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
+        val intent =
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
         startActivity(intent)
         finish()
     }

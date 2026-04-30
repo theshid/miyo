@@ -44,8 +44,7 @@ import org.robolectric.annotation.Config
  * Each layer's "load-bearing" types are listed; ViewModel bindings live
  * behind the savedStateHandle factory so they're not directly resolved
  * here (they're exercised in their own tests).
- */
-/**
+ *
  * Stubbed Application — defaulting to MiyoApplication would trigger its
  * full onCreate (Sentry, WorkManager scheduling, etc.), which breaks the
  * test by reaching into uninitialised platform APIs.
@@ -53,7 +52,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
 class KoinGraphTest : KoinTest {
-
     @After
     fun tearDown() {
         stopKoin()

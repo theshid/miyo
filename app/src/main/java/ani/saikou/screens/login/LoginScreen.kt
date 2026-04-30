@@ -49,28 +49,29 @@ import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
 
 @Composable
-fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-) {
+fun LoginScreen(onLoginSuccess: () -> Unit) {
     val context = LocalContext.current
 
     // Subtle diagonal gradient glow
-    val gradientBrush = Brush.linearGradient(
-        colors = listOf(
-            Background,
-            Primary.copy(alpha = 0.06f),
-            Secondary.copy(alpha = 0.04f),
-            Background,
-        ),
-        start = Offset(0f, 0f),
-        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
-    )
+    val gradientBrush =
+        Brush.linearGradient(
+            colors =
+                listOf(
+                    Background,
+                    Primary.copy(alpha = 0.06f),
+                    Secondary.copy(alpha = 0.04f),
+                    Background,
+                ),
+            start = Offset(0f, 0f),
+            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+        )
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .drawBehind { drawRect(gradientBrush) },
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background)
+                .drawBehind { drawRect(gradientBrush) },
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -82,9 +83,10 @@ fun LoginScreen(
             Image(
                 painter = painterResource(R.drawable.samurai_login),
                 contentDescription = "Miyo",
-                modifier = Modifier
-                    .fillMaxWidth(0.75f)
-                    .heightIn(max = 360.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth(0.75f)
+                        .heightIn(max = 360.dp),
                 contentScale = ContentScale.Fit,
             )
 
@@ -93,11 +95,12 @@ fun LoginScreen(
             // App name — thin weight, large display
             Text(
                 text = "MIYO",
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontFamily = Epilogue,
-                    fontWeight = FontWeight.W300,
-                    letterSpacing = 4.dp.value.sp,
-                ),
+                style =
+                    MaterialTheme.typography.displayLarge.copy(
+                        fontFamily = Epilogue,
+                        fontWeight = FontWeight.W300,
+                        letterSpacing = 4.dp.value.sp,
+                    ),
                 color = Primary,
             )
 
@@ -166,7 +169,9 @@ fun LoginScreen(
 }
 
 // Helper to use dp value as sp for letter spacing
-private inline val Float.sp get() = androidx.compose.ui.unit.TextUnit(this, androidx.compose.ui.unit.TextUnitType.Sp)
+private inline val Float.sp get() =
+    androidx.compose.ui.unit
+        .TextUnit(this, androidx.compose.ui.unit.TextUnitType.Sp)
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable

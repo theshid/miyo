@@ -18,25 +18,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -48,6 +39,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -65,21 +57,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.ChapterDownloadState
 import ani.saikou.components.ChapterRow
-import ani.saikou.components.GlassCard
 import ani.saikou.components.GenreChip
+import ani.saikou.components.GlassCard
 import ani.saikou.components.MediaPosterCard
 import ani.saikou.components.PillButton
 import ani.saikou.components.SourceItem
 import ani.saikou.components.SourceSelectorSheet
+import ani.saikou.data.local.db.ReadingHistoryDao
+import ani.saikou.data.local.db.WatchHistoryDao
 import ani.saikou.data.remote.parsers.GogoParser
+import ani.saikou.data.source.manga.MangaDexParser
+import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.model.AnimeSource
 import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.model.Media
+import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.repository.MangaSourceRepository
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.Favorite
 import ani.saikou.ui.theme.OnSurface
@@ -87,17 +83,11 @@ import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
 import ani.saikou.ui.theme.SurfaceContainer
-import ani.saikou.data.local.db.ReadingHistoryDao
-import ani.saikou.data.local.db.WatchHistoryDao
-import ani.saikou.data.remote.OpenAiService
-import ani.saikou.data.source.manga.MangaDexParser
-import ani.saikou.data.source.manga.MangaPillParser
-import ani.saikou.domain.repository.AnilistRepository
-import ani.saikou.domain.repository.MangaSourceRepository
-import org.koin.compose.koinInject
 import ani.saikou.util.ShareCardGenerator
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -262,9 +252,10 @@ fun MediaDetailScreen(
     if (sourceSearching || mangaSourceSearching) {
         androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
             Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .background(SurfaceContainer, MaterialTheme.shapes.large),
+                modifier =
+                    Modifier
+                        .size(120.dp)
+                        .background(SurfaceContainer, MaterialTheme.shapes.large),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -276,16 +267,18 @@ fun MediaDetailScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .verticalScroll(rememberScrollState()),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background)
+                .verticalScroll(rememberScrollState()),
     ) {
         // ── Collapsing Banner Header ─────────────────────────
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(240.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(240.dp),
         ) {
             AsyncImage(
                 model = media.banner ?: media.cover,
@@ -295,25 +288,28 @@ fun MediaDetailScreen(
             )
             // Gradient fade to background
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Background.copy(alpha = 0.6f),
-                                Background,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        Color.Transparent,
+                                        Background.copy(alpha = 0.6f),
+                                        Background,
+                                    ),
+                                startY = 80f,
                             ),
-                            startY = 80f,
-                        )
-                    ),
+                        ),
             )
             // Back button
             IconButton(
                 onClick = onBack,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp),
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -325,9 +321,10 @@ fun MediaDetailScreen(
 
         // ── Poster + Title + Actions ─────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Poster
@@ -335,10 +332,11 @@ fun MediaDetailScreen(
                 model = media.cover,
                 contentDescription = media.displayTitle,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .width(100.dp)
-                    .height(150.dp)
-                    .clip(MaterialTheme.shapes.medium),
+                modifier =
+                    Modifier
+                        .width(100.dp)
+                        .height(150.dp)
+                        .clip(MaterialTheme.shapes.medium),
             )
 
             // Title + meta
@@ -369,11 +367,12 @@ fun MediaDetailScreen(
                         StatusBadge(text = it, color = Primary)
                     }
                     media.status?.let { status ->
-                        val color = when (status) {
-                            "RELEASING" -> Color(0xFF4CAF50)
-                            "FINISHED" -> Secondary
-                            else -> OnSurfaceVariant
-                        }
+                        val color =
+                            when (status) {
+                                "RELEASING" -> Color(0xFF4CAF50)
+                                "FINISHED" -> Secondary
+                                else -> OnSurfaceVariant
+                            }
                         StatusBadge(text = status, color = color)
                     }
                 }
@@ -384,9 +383,10 @@ fun MediaDetailScreen(
 
         // ── Action Row ───────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -457,15 +457,16 @@ fun MediaDetailScreen(
             IconButton(onClick = {
                 scope.launch {
                     val user = anilistRepository.getUserData()
-                    val bitmap = ShareCardGenerator.generateWatchingCard(
-                        context = context,
-                        title = media.displayTitle,
-                        coverUrl = media.cover,
-                        episodeProgress = media.userProgress,
-                        totalEpisodes = media.totalEpisodes,
-                        userScore = if (media.userScore > 0) media.userScore else null,
-                        userName = user?.name,
-                    )
+                    val bitmap =
+                        ShareCardGenerator.generateWatchingCard(
+                            context = context,
+                            title = media.displayTitle,
+                            coverUrl = media.cover,
+                            episodeProgress = media.userProgress,
+                            totalEpisodes = media.totalEpisodes,
+                            userScore = if (media.userScore > 0) media.userScore else null,
+                            userName = user?.name,
+                        )
                     val uri = ShareCardGenerator.saveToCacheAndGetUri(context, bitmap)
                     ShareCardGenerator.shareImage(
                         context = context,
@@ -507,9 +508,10 @@ fun MediaDetailScreen(
         // ── Airing Countdown (if releasing) ──────────────────
         if (media.isOngoing && media.nextAiringEpisode != null) {
             GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
             ) {
                 Text(
                     text = "Ep ${media.nextAiringEpisode!! + 1} airing soon",
@@ -522,12 +524,13 @@ fun MediaDetailScreen(
         }
 
         // ── Tabbed Content ───────────────────────────────────
-        val tabs = buildList {
-            add("Info")
-            if (media.type == "ANIME") add("Episodes") else add("Chapters")
-            if (!media.characters.isNullOrEmpty()) add("Characters")
-            if (!media.relations.isNullOrEmpty() || !media.recommendations.isNullOrEmpty()) add("Related")
-        }
+        val tabs =
+            buildList {
+                add("Info")
+                if (media.type == "ANIME") add("Episodes") else add("Chapters")
+                if (!media.characters.isNullOrEmpty()) add("Characters")
+                if (!media.relations.isNullOrEmpty() || !media.recommendations.isNullOrEmpty()) add("Related")
+            }
 
         var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -559,34 +562,39 @@ fun MediaDetailScreen(
         // ── Tab Content ──────────────────────────────────────
         when (tabs.getOrNull(selectedTab)) {
             "Info" -> InfoTab(media)
-            "Episodes" -> EpisodesTab(
-                totalEpisodes = media.totalEpisodes,
-                userProgress = media.userProgress,
-                onEpisodeClick = ::onEpisodeSelected,
-            )
-            "Chapters" -> ChaptersTab(
-                mediaId = media.id,
-                totalChapters = media.totalChapters,
-                userProgress = media.userProgress,
-                mediaTitle = media.nameRomaji ?: media.name ?: media.displayTitle,
-                onChapterClick = ::onChapterSelected,
-                downloadStates = viewModel.chapterDownloads.collectAsState().value,
-                onDownloadClick = { chapterNum ->
-                    viewModel.queueChapterDownload(chapterNum) {
-                        ani.saikou.data.local.downloads.DownloadService.start(context)
-                    }
-                },
-                onCancelDownloadClick = viewModel::cancelChapterDownload,
-            )
-            "Characters" -> CharactersTab(
-                characters = media.characters.orEmpty(),
-                onCharacterClick = onNavigateToCharacter,
-            )
-            "Related" -> RelatedTab(
-                relations = media.relations.orEmpty(),
-                recommendations = media.recommendations.orEmpty(),
-                onMediaClick = onNavigateToMedia,
-            )
+            "Episodes" ->
+                EpisodesTab(
+                    totalEpisodes = media.totalEpisodes,
+                    userProgress = media.userProgress,
+                    onEpisodeClick = ::onEpisodeSelected,
+                )
+            "Chapters" ->
+                ChaptersTab(
+                    mediaId = media.id,
+                    totalChapters = media.totalChapters,
+                    userProgress = media.userProgress,
+                    mediaTitle = media.nameRomaji ?: media.name ?: media.displayTitle,
+                    onChapterClick = ::onChapterSelected,
+                    downloadStates = viewModel.chapterDownloads.collectAsState().value,
+                    onDownloadClick = { chapterNum ->
+                        viewModel.queueChapterDownload(chapterNum) {
+                            ani.saikou.data.local.downloads.DownloadService
+                                .start(context)
+                        }
+                    },
+                    onCancelDownloadClick = viewModel::cancelChapterDownload,
+                )
+            "Characters" ->
+                CharactersTab(
+                    characters = media.characters.orEmpty(),
+                    onCharacterClick = onNavigateToCharacter,
+                )
+            "Related" ->
+                RelatedTab(
+                    relations = media.relations.orEmpty(),
+                    recommendations = media.recommendations.orEmpty(),
+                    onMediaClick = onNavigateToMedia,
+                )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -594,7 +602,10 @@ fun MediaDetailScreen(
 }
 
 @Composable
-private fun displayStatusLabel(status: String?, type: String?): String {
+private fun displayStatusLabel(
+    status: String?,
+    type: String?,
+): String {
     val isManga = type == "MANGA"
     return when (status) {
         null -> "ADD TO LIST"
@@ -609,11 +620,15 @@ private fun displayStatusLabel(status: String?, type: String?): String {
 }
 
 @Composable
-private fun StatusBadge(text: String, color: Color) {
+private fun StatusBadge(
+    text: String,
+    color: Color,
+) {
     Box(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+        modifier =
+            Modifier
+                .background(color.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
         Text(
             text = text,
@@ -640,9 +655,10 @@ private fun InfoTab(media: Media) {
                 color = OnSurfaceVariant,
                 maxLines = if (expanded) Int.MAX_VALUE else 4,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .animateContentSize()
-                    .clickable { expanded = !expanded },
+                modifier =
+                    Modifier
+                        .animateContentSize()
+                        .clickable { expanded = !expanded },
             )
         }
 
@@ -655,7 +671,7 @@ private fun InfoTab(media: Media) {
             }
             media.totalEpisodes?.let { MetadataRow("Episodes", "$it") }
             media.totalChapters?.let { MetadataRow("Chapters", "$it") }
-            media.episodeDuration?.let { MetadataRow("Duration", "${it} min") }
+            media.episodeDuration?.let { MetadataRow("Duration", "$it min") }
             media.mainStudio?.let { MetadataRow("Studio", it) }
             media.meanScore?.let { MetadataRow("Score", "★ ${it / 10.0}") }
         }
@@ -676,7 +692,10 @@ private fun InfoTab(media: Media) {
 }
 
 @Composable
-private fun MetadataRow(label: String, value: String) {
+private fun MetadataRow(
+    label: String,
+    value: String,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -715,11 +734,12 @@ private fun EpisodesTab(
     // Partition episodes into 100-range buckets — keeps long series (One Piece, Conan) performant
     // by rendering only ~100 GlassCards at a time instead of 1000+.
     val bucketSize = 100
-    val buckets = remember(count) {
-        (1..count step bucketSize).map { start ->
-            start..minOf(start + bucketSize - 1, count)
+    val buckets =
+        remember(count) {
+            (1..count step bucketSize).map { start ->
+                start..minOf(start + bucketSize - 1, count)
+            }
         }
-    }
 
     // Bucket containing the next episode to watch — used as the default selection
     // and as a secondary highlight so users can jump back to "where they left off".
@@ -743,26 +763,27 @@ private fun EpisodesTab(
                     val isSelected = index == selectedBucketIndex
                     val isCurrent = index == progressBucketIndex
                     Box(
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                            .background(
-                                when {
-                                    isSelected -> Primary
-                                    isCurrent -> Primary.copy(alpha = 0.15f)
-                                    else -> SurfaceContainer
-                                },
-                            )
-                            .clickable { selectedBucketIndex = index }
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        modifier =
+                            Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .background(
+                                    when {
+                                        isSelected -> Primary
+                                        isCurrent -> Primary.copy(alpha = 0.15f)
+                                        else -> SurfaceContainer
+                                    },
+                                ).clickable { selectedBucketIndex = index }
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
                     ) {
                         Text(
                             text = "${range.first}-${range.last}",
                             style = MaterialTheme.typography.labelMedium,
-                            color = when {
-                                isSelected -> Color.Black
-                                isCurrent -> Primary
-                                else -> OnSurface
-                            },
+                            color =
+                                when {
+                                    isSelected -> Color.Black
+                                    isCurrent -> Primary
+                                    else -> OnSurface
+                                },
                             fontWeight = if (isSelected || isCurrent) FontWeight.SemiBold else FontWeight.Normal,
                         )
                     }
@@ -775,10 +796,11 @@ private fun EpisodesTab(
         for (ep in visibleRange) {
             val watched = userProgress != null && ep <= userProgress
             GlassCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable { onEpisodeClick(ep) },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.medium)
+                        .clickable { onEpisodeClick(ep) },
                 contentPadding = 12.dp,
             ) {
                 Row(
@@ -791,12 +813,13 @@ private fun EpisodesTab(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(
-                                    if (watched) Primary.copy(alpha = 0.2f) else SurfaceContainer,
-                                    MaterialTheme.shapes.small,
-                                ),
+                            modifier =
+                                Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        if (watched) Primary.copy(alpha = 0.2f) else SurfaceContainer,
+                                        MaterialTheme.shapes.small,
+                                    ),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
@@ -850,10 +873,11 @@ private fun ChaptersTab(
         if (mediaTitle != null && !loadingCount) {
             loadingCount = true
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val resolved = mangaSourceRepo.resolveChapterCount(
-                    title = mediaTitle,
-                    anilistTotal = totalChapters,
-                )
+                val resolved =
+                    mangaSourceRepo.resolveChapterCount(
+                        title = mediaTitle,
+                        anilistTotal = totalChapters,
+                    )
                 sourceChapterCount = resolved
                 // Stash the resolved count so other screens (lists, continue
                 // reading, etc.) can render the real number instead of "?"
@@ -861,7 +885,8 @@ private fun ChaptersTab(
                 // keyed by AniList mediaId — that mapping isn't visible to
                 // the repo, so the put() stays here.
                 if (resolved != null) {
-                    ani.saikou.data.local.MangaChapterCountCache.put(mediaId, resolved)
+                    ani.saikou.data.local.MangaChapterCountCache
+                        .put(mediaId, resolved)
                 }
             }
             loadingCount = false
@@ -871,12 +896,13 @@ private fun ChaptersTab(
     // Prefer the source count when it's notably higher than what AniList
     // reported — covers the Vagabond case where AniList returns null but the
     // source actually has 327. The 1.5x guard avoids flipping on minor diffs.
-    val count = when {
-        sourceChapterCount != null && sourceChapterCount!! > (totalChapters ?: 0) * 1.5 -> sourceChapterCount!!
-        totalChapters != null && totalChapters > 0 -> totalChapters
-        sourceChapterCount != null && sourceChapterCount!! > 0 -> sourceChapterCount!!
-        else -> 0
-    }
+    val count =
+        when {
+            sourceChapterCount != null && sourceChapterCount!! > (totalChapters ?: 0) * 1.5 -> sourceChapterCount!!
+            totalChapters != null && totalChapters > 0 -> totalChapters
+            sourceChapterCount != null && sourceChapterCount!! > 0 -> sourceChapterCount!!
+            else -> 0
+        }
 
     if (count == 0 && loadingCount) {
         Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
@@ -957,9 +983,10 @@ private fun CharactersTab(
             ) {
                 rowItems.forEach { character ->
                     Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onCharacterClick(character.id) },
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .clickable { onCharacterClick(character.id) },
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
@@ -967,9 +994,10 @@ private fun CharactersTab(
                             model = character.image,
                             contentDescription = character.name,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(100.dp, 140.dp)
-                                .clip(MaterialTheme.shapes.medium),
+                            modifier =
+                                Modifier
+                                    .size(100.dp, 140.dp)
+                                    .clip(MaterialTheme.shapes.medium),
                         )
                         Text(
                             text = character.name ?: "Unknown",

@@ -16,33 +16,32 @@ import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ActivityEventEntity
 import ani.saikou.di.appModule
 import ani.saikou.notifications.EpisodeCheckWorker
-import ani.saikou.platform.android.di.platformAndroidModule
 import ani.saikou.notifications.EpisodeNotificationChannel
+import ani.saikou.platform.android.di.platformAndroidModule
+import io.github.theshid.prettylog.DefaultLoggingService
 import io.github.theshid.prettylog.Log
 import io.github.theshid.prettylog.LogBreadcrumbs
 import io.github.theshid.prettylog.LogLevel
 import io.github.theshid.prettylog.LoggingService
 import io.github.theshid.prettylog.PrettyLog
 import io.github.theshid.prettylog.PrettyLoggingService
-import io.github.theshid.prettylog.DefaultLoggingService
 import io.sentry.Breadcrumb
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 class MiyoApplication : Application() {
-
     private val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val activityEventDao: ActivityEventDao by inject()
 
@@ -52,11 +51,12 @@ class MiyoApplication : Application() {
         // workers, and any other startup code may log during their own init.
         // The custom service forwards every log call into Sentry as a breadcrumb
         // so a crash report carries the last ~100 log lines as context.
-        val baseService: LoggingService = if (BuildConfig.DEBUG) {
-            PrettyLoggingService(defaultTag = "Miyo", minLevel = LogLevel.Debug)
-        } else {
-            DefaultLoggingService(defaultTag = "Miyo")
-        }
+        val baseService: LoggingService =
+            if (BuildConfig.DEBUG) {
+                PrettyLoggingService(defaultTag = "Miyo", minLevel = LogLevel.Debug)
+            } else {
+                DefaultLoggingService(defaultTag = "Miyo")
+            }
         PrettyLog.init(
             isDebug = BuildConfig.DEBUG,
             defaultTag = "Miyo",
@@ -93,13 +93,14 @@ class MiyoApplication : Application() {
         appScope.launch {
             ListEventBus.events.collect { event ->
                 if (event is ListEvent.ListEntryChanged) {
-                    val request = OneTimeWorkRequestBuilder<EpisodeCheckWorker>()
-                        .setConstraints(
-                            Constraints.Builder()
-                                .setRequiredNetworkType(NetworkType.CONNECTED)
-                                .build(),
-                        )
-                        .build()
+                    val request =
+                        OneTimeWorkRequestBuilder<EpisodeCheckWorker>()
+                            .setConstraints(
+                                Constraints
+                                    .Builder()
+                                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                                    .build(),
+                            ).build()
                     WorkManager.getInstance(this@MiyoApplication).enqueueUniqueWork(
                         "episode_check_list_change",
                         ExistingWorkPolicy.REPLACE,
@@ -112,10 +113,12 @@ class MiyoApplication : Application() {
 
     private fun logDailySession() {
         val dao = activityEventDao
-        val startOfDayMs = LocalDate.now()
-            .atStartOfDay(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
+        val startOfDayMs =
+            LocalDate
+                .now()
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             try {
                 if (dao.countByTypeSince("session", startOfDayMs) == 0) {
@@ -123,10 +126,12 @@ class MiyoApplication : Application() {
                         ActivityEventEntity(
                             timestampMs = System.currentTimeMillis(),
                             type = "session",
-                        )
+                        ),
                     )
                 }
-            } catch (_: Exception) { /* best-effort */ }
+            } catch (_: Exception) {
+                // best-effort
+            }
         }
     }
 
@@ -139,21 +144,27 @@ class MiyoApplication : Application() {
             try {
                 Log.wtf(tag = "CRASH", message = "Uncaught exception on ${thread.name}: ${throwable.message}")
                 LogBreadcrumbs.dumpToFile(this)
-            } catch (_: Exception) { /* best-effort */ }
+            } catch (_: Exception) {
+                // best-effort
+            }
             // Forward to the default handler (Sentry's wrapper, then crash dialog)
             defaultHandler?.uncaughtException(thread, throwable)
         }
     }
 
     private fun scheduleEpisodeCheck() {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        val constraints =
+            Constraints
+                .Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
         // Periodic check — every 15 min (WorkManager's minimum interval)
-        val periodicRequest = PeriodicWorkRequestBuilder<EpisodeCheckWorker>(
-            15, TimeUnit.MINUTES,
-        ).setConstraints(constraints).build()
+        val periodicRequest =
+            PeriodicWorkRequestBuilder<EpisodeCheckWorker>(
+                15,
+                TimeUnit.MINUTES,
+            ).setConstraints(constraints).build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "episode_check",
@@ -163,9 +174,10 @@ class MiyoApplication : Application() {
 
         // Fire one immediately on app start so we seed the baseline / catch
         // up on missed episodes without waiting 15 minutes
-        val immediateRequest = OneTimeWorkRequestBuilder<EpisodeCheckWorker>()
-            .setConstraints(constraints)
-            .build()
+        val immediateRequest =
+            OneTimeWorkRequestBuilder<EpisodeCheckWorker>()
+                .setConstraints(constraints)
+                .build()
         WorkManager.getInstance(this).enqueueUniqueWork(
             "episode_check_now",
             ExistingWorkPolicy.KEEP,
@@ -185,25 +197,34 @@ class MiyoApplication : Application() {
 private class SentryBreadcrumbLoggingService(
     private val delegate: LoggingService,
 ) : LoggingService {
-    override fun log(message: String, tag: String?, level: LogLevel, error: Throwable?) {
+    override fun log(
+        message: String,
+        tag: String?,
+        level: LogLevel,
+        error: Throwable?,
+    ) {
         delegate.log(message, tag, level, error)
 
         if (level == LogLevel.Debug) return
 
         try {
-            val crumb = Breadcrumb().apply {
-                this.level = when (level) {
-                    LogLevel.Debug -> SentryLevel.DEBUG
-                    LogLevel.Info -> SentryLevel.INFO
-                    LogLevel.Warning -> SentryLevel.WARNING
-                    LogLevel.Error -> SentryLevel.ERROR
-                    LogLevel.Critical -> SentryLevel.FATAL
+            val crumb =
+                Breadcrumb().apply {
+                    this.level =
+                        when (level) {
+                            LogLevel.Debug -> SentryLevel.DEBUG
+                            LogLevel.Info -> SentryLevel.INFO
+                            LogLevel.Warning -> SentryLevel.WARNING
+                            LogLevel.Error -> SentryLevel.ERROR
+                            LogLevel.Critical -> SentryLevel.FATAL
+                        }
+                    this.category = tag ?: "log"
+                    this.message = message
+                    if (error != null) setData("throwable", error.toString())
                 }
-                this.category = tag ?: "log"
-                this.message = message
-                if (error != null) setData("throwable", error.toString())
-            }
             Sentry.addBreadcrumb(crumb)
-        } catch (_: Exception) { /* best-effort */ }
+        } catch (_: Exception) {
+            // best-effort
+        }
     }
 }

@@ -11,7 +11,6 @@ import kotlinx.coroutines.launch
 class StatsViewModel(
     private val repository: AnilistRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState
 
@@ -23,10 +22,11 @@ class StatsViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val stats = repository.getUserStats()
-            _uiState.value = StatsUiState(
-                stats = stats,
-                isLoading = false,
-            )
+            _uiState.value =
+                StatsUiState(
+                    stats = stats,
+                    isLoading = false,
+                )
         }
     }
 }

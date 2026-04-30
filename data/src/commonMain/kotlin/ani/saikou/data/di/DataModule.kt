@@ -21,6 +21,7 @@ import org.koin.dsl.module
  * source inject the concrete type (e.g. `get<MangaDexParser>()`); the repo
  * accepts them as `MangaSource` via Kotlin's structural conformance.
  */
-val dataModule = module {
-    singleOf(::MangaDexParser)
-}
+val dataModule =
+    module {
+        singleOf(::MangaDexParser)
+    }

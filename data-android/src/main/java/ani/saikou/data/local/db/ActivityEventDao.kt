@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ActivityEventDao {
-
     @Insert
     suspend fun insert(event: ActivityEventEntity)
 
@@ -15,7 +14,10 @@ interface ActivityEventDao {
     fun getSince(sinceMs: Long): Flow<List<ActivityEventEntity>>
 
     @Query("SELECT COUNT(*) FROM activity_events WHERE type = :type AND timestampMs >= :sinceMs")
-    suspend fun countByTypeSince(type: String, sinceMs: Long): Int
+    suspend fun countByTypeSince(
+        type: String,
+        sinceMs: Long,
+    ): Int
 
     @Query("DELETE FROM activity_events WHERE timestampMs < :beforeMs")
     suspend fun deleteOlderThan(beforeMs: Long)

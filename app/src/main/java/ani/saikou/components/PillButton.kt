@@ -25,12 +25,13 @@ fun PillButton(
         modifier = modifier.height(56.dp),
         enabled = enabled,
         shape = PillShape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Primary,
-            contentColor = OnPrimary,
-            disabledContainerColor = Primary.copy(alpha = 0.35f),
-            disabledContentColor = OnPrimary.copy(alpha = 0.35f),
-        ),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = Primary,
+                contentColor = OnPrimary,
+                disabledContainerColor = Primary.copy(alpha = 0.35f),
+                disabledContentColor = OnPrimary.copy(alpha = 0.35f),
+            ),
         contentPadding = PaddingValues(horizontal = 32.dp, vertical = 12.dp),
     ) {
         Text(

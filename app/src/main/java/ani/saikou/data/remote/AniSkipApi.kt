@@ -1,6 +1,6 @@
 package ani.saikou.data.remote
 
-import android.util.Log
+import io.github.theshid.prettylog.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.get
@@ -18,7 +18,6 @@ import kotlinx.serialization.json.jsonPrimitive
  * Docs: https://api.aniskip.com/api-docs
  */
 class AniSkipApi {
-
     companion object {
         private const val BASE = "https://api.aniskip.com/v2/skip-times"
         private const val TAG = "AniSkipApi"
@@ -26,21 +25,25 @@ class AniSkipApi {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private val client = HttpClient(OkHttp) {
-        engine {
-            config {
-                connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+    private val client =
+        HttpClient(OkHttp) {
+            engine {
+                config {
+                    connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                    readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                }
             }
         }
-    }
 
     /**
      * Fetches OP/ED skip intervals for the given MAL ID and episode.
      * Returns a [SkipTimes] with nullable start/end pairs (seconds).
      * On any failure, returns [SkipTimes.EMPTY] — never throws.
      */
-    suspend fun getSkipTimes(malId: Int, episodeNumber: Int): SkipTimes {
+    suspend fun getSkipTimes(
+        malId: Int,
+        episodeNumber: Int,
+    ): SkipTimes {
         return try {
             val url = "$BASE/$malId/$episodeNumber?types=op&types=ed&episodeLength=0"
             val response = client.get(url)
@@ -64,8 +67,14 @@ class AniSkipApi {
                 val end = interval["endTime"]?.jsonPrimitive?.content?.toFloatOrNull() ?: continue
 
                 when (type) {
-                    "op" -> { opStart = start; opEnd = end }
-                    "ed" -> { edStart = start; edEnd = end }
+                    "op" -> {
+                        opStart = start
+                        opEnd = end
+                    }
+                    "ed" -> {
+                        edStart = start
+                        edEnd = end
+                    }
                 }
             }
 

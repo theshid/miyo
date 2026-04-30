@@ -18,11 +18,12 @@ import ani.saikou.domain.repository.DownloadRepository
 class QueueChapterDownloadUseCase(
     private val downloadRepo: DownloadRepository,
 ) {
-    private val activeStatuses = setOf(
-        DownloadStatus.QUEUED,
-        DownloadStatus.DOWNLOADING,
-        DownloadStatus.COMPLETED,
-    )
+    private val activeStatuses =
+        setOf(
+            DownloadStatus.QUEUED,
+            DownloadStatus.DOWNLOADING,
+            DownloadStatus.COMPLETED,
+        )
 
     suspend operator fun invoke(request: DownloadRequest) {
         val id = "${request.mangaId}_${request.chapterKey}"

@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -31,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +40,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.SectionHeader
@@ -65,17 +64,19 @@ fun NewsFeedScreen(
     val context = LocalContext.current
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background),
         contentPadding = PaddingValues(bottom = 80.dp),
     ) {
         // ── Top Bar ──────────────────────────────────────────
         item {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 4.dp, end = 8.dp, top = 16.dp, bottom = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, end = 8.dp, top = 16.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
@@ -111,11 +112,12 @@ fun NewsFeedScreen(
                 itemsIndexed(NewsFeedViewModel.DAY_LABELS) { index, label ->
                     val selected = index == state.selectedDayIndex
                     Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(if (selected) Primary else SurfaceContainer)
-                            .clickable { viewModel.selectDay(index) },
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(if (selected) Primary else SurfaceContainer)
+                                .clickable { viewModel.selectDay(index) },
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -152,9 +154,10 @@ fun NewsFeedScreen(
         // ── Latest Updates Section ───────────────────────────
         item {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -169,12 +172,13 @@ fun NewsFeedScreen(
                     text = state.sourceFilter ?: "ALL",
                     selected = true,
                     onClick = {
-                        val next = when (state.sourceFilter) {
-                            null -> "Reddit"
-                            "Reddit" -> "MAL"
-                            "MAL" -> "ANN"
-                            else -> null
-                        }
+                        val next =
+                            when (state.sourceFilter) {
+                                null -> "Reddit"
+                                "Reddit" -> "MAL"
+                                "MAL" -> "ANN"
+                                else -> null
+                            }
                         viewModel.setFilter(next)
                     },
                 )
@@ -211,9 +215,10 @@ private fun ScheduleCard(item: AiringScheduleItem) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
-            modifier = Modifier
-                .size(120.dp, 160.dp)
-                .clip(MaterialTheme.shapes.medium),
+            modifier =
+                Modifier
+                    .size(120.dp, 160.dp)
+                    .clip(MaterialTheme.shapes.medium),
         ) {
             AsyncImage(
                 model = item.imageUrl,
@@ -224,11 +229,12 @@ private fun ScheduleCard(item: AiringScheduleItem) {
             // Airing time badge
             if (item.airingTime.isNotEmpty()) {
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(6.dp)
-                        .background(Primary.copy(alpha = 0.9f), MaterialTheme.shapes.extraSmall)
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(6.dp)
+                            .background(Primary.copy(alpha = 0.9f), MaterialTheme.shapes.extraSmall)
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text(item.airingTime, style = MaterialTheme.typography.labelSmall, color = Background)
                 }
@@ -251,12 +257,13 @@ private fun NewsCard(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(SurfaceContainer)
-            .clickable(onClick = onClick)
-            .padding(12.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
+                .background(SurfaceContainer)
+                .clickable(onClick = onClick)
+                .padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Thumbnail
@@ -265,9 +272,10 @@ private fun NewsCard(
                 model = item.imageUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(MaterialTheme.shapes.small),
+                modifier =
+                    Modifier
+                        .size(72.dp)
+                        .clip(MaterialTheme.shapes.small),
             )
         }
 
@@ -311,18 +319,20 @@ private fun NewsCard(
 
 @Composable
 private fun CategoryBadge(category: NewsCategory) {
-    val (text, color) = when (category) {
-        NewsCategory.EPISODE_RELEASE -> "EPISODE" to Primary
-        NewsCategory.CHAPTER_RELEASE -> "CHAPTER" to Secondary
-        NewsCategory.INDUSTRY_NEWS -> "NEWS" to Tertiary
-        NewsCategory.DISCUSSION -> "DISCUSSION" to Secondary
-        NewsCategory.SCHEDULE -> "SCHEDULE" to Primary
-        NewsCategory.ANNOUNCEMENT -> "ANNOUNCE" to Tertiary
-    }
+    val (text, color) =
+        when (category) {
+            NewsCategory.EPISODE_RELEASE -> "EPISODE" to Primary
+            NewsCategory.CHAPTER_RELEASE -> "CHAPTER" to Secondary
+            NewsCategory.INDUSTRY_NEWS -> "NEWS" to Tertiary
+            NewsCategory.DISCUSSION -> "DISCUSSION" to Secondary
+            NewsCategory.SCHEDULE -> "SCHEDULE" to Primary
+            NewsCategory.ANNOUNCEMENT -> "ANNOUNCE" to Tertiary
+        }
     Box(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+        modifier =
+            Modifier
+                .background(color.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall)
+                .padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
         Text(text, style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.Bold)
     }
@@ -331,9 +341,10 @@ private fun CategoryBadge(category: NewsCategory) {
 @Composable
 private fun SourceBadge(source: String) {
     Box(
-        modifier = Modifier
-            .background(OnSurfaceVariant.copy(alpha = 0.1f), MaterialTheme.shapes.extraSmall)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+        modifier =
+            Modifier
+                .background(OnSurfaceVariant.copy(alpha = 0.1f), MaterialTheme.shapes.extraSmall)
+                .padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
         Text(source, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
     }

@@ -26,26 +26,31 @@ class DownloadRepositoryImpl(
     private val manager: MangaDownloadManager,
     private val sizeEstimator: ChapterSizeEstimator,
 ) : DownloadRepository {
-
     override fun observeDownloadsForManga(mangaId: Int): Flow<Map<Int, Download>> =
         dao.getDownloadsForManga(mangaId).map { rows ->
             // Legacy rows from a pre-v6 schema can carry chapterNumber == -1.
             // Filter them out — they're unreachable from chapter-number-based UI.
-            rows.filter { it.chapterNumber >= 0 }
+            rows
+                .filter { it.chapterNumber >= 0 }
                 .associate { it.chapterNumber to it.toDomain() }
         }
 
-    override suspend fun getDownload(id: String): Download? =
-        dao.getDownload(id)?.toDomain()
+    override suspend fun getDownload(id: String): Download? = dao.getDownload(id)?.toDomain()
 
-    override suspend fun getCompletedChapter(mangaId: Int, chapterNumber: Int): Download? =
-        dao.getCompletedByChapterNumber(mangaId, chapterNumber)?.toDomain()
+    override suspend fun getCompletedChapter(
+        mangaId: Int,
+        chapterNumber: Int,
+    ): Download? = dao.getCompletedByChapterNumber(mangaId, chapterNumber)?.toDomain()
 
-    override suspend fun getLocalPages(mangaId: Int, chapterKey: String): List<MangaPage> =
-        manager.getLocalPages(mangaId, chapterKey).orEmpty()
+    override suspend fun getLocalPages(
+        mangaId: Int,
+        chapterKey: String,
+    ): List<MangaPage> = manager.getLocalPages(mangaId, chapterKey).orEmpty()
 
-    override suspend fun estimateBytesForNext(mangaId: Int, count: Int): Long =
-        sizeEstimator.estimateBytes(mangaId, count)
+    override suspend fun estimateBytesForNext(
+        mangaId: Int,
+        count: Int,
+    ): Long = sizeEstimator.estimateBytes(mangaId, count)
 
     override suspend fun queueChapter(request: DownloadRequest) {
         // Manager owns the duplicate-detection — it short-circuits when a row
@@ -74,8 +79,7 @@ class DownloadRepositoryImpl(
         manager.deleteAllForManga(mangaId)
     }
 
-    override fun observeAllDownloads(): Flow<List<Download>> =
-        dao.getAllDownloads().map { rows -> rows.map { it.toDomain() } }
+    override fun observeAllDownloads(): Flow<List<Download>> = dao.getAllDownloads().map { rows -> rows.map { it.toDomain() } }
 
     override fun observeAllDownloadedManga(): Flow<List<DownloadedManga>> =
         dao.getAllDownloadedManga().map { rows -> rows.map { it.toDomain() } }
@@ -106,27 +110,29 @@ class DownloadRepositoryImpl(
 
     override suspend fun availableSpaceBytes(): Long = manager.getAvailableSpace()
 
-    private fun DownloadedMangaEntity.toDomain(): DownloadedManga = DownloadedManga(
-        mangaId = mangaId,
-        title = title,
-        coverUrl = coverUrl,
-        sourceId = sourceId,
-    )
+    private fun DownloadedMangaEntity.toDomain(): DownloadedManga =
+        DownloadedManga(
+            mangaId = mangaId,
+            title = title,
+            coverUrl = coverUrl,
+            sourceId = sourceId,
+        )
 
-    private fun DownloadEntity.toDomain(): Download = Download(
-        id = id,
-        mangaId = mangaId,
-        mangaTitle = mangaTitle,
-        chapterKey = chapterKey,
-        chapterNumber = chapterNumber,
-        chapterName = chapterName,
-        sourceId = sourceId,
-        // Persisted strings can drift from the enum — fall back to ERROR
-        // rather than null-propagate so the UI always has a state to render.
-        status = DownloadStatus.fromString(status) ?: DownloadStatus.ERROR,
-        totalPages = totalPages,
-        downloadedPages = downloadedPages,
-        fileSizeBytes = fileSizeBytes,
-        createdAt = createdAt,
-    )
+    private fun DownloadEntity.toDomain(): Download =
+        Download(
+            id = id,
+            mangaId = mangaId,
+            mangaTitle = mangaTitle,
+            chapterKey = chapterKey,
+            chapterNumber = chapterNumber,
+            chapterName = chapterName,
+            sourceId = sourceId,
+            // Persisted strings can drift from the enum — fall back to ERROR
+            // rather than null-propagate so the UI always has a state to render.
+            status = DownloadStatus.fromString(status) ?: DownloadStatus.ERROR,
+            totalPages = totalPages,
+            downloadedPages = downloadedPages,
+            fileSizeBytes = fileSizeBytes,
+            createdAt = createdAt,
+        )
 }

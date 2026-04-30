@@ -19,12 +19,14 @@ import io.github.theshid.prettylog.Log
  * + the periodic safety net), so schedule drift from the AniList side is
  * picked up automatically.
  */
-class EpisodeAlarmScheduler(private val context: Context) {
-
+class EpisodeAlarmScheduler(
+    private val context: Context,
+) {
     companion object {
         private const val TAG = "EpisodeAlarmScheduler"
         private const val PREFS_NAME = "episode_alarms"
         private const val KEY_SCHEDULED_IDS = "scheduled_ids"
+
         // A small buffer so the alarm lands just *after* the stated airing time.
         // AniList's `airingAt` is the start of the episode; we want the user to
         // be pinged when it's actually available on streaming sites.
@@ -39,10 +41,12 @@ class EpisodeAlarmScheduler(private val context: Context) {
      * airings. Alarms in the past are skipped.
      */
     fun rescheduleAll(airings: List<Airing>) {
-        val previouslyScheduled = prefs.getStringSet(KEY_SCHEDULED_IDS, emptySet())
-            .orEmpty()
-            .mapNotNull { it.toIntOrNull() }
-            .toSet()
+        val previouslyScheduled =
+            prefs
+                .getStringSet(KEY_SCHEDULED_IDS, emptySet())
+                .orEmpty()
+                .mapNotNull { it.toIntOrNull() }
+                .toSet()
 
         // Cancel everything we scheduled last time — handles removed shows and
         // updated airing times atomically.
@@ -80,18 +84,20 @@ class EpisodeAlarmScheduler(private val context: Context) {
 
         Log.i(
             tag = TAG,
-            message = "Rescheduled alarms: cancelled ${previouslyScheduled.size}, " +
-                "set ${newlyScheduled.size} (skipped ${airings.size - newlyScheduled.size} past/failed)",
+            message =
+                "Rescheduled alarms: cancelled ${previouslyScheduled.size}, " +
+                    "set ${newlyScheduled.size} (skipped ${airings.size - newlyScheduled.size} past/failed)",
         )
     }
 
     private fun setBootReceiverEnabled(enabled: Boolean) {
         val component = ComponentName(context, BootCompletedReceiver::class.java)
-        val desired = if (enabled) {
-            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-        } else {
-            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-        }
+        val desired =
+            if (enabled) {
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            }
         val current = context.packageManager.getComponentEnabledSetting(component)
         if (current != desired) {
             context.packageManager.setComponentEnabledSetting(
@@ -103,12 +109,13 @@ class EpisodeAlarmScheduler(private val context: Context) {
     }
 
     fun cancelAlarmFor(mediaId: Int) {
-        val pi = PendingIntent.getBroadcast(
-            context,
-            mediaId,
-            Intent(context, EpisodeAiringReceiver::class.java),
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
-        )
+        val pi =
+            PendingIntent.getBroadcast(
+                context,
+                mediaId,
+                Intent(context, EpisodeAiringReceiver::class.java),
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+            )
         if (pi != null) {
             alarmManager.cancel(pi)
             pi.cancel()
@@ -116,12 +123,13 @@ class EpisodeAlarmScheduler(private val context: Context) {
     }
 
     private fun buildPendingIntent(airing: Airing): PendingIntent {
-        val intent = Intent(context, EpisodeAiringReceiver::class.java).apply {
-            putExtra(EpisodeAiringReceiver.EXTRA_MEDIA_ID, airing.mediaId)
-            putExtra(EpisodeAiringReceiver.EXTRA_EPISODE, airing.episode)
-            putExtra(EpisodeAiringReceiver.EXTRA_TITLE, airing.title)
-            putExtra(EpisodeAiringReceiver.EXTRA_COVER_URL, airing.coverUrl)
-        }
+        val intent =
+            Intent(context, EpisodeAiringReceiver::class.java).apply {
+                putExtra(EpisodeAiringReceiver.EXTRA_MEDIA_ID, airing.mediaId)
+                putExtra(EpisodeAiringReceiver.EXTRA_EPISODE, airing.episode)
+                putExtra(EpisodeAiringReceiver.EXTRA_TITLE, airing.title)
+                putExtra(EpisodeAiringReceiver.EXTRA_COVER_URL, airing.coverUrl)
+            }
         return PendingIntent.getBroadcast(
             context,
             airing.mediaId,

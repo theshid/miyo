@@ -9,52 +9,46 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val SaikouDarkColorScheme = darkColorScheme(
-    // Primary
-    primary = Primary,
-    onPrimary = OnPrimary,
-    primaryContainer = PrimaryContainer,
-    onPrimaryContainer = OnPrimaryContainer,
-    inversePrimary = InversePrimary,
-
-    // Secondary
-    secondary = Secondary,
-    onSecondary = OnSecondary,
-    secondaryContainer = SecondaryContainer,
-    onSecondaryContainer = OnSecondaryContainer,
-
-    // Tertiary
-    tertiary = Tertiary,
-    onTertiary = OnTertiary,
-    tertiaryContainer = TertiaryContainer,
-    onTertiaryContainer = OnTertiaryContainer,
-
-    // Background & Surface
-    background = Background,
-    onBackground = OnBackground,
-    surface = Surface,
-    onSurface = OnSurface,
-    surfaceVariant = SurfaceVariant,
-    onSurfaceVariant = OnSurfaceVariant,
-    surfaceTint = Primary,
-    inverseSurface = InverseSurface,
-    inverseOnSurface = InverseOnSurface,
-
-    // Outline
-    outline = Outline,
-    outlineVariant = OutlineVariant,
-
-    // Error
-    error = Error,
-    onError = OnError,
-    errorContainer = ErrorContainer,
-    onErrorContainer = OnErrorContainer,
-)
+private val SaikouDarkColorScheme =
+    darkColorScheme(
+        // Primary
+        primary = Primary,
+        onPrimary = OnPrimary,
+        primaryContainer = PrimaryContainer,
+        onPrimaryContainer = OnPrimaryContainer,
+        inversePrimary = InversePrimary,
+        // Secondary
+        secondary = Secondary,
+        onSecondary = OnSecondary,
+        secondaryContainer = SecondaryContainer,
+        onSecondaryContainer = OnSecondaryContainer,
+        // Tertiary
+        tertiary = Tertiary,
+        onTertiary = OnTertiary,
+        tertiaryContainer = TertiaryContainer,
+        onTertiaryContainer = OnTertiaryContainer,
+        // Background & Surface
+        background = Background,
+        onBackground = OnBackground,
+        surface = Surface,
+        onSurface = OnSurface,
+        surfaceVariant = SurfaceVariant,
+        onSurfaceVariant = OnSurfaceVariant,
+        surfaceTint = Primary,
+        inverseSurface = InverseSurface,
+        inverseOnSurface = InverseOnSurface,
+        // Outline
+        outline = Outline,
+        outlineVariant = OutlineVariant,
+        // Error
+        error = Error,
+        onError = OnError,
+        errorContainer = ErrorContainer,
+        onErrorContainer = OnErrorContainer,
+    )
 
 @Composable
-fun SaikouTheme(
-    content: @Composable () -> Unit
-) {
+fun SaikouTheme(content: @Composable () -> Unit) {
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {

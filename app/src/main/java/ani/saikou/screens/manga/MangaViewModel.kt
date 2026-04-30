@@ -15,7 +15,6 @@ class MangaViewModel(
     private val repository: AnilistRepository,
     private val api: AnilistApi,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(MangaUiState())
     val uiState: StateFlow<MangaUiState> = _uiState
 
@@ -41,13 +40,14 @@ class MangaViewModel(
             val networkFailure = api.lastFailure.value
             val allEmpty = trending.isEmpty() && updated.isEmpty() && popular.isEmpty()
 
-            _uiState.value = MangaUiState(
-                trending = trending,
-                recentlyUpdated = updated,
-                popular = popular,
-                isLoading = false,
-                error = if (networkFailure != null && allEmpty) friendlyMessage(networkFailure) else null,
-            )
+            _uiState.value =
+                MangaUiState(
+                    trending = trending,
+                    recentlyUpdated = updated,
+                    popular = popular,
+                    isLoading = false,
+                    error = if (networkFailure != null && allEmpty) friendlyMessage(networkFailure) else null,
+                )
         }
     }
 
@@ -55,11 +55,12 @@ class MangaViewModel(
         loadMangaData()
     }
 
-    private fun friendlyMessage(failure: AnilistFailure): String = when (failure) {
-        is AnilistFailure.Network -> "Couldn't reach AniList. Check your connection."
-        is AnilistFailure.Server -> "AniList is having issues (HTTP ${failure.httpStatus})."
-        is AnilistFailure.Other -> "Something went wrong loading this page."
-    }
+    private fun friendlyMessage(failure: AnilistFailure): String =
+        when (failure) {
+            is AnilistFailure.Network -> "Couldn't reach AniList. Check your connection."
+            is AnilistFailure.Server -> "AniList is having issues (HTTP ${failure.httpStatus})."
+            is AnilistFailure.Other -> "Something went wrong loading this page."
+        }
 
     fun loadMorePopular() {
         if (isLoadingMore) return
@@ -67,9 +68,10 @@ class MangaViewModel(
         viewModelScope.launch {
             popularPage++
             val more = repository.getPopularManga(page = popularPage)
-            _uiState.value = _uiState.value.copy(
-                popular = _uiState.value.popular + more,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    popular = _uiState.value.popular + more,
+                )
             isLoadingMore = false
         }
     }

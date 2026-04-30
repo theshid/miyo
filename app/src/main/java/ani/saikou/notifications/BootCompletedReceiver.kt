@@ -16,8 +16,10 @@ import io.github.theshid.prettylog.Log
  * user's list and re-schedule every upcoming airing alarm.
  */
 class BootCompletedReceiver : BroadcastReceiver() {
-
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
             intent.action != Intent.ACTION_LOCKED_BOOT_COMPLETED
         ) {
@@ -26,13 +28,14 @@ class BootCompletedReceiver : BroadcastReceiver() {
 
         Log.i(tag = "BootCompletedReceiver", message = "Re-scheduling episode alarms after boot")
 
-        val request = OneTimeWorkRequestBuilder<EpisodeCheckWorker>()
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build(),
-            )
-            .build()
+        val request =
+            OneTimeWorkRequestBuilder<EpisodeCheckWorker>()
+                .setConstraints(
+                    Constraints
+                        .Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                ).build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             "episode_check_boot",

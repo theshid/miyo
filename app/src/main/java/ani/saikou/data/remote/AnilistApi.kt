@@ -1,8 +1,6 @@
 package ani.saikou.data.remote
 
-import android.util.Log
-import io.sentry.Sentry
-import io.sentry.SentryLevel
+import io.github.theshid.prettylog.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.header
@@ -11,6 +9,12 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.sentry.Sentry
+import io.sentry.SentryLevel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -18,21 +22,26 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.put
 
 /** Last failure observed by [AnilistApi.execute] after exhausting retries. */
 sealed class AnilistFailure {
-    data class Network(val cause: Throwable) : AnilistFailure()
-    data class Server(val httpStatus: Int) : AnilistFailure()
-    data class Other(val cause: Throwable) : AnilistFailure()
+    data class Network(
+        val cause: Throwable,
+    ) : AnilistFailure()
+
+    data class Server(
+        val httpStatus: Int,
+    ) : AnilistFailure()
+
+    data class Other(
+        val cause: Throwable,
+    ) : AnilistFailure()
 }
 
-class AnilistApi(private val tokenProvider: () -> String?) {
-
+class AnilistApi(
+    private val tokenProvider: () -> String?,
+) {
     companion object {
         private const val ENDPOINT = "https://graphql.anilist.co/"
         private const val TAG = "AnilistApi"
@@ -41,30 +50,37 @@ class AnilistApi(private val tokenProvider: () -> String?) {
     }
 
     private val _lastFailure = MutableStateFlow<AnilistFailure?>(null)
+
     /** Observed network/server errors. Cleared on the next successful execute. */
     val lastFailure: StateFlow<AnilistFailure?> = _lastFailure.asStateFlow()
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
 
-    private val client = HttpClient(OkHttp) {
-        engine {
-            config {
-                connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+    private val client =
+        HttpClient(OkHttp) {
+            engine {
+                config {
+                    connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                    readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                }
             }
         }
-    }
 
-    suspend fun execute(query: String, variables: String = ""): JsonObject? {
-        val body = buildJsonObject {
-            put("query", query)
-            if (variables.isNotEmpty()) {
-                put("variables", json.parseToJsonElement(variables))
-            }
-        }.toString()
+    suspend fun execute(
+        query: String,
+        variables: String = "",
+    ): JsonObject? {
+        val body =
+            buildJsonObject {
+                put("query", query)
+                if (variables.isNotEmpty()) {
+                    put("variables", json.parseToJsonElement(variables))
+                }
+            }.toString()
 
         var lastFailureForRetry: AnilistFailure? = null
         for (attempt in 1..MAX_ATTEMPTS) {
@@ -74,14 +90,15 @@ class AnilistApi(private val tokenProvider: () -> String?) {
                 Log.d(TAG, "execute() retry attempt $attempt of $MAX_ATTEMPTS")
             }
             try {
-                val response = client.post(ENDPOINT) {
-                    contentType(ContentType.Application.Json)
-                    header("Accept", "application/json")
-                    tokenProvider()?.let { token ->
-                        header("Authorization", "Bearer $token")
+                val response =
+                    client.post(ENDPOINT) {
+                        contentType(ContentType.Application.Json)
+                        header("Accept", "application/json")
+                        tokenProvider()?.let { token ->
+                            header("Authorization", "Bearer $token")
+                        }
+                        setBody(body)
                     }
-                    setBody(body)
-                }
                 val status = response.status.value
 
                 // 5xx is transient — retry. 4xx is a client error (bad token,
@@ -100,9 +117,10 @@ class AnilistApi(private val tokenProvider: () -> String?) {
                 // malformed queries, variable type mismatches, auth failures, etc.
                 val errors = jsonObj["errors"]?.takeIf { it != JsonNull }?.jsonArray
                 if (!errors.isNullOrEmpty()) {
-                    val summary = errors.joinToString("; ") { err ->
-                        err.jsonObject["message"]?.jsonPrimitive?.content ?: err.toString()
-                    }
+                    val summary =
+                        errors.joinToString("; ") { err ->
+                            err.jsonObject["message"]?.jsonPrimitive?.content ?: err.toString()
+                        }
                     Log.w(TAG, "GraphQL errors (HTTP $status): $summary")
                     Log.w(TAG, "Failed query: ${query.take(200)}")
                     if (variables.isNotEmpty()) Log.w(TAG, "Variables: $variables")
@@ -141,15 +159,17 @@ class AnilistApi(private val tokenProvider: () -> String?) {
         Log.e(TAG, "Failed query: ${query.take(200)}")
         _lastFailure.value = lastFailureForRetry
         when (lastFailureForRetry) {
-            is AnilistFailure.Network -> reportApiIssue(
-                message = "AniList request failed after retries: ${lastFailureForRetry.cause.javaClass.simpleName}",
-                query = query,
-                throwable = lastFailureForRetry.cause,
-            )
-            is AnilistFailure.Server -> reportApiIssue(
-                message = "AniList HTTP ${lastFailureForRetry.httpStatus} after retries",
-                query = query,
-            ) { scope -> scope.setExtra("httpStatus", lastFailureForRetry.httpStatus.toString()) }
+            is AnilistFailure.Network ->
+                reportApiIssue(
+                    message = "AniList request failed after retries: ${lastFailureForRetry.cause.javaClass.simpleName}",
+                    query = query,
+                    throwable = lastFailureForRetry.cause,
+                )
+            is AnilistFailure.Server ->
+                reportApiIssue(
+                    message = "AniList HTTP ${lastFailureForRetry.httpStatus} after retries",
+                    query = query,
+                ) { scope -> scope.setExtra("httpStatus", lastFailureForRetry.httpStatus.toString()) }
             else -> { /* unreachable */ }
         }
         return null
@@ -174,10 +194,15 @@ class AnilistApi(private val tokenProvider: () -> String?) {
                 scope.setTag("operation", extractOperationName(query))
                 scope.setExtra("queryPreview", query.take(200))
                 extras?.invoke(scope)
-                if (throwable != null) Sentry.captureException(throwable)
-                else Sentry.captureMessage(message)
+                if (throwable != null) {
+                    Sentry.captureException(throwable)
+                } else {
+                    Sentry.captureMessage(message)
+                }
             }
-        } catch (_: Exception) { /* best-effort */ }
+        } catch (_: Exception) {
+            // best-effort
+        }
     }
 
     /**
@@ -187,11 +212,12 @@ class AnilistApi(private val tokenProvider: () -> String?) {
      */
     private fun extractOperationName(query: String): String {
         val trimmed = query.trimStart()
-        val keywordEnd = when {
-            trimmed.startsWith("query") -> 5
-            trimmed.startsWith("mutation") -> 8
-            else -> return "unknown"
-        }
+        val keywordEnd =
+            when {
+                trimmed.startsWith("query") -> 5
+                trimmed.startsWith("mutation") -> 8
+                else -> return "unknown"
+            }
         val rest = trimmed.substring(keywordEnd).trimStart()
         val nameEnd = rest.indexOfFirst { !it.isLetterOrDigit() && it != '_' }
         return if (nameEnd <= 0) "unknown" else rest.substring(0, nameEnd)

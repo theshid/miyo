@@ -37,11 +37,12 @@ fun LoadErrorBanner(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(SurfaceContainerHigh)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
+                .background(SurfaceContainerHigh)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -66,10 +67,11 @@ fun LoadErrorBanner(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier
-                .clip(MaterialTheme.shapes.small)
-                .clickable(onClick = onRetry)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(onClick = onRetry)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             Icon(
                 Icons.Default.Refresh,

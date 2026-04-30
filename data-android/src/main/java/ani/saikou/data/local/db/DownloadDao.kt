@@ -1,7 +1,6 @@
 package ani.saikou.data.local.db
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -10,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface DownloadDao {
-
     // ── Downloads ─────────────────────────────────────────────
 
     @Query("SELECT * FROM downloads ORDER BY createdAt DESC")
@@ -26,7 +24,10 @@ interface DownloadDao {
     suspend fun getPendingDownloads(): List<DownloadEntity>
 
     @Query("SELECT * FROM downloads WHERE mangaId = :mangaId AND chapterKey = :chapterKey")
-    suspend fun getDownloadByChapter(mangaId: Int, chapterKey: String): DownloadEntity?
+    suspend fun getDownloadByChapter(
+        mangaId: Int,
+        chapterKey: String,
+    ): DownloadEntity?
 
     /**
      * Look up a completed download by chapter NUMBER — not by parser-specific
@@ -34,12 +35,17 @@ interface DownloadDao {
      * round-trip to the source. Picks the most recently created if multiple
      * sources have downloaded the same chapter.
      */
-    @Query("""
+    @Query(
+        """
         SELECT * FROM downloads
         WHERE mangaId = :mangaId AND chapterNumber = :chapterNumber AND status = 'COMPLETED'
         ORDER BY createdAt DESC LIMIT 1
-    """)
-    suspend fun getCompletedByChapterNumber(mangaId: Int, chapterNumber: Int): DownloadEntity?
+    """,
+    )
+    suspend fun getCompletedByChapterNumber(
+        mangaId: Int,
+        chapterNumber: Int,
+    ): DownloadEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDownload(download: DownloadEntity)
@@ -48,7 +54,10 @@ interface DownloadDao {
     suspend fun updateDownload(download: DownloadEntity)
 
     @Query("UPDATE downloads SET status = :status WHERE id = :id")
-    suspend fun updateStatus(id: String, status: String)
+    suspend fun updateStatus(
+        id: String,
+        status: String,
+    )
 
     /**
      * Move ERROR rows back into the queue for another shot, but only those that
@@ -61,28 +70,39 @@ interface DownloadDao {
         UPDATE downloads
         SET status = 'QUEUED', attemptCount = attemptCount + 1
         WHERE status = 'ERROR' AND attemptCount < :maxAttempts
-        """
+        """,
     )
     suspend fun requeueRetryableErrors(maxAttempts: Int): Int
 
     @Query("UPDATE downloads SET downloadedPages = :pages, status = :status WHERE id = :id")
-    suspend fun updateProgress(id: String, pages: Int, status: String)
+    suspend fun updateProgress(
+        id: String,
+        pages: Int,
+        status: String,
+    )
 
     @Query("UPDATE downloads SET fileSizeBytes = :bytes WHERE id = :id")
-    suspend fun updateFileSize(id: String, bytes: Long)
+    suspend fun updateFileSize(
+        id: String,
+        bytes: Long,
+    )
 
     /** Average completed-chapter size for a specific manga — best signal if available. */
-    @Query("""
+    @Query(
+        """
         SELECT AVG(fileSizeBytes) FROM downloads
         WHERE mangaId = :mangaId AND status = 'COMPLETED' AND fileSizeBytes > 0
-    """)
+    """,
+    )
     suspend fun getAverageSizeForManga(mangaId: Int): Double?
 
     /** Fallback: average completed-chapter size across every manga the user has downloaded. */
-    @Query("""
+    @Query(
+        """
         SELECT AVG(fileSizeBytes) FROM downloads
         WHERE status = 'COMPLETED' AND fileSizeBytes > 0
-    """)
+    """,
+    )
     suspend fun getGlobalAverageSize(): Double?
 
     @Query("DELETE FROM downloads WHERE id = :id")
@@ -106,7 +126,7 @@ interface DownloadDao {
           AND d.chapterNumber > 0
           AND h.totalPages > 0
           AND ((h.lastPage + 1) * 1.0 / h.totalPages) >= 0.8
-        """
+        """,
     )
     suspend fun getReadCompletedDownloads(): List<DownloadEntity>
 

@@ -17,7 +17,6 @@ import java.util.TimeZone
 class SeasonalCalendarViewModel(
     private val repository: AnilistRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(SeasonalUiState())
     val uiState: StateFlow<SeasonalUiState> = _uiState
 
@@ -30,10 +29,11 @@ class SeasonalCalendarViewModel(
         val month = cal.get(Calendar.MONTH) // 0-based
         val year = cal.get(Calendar.YEAR)
         val season = monthToSeason(month)
-        _uiState.value = _uiState.value.copy(
-            selectedSeason = season,
-            selectedYear = year,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                selectedSeason = season,
+                selectedYear = year,
+            )
         load()
     }
 
@@ -59,14 +59,16 @@ class SeasonalCalendarViewModel(
         isLoadingMore = true
         viewModelScope.launch {
             page++
-            val more = repository.getSeasonalAnime(
-                _uiState.value.selectedSeason,
-                _uiState.value.selectedYear,
-                page,
-            )
-            _uiState.value = _uiState.value.copy(
-                seasonalAnime = _uiState.value.seasonalAnime + more,
-            )
+            val more =
+                repository.getSeasonalAnime(
+                    _uiState.value.selectedSeason,
+                    _uiState.value.selectedYear,
+                    page,
+                )
+            _uiState.value =
+                _uiState.value.copy(
+                    seasonalAnime = _uiState.value.seasonalAnime + more,
+                )
             isLoadingMore = false
         }
     }
@@ -81,77 +83,88 @@ class SeasonalCalendarViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             val state = _uiState.value
-            val seasonalDeferred = async {
-                repository.getSeasonalAnime(state.selectedSeason, state.selectedYear, 1)
-            }
-            val scheduleDeferred = async {
-                val (start, end) = weekRangeForSeason(state.selectedSeason, state.selectedYear)
-                repository.getAiringSchedule(start, end)
-            }
+            val seasonalDeferred =
+                async {
+                    repository.getSeasonalAnime(state.selectedSeason, state.selectedYear, 1)
+                }
+            val scheduleDeferred =
+                async {
+                    val (start, end) = weekRangeForSeason(state.selectedSeason, state.selectedYear)
+                    repository.getAiringSchedule(start, end)
+                }
 
             val seasonal = seasonalDeferred.await()
             val schedule = scheduleDeferred.await()
 
             // Group schedule by day of week
-            val grouped = schedule.groupBy { entry ->
-                dayOfWeek(entry.airingAt)
-            }
+            val grouped =
+                schedule.groupBy { entry ->
+                    dayOfWeek(entry.airingAt)
+                }
 
-            _uiState.value = state.copy(
-                seasonalAnime = seasonal,
-                weeklySchedule = grouped,
-                weekDayLabels = weekDaysForSeason(state.selectedSeason, state.selectedYear),
-                isLoading = false,
-            )
+            _uiState.value =
+                state.copy(
+                    seasonalAnime = seasonal,
+                    weeklySchedule = grouped,
+                    weekDayLabels = weekDaysForSeason(state.selectedSeason, state.selectedYear),
+                    isLoading = false,
+                )
         }
     }
 
     companion object {
         val SEASONS = listOf("WINTER", "SPRING", "SUMMER", "FALL")
 
-        fun monthToSeason(month: Int): String = when (month) {
-            0, 1, 2 -> "WINTER"
-            3, 4, 5 -> "SPRING"
-            6, 7, 8 -> "SUMMER"
-            else -> "FALL"
-        }
+        fun monthToSeason(month: Int): String =
+            when (month) {
+                0, 1, 2 -> "WINTER"
+                3, 4, 5 -> "SPRING"
+                6, 7, 8 -> "SUMMER"
+                else -> "FALL"
+            }
 
-        fun seasonLabel(season: String): String = when (season) {
-            "WINTER" -> "Winter"
-            "SPRING" -> "Spring"
-            "SUMMER" -> "Summer"
-            "FALL" -> "Fall"
-            else -> season
-        }
+        fun seasonLabel(season: String): String =
+            when (season) {
+                "WINTER" -> "Winter"
+                "SPRING" -> "Spring"
+                "SUMMER" -> "Summer"
+                "FALL" -> "Fall"
+                else -> season
+            }
 
         /**
          * Returns a Mon–Sun week range (epoch seconds) for the selected season.
          * - Current season → current week
          * - Past/future season → first full week of that season
          */
-        fun weekRangeForSeason(season: String, year: Int): Pair<Long, Long> {
+        fun weekRangeForSeason(
+            season: String,
+            year: Int,
+        ): Pair<Long, Long> {
             val now = Calendar.getInstance()
             val currentSeason = monthToSeason(now.get(Calendar.MONTH))
             val currentYear = now.get(Calendar.YEAR)
 
-            val cal = if (season == currentSeason && year == currentYear) {
-                // Current season → use this week
-                Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-            } else {
-                // Different season → use the first Monday of that season
-                val startMonth = when (season) {
-                    "WINTER" -> Calendar.JANUARY
-                    "SPRING" -> Calendar.APRIL
-                    "SUMMER" -> Calendar.JULY
-                    "FALL" -> Calendar.OCTOBER
-                    else -> Calendar.JANUARY
+            val cal =
+                if (season == currentSeason && year == currentYear) {
+                    // Current season → use this week
+                    Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+                } else {
+                    // Different season → use the first Monday of that season
+                    val startMonth =
+                        when (season) {
+                            "WINTER" -> Calendar.JANUARY
+                            "SPRING" -> Calendar.APRIL
+                            "SUMMER" -> Calendar.JULY
+                            "FALL" -> Calendar.OCTOBER
+                            else -> Calendar.JANUARY
+                        }
+                    Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                        set(Calendar.YEAR, year)
+                        set(Calendar.MONTH, startMonth)
+                        set(Calendar.DAY_OF_MONTH, 1)
+                    }
                 }
-                Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
-                    set(Calendar.YEAR, year)
-                    set(Calendar.MONTH, startMonth)
-                    set(Calendar.DAY_OF_MONTH, 1)
-                }
-            }
 
             cal.set(Calendar.HOUR_OF_DAY, 0)
             cal.set(Calendar.MINUTE, 0)
@@ -175,33 +188,8 @@ class SeasonalCalendarViewModel(
         fun dayOfWeek(epochSeconds: Long): String {
             val cal = Calendar.getInstance()
             cal.timeInMillis = epochSeconds * 1000
-            val dayName = when (cal.get(Calendar.DAY_OF_WEEK)) {
-                Calendar.MONDAY -> "Monday"
-                Calendar.TUESDAY -> "Tuesday"
-                Calendar.WEDNESDAY -> "Wednesday"
-                Calendar.THURSDAY -> "Thursday"
-                Calendar.FRIDAY -> "Friday"
-                Calendar.SATURDAY -> "Saturday"
-                Calendar.SUNDAY -> "Sunday"
-                else -> "Unknown"
-            }
-            val dateStr = dateFormat.format(cal.time)
-            return "$dayName, $dateStr"
-        }
-
-        /**
-         * Returns ordered day labels (Mon–Sun) with dates for the given season/year.
-         * e.g. ["Monday, Apr 14", "Tuesday, Apr 15", ...]
-         */
-        fun weekDaysForSeason(season: String, year: Int): List<String> {
-            val (startEpoch, _) = weekRangeForSeason(season, year)
-            val cal = Calendar.getInstance()
-            cal.timeInMillis = startEpoch * 1000
-
-            return (0..6).map { offset ->
-                val dayCal = cal.clone() as Calendar
-                dayCal.add(Calendar.DAY_OF_YEAR, offset)
-                val dayName = when (dayCal.get(Calendar.DAY_OF_WEEK)) {
+            val dayName =
+                when (cal.get(Calendar.DAY_OF_WEEK)) {
                     Calendar.MONDAY -> "Monday"
                     Calendar.TUESDAY -> "Tuesday"
                     Calendar.WEDNESDAY -> "Wednesday"
@@ -211,6 +199,36 @@ class SeasonalCalendarViewModel(
                     Calendar.SUNDAY -> "Sunday"
                     else -> "Unknown"
                 }
+            val dateStr = dateFormat.format(cal.time)
+            return "$dayName, $dateStr"
+        }
+
+        /**
+         * Returns ordered day labels (Mon–Sun) with dates for the given season/year.
+         * e.g. ["Monday, Apr 14", "Tuesday, Apr 15", ...]
+         */
+        fun weekDaysForSeason(
+            season: String,
+            year: Int,
+        ): List<String> {
+            val (startEpoch, _) = weekRangeForSeason(season, year)
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = startEpoch * 1000
+
+            return (0..6).map { offset ->
+                val dayCal = cal.clone() as Calendar
+                dayCal.add(Calendar.DAY_OF_YEAR, offset)
+                val dayName =
+                    when (dayCal.get(Calendar.DAY_OF_WEEK)) {
+                        Calendar.MONDAY -> "Monday"
+                        Calendar.TUESDAY -> "Tuesday"
+                        Calendar.WEDNESDAY -> "Wednesday"
+                        Calendar.THURSDAY -> "Thursday"
+                        Calendar.FRIDAY -> "Friday"
+                        Calendar.SATURDAY -> "Saturday"
+                        Calendar.SUNDAY -> "Sunday"
+                        else -> "Unknown"
+                    }
                 "$dayName, ${dateFormat.format(dayCal.time)}"
             }
         }

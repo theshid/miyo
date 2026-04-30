@@ -15,7 +15,6 @@ import ani.saikou.domain.model.MangaSearchResult
  * and a `Chapter.id` is the input expected by `getPages()`.
  */
 interface MangaSource {
-
     /** Best-effort search; should swallow network errors and return an empty list. */
     suspend fun search(query: String): List<MangaSearchResult>
 

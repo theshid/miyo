@@ -1,6 +1,5 @@
 package ani.saikou.navigation
 
-import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,26 +12,26 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import ani.saikou.data.local.TokenStorage
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.screens.ai.AiChatScreen
 import ani.saikou.screens.anime.AnimeScreen
 import ani.saikou.screens.character.CharacterDetailScreen
 import ani.saikou.screens.detail.MediaDetailScreen
+import ani.saikou.screens.downloads.DownloadsScreen
 import ani.saikou.screens.error.NoInternetScreen
+import ani.saikou.screens.feedback.FeedbackScreen
 import ani.saikou.screens.home.HomeScreen
 import ani.saikou.screens.lists.UserListsScreen
 import ani.saikou.screens.login.LoginScreen
 import ani.saikou.screens.manga.MangaScreen
+import ani.saikou.screens.news.NewsFeedScreen
 import ani.saikou.screens.player.VideoPlayerScreen
 import ani.saikou.screens.reader.MangaReaderScreen
 import ani.saikou.screens.search.SearchScreen
-import ani.saikou.screens.downloads.DownloadsScreen
-import ani.saikou.screens.news.NewsFeedScreen
 import ani.saikou.screens.seasonal.SeasonalCalendarScreen
-import ani.saikou.screens.stats.StatsScreen
-import ani.saikou.screens.ai.AiChatScreen
-import ani.saikou.screens.feedback.FeedbackScreen
-import org.koin.compose.koinInject
 import ani.saikou.screens.splash.SplashScreen
+import ani.saikou.screens.stats.StatsScreen
 import ani.saikou.screens.torrent.TorrentSearchScreen
+import org.koin.compose.koinInject
 
 @Composable
 fun SaikouNavHost(
@@ -72,7 +71,7 @@ fun SaikouNavHost(
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
-                }
+                },
             )
         }
 
@@ -104,14 +103,24 @@ fun SaikouNavHost(
         composable(Screen.Anime.route) {
             AnimeScreen(
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
-                onNavigateToSearch = { genre, sort -> navController.navigate(Screen.Search.createRoute(genre = genre, type = "ANIME", sort = sort)) },
+                onNavigateToSearch = {
+                    genre,
+                    sort,
+                    ->
+                    navController.navigate(Screen.Search.createRoute(genre = genre, type = "ANIME", sort = sort))
+                },
             )
         }
 
         composable(Screen.Manga.route) {
             MangaScreen(
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
-                onNavigateToSearch = { genre, sort -> navController.navigate(Screen.Search.createRoute(genre = genre, type = "MANGA", sort = sort)) },
+                onNavigateToSearch = {
+                    genre,
+                    sort,
+                    ->
+                    navController.navigate(Screen.Search.createRoute(genre = genre, type = "MANGA", sort = sort))
+                },
             )
         }
 
@@ -125,8 +134,18 @@ fun SaikouNavHost(
                 mediaId = mediaId,
                 onBack = { navController.popBackStack() },
                 onNavigateToCharacter = { id -> navController.navigate(Screen.CharacterDetail.createRoute(id)) },
-                onNavigateToPlayer = { episodeNum, sourceSlug -> navController.navigate(Screen.VideoPlayer.createRoute(mediaId, episodeNum, sourceSlug)) },
-                onNavigateToReader = { chapterNum, sourceId -> navController.navigate(Screen.MangaReader.createRoute(mediaId, chapterNum, sourceId)) },
+                onNavigateToPlayer = {
+                    episodeNum,
+                    sourceSlug,
+                    ->
+                    navController.navigate(Screen.VideoPlayer.createRoute(mediaId, episodeNum, sourceSlug))
+                },
+                onNavigateToReader = {
+                    chapterNum,
+                    sourceId,
+                    ->
+                    navController.navigate(Screen.MangaReader.createRoute(mediaId, chapterNum, sourceId))
+                },
                 onNavigateToMedia = { id -> navController.navigate(Screen.MediaDetail.createRoute(id)) },
                 onNavigateToTorrent = { query -> navController.navigate(Screen.TorrentSearch.createRoute(query)) },
             )
@@ -148,11 +167,21 @@ fun SaikouNavHost(
         // ── Search ────────────────────────────────────────────
         composable(
             route = Screen.Search.route,
-            arguments = listOf(
-                navArgument("genre") { type = NavType.StringType; defaultValue = "" },
-                navArgument("type") { type = NavType.StringType; defaultValue = "" },
-                navArgument("sort") { type = NavType.StringType; defaultValue = "" },
-            ),
+            arguments =
+                listOf(
+                    navArgument("genre") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                    navArgument("type") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                    navArgument("sort") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                ),
         ) { backStackEntry ->
             val initialGenre = backStackEntry.arguments?.getString("genre")?.takeIf { it.isNotEmpty() }
             val initialType = backStackEntry.arguments?.getString("type")?.takeIf { it.isNotEmpty() }
@@ -182,11 +211,15 @@ fun SaikouNavHost(
         // ── Video Player ──────────────────────────────────────
         composable(
             route = Screen.VideoPlayer.route,
-            arguments = listOf(
-                navArgument("mediaId") { type = NavType.IntType },
-                navArgument("episodeNum") { type = NavType.IntType },
-                navArgument("sourceSlug") { type = NavType.StringType; defaultValue = "" },
-            ),
+            arguments =
+                listOf(
+                    navArgument("mediaId") { type = NavType.IntType },
+                    navArgument("episodeNum") { type = NavType.IntType },
+                    navArgument("sourceSlug") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                ),
         ) { backStackEntry ->
             val mediaId = backStackEntry.arguments?.getInt("mediaId") ?: return@composable
             val episodeNum = backStackEntry.arguments?.getInt("episodeNum") ?: return@composable
@@ -210,11 +243,15 @@ fun SaikouNavHost(
         // ── Manga Reader ─────────────────────────────────────
         composable(
             route = Screen.MangaReader.route,
-            arguments = listOf(
-                navArgument("mediaId") { type = NavType.IntType },
-                navArgument("chapterNum") { type = NavType.IntType },
-                navArgument("sourceId") { type = NavType.StringType; defaultValue = "" },
-            ),
+            arguments =
+                listOf(
+                    navArgument("mediaId") { type = NavType.IntType },
+                    navArgument("chapterNum") { type = NavType.IntType },
+                    navArgument("sourceId") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                ),
         ) { backStackEntry ->
             val mediaId = backStackEntry.arguments?.getInt("mediaId") ?: return@composable
             val chapterNum = backStackEntry.arguments?.getInt("chapterNum") ?: return@composable
@@ -262,9 +299,13 @@ fun SaikouNavHost(
         // ── Torrent Search ────────────────────────────────────
         composable(
             route = Screen.TorrentSearch.route,
-            arguments = listOf(
-                navArgument("query") { type = NavType.StringType; defaultValue = "" },
-            ),
+            arguments =
+                listOf(
+                    navArgument("query") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                ),
         ) {
             TorrentSearchScreen(
                 onBack = { navController.popBackStack() },

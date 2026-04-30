@@ -11,10 +11,10 @@ data class ReadingHistoryEntity(
     val coverUrl: String?,
     val chapterNumber: Int,
     val chapterName: String,
-    val chapterId: String,       // MangaDex chapter UUID — skip search on resume
-    val sourceId: String,        // e.g. MangaDex manga UUID — skip search on resume
-    val sourceName: String,      // "MangaDex"
-    val lastPage: Int,           // 0-indexed page within the chapter
+    val chapterId: String, // MangaDex chapter UUID — skip search on resume
+    val sourceId: String, // e.g. MangaDex manga UUID — skip search on resume
+    val sourceName: String, // "MangaDex"
+    val lastPage: Int, // 0-indexed page within the chapter
     val totalPages: Int,
     val lastReadAt: Long = System.currentTimeMillis(),
 )

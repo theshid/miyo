@@ -6,10 +6,10 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import ani.saikou.domain.repository.AnilistRepository
-import io.github.theshid.prettylog.Log
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import io.github.theshid.prettylog.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
@@ -23,8 +23,8 @@ import org.koin.core.component.inject
 class EpisodeCheckWorker(
     context: Context,
     params: WorkerParameters,
-) : CoroutineWorker(context, params), KoinComponent {
-
+) : CoroutineWorker(context, params),
+    KoinComponent {
     private val repository: AnilistRepository by inject()
 
     companion object {
@@ -34,106 +34,112 @@ class EpisodeCheckWorker(
         private const val KEY_FIRST_RUN = "first_run_done"
     }
 
-    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        try {
-            if (!repository.isLoggedIn()) {
-                // Cancel any alarms left over from a previous logged-in session
-                // and flip the boot receiver off.
-                EpisodeAlarmScheduler(applicationContext).rescheduleAll(emptyList())
-                Log.d(tag = TAG, message = "Not logged in — cleared alarms, skipping check")
-                return@withContext Result.success()
-            }
+    override suspend fun doWork(): Result =
+        withContext(Dispatchers.IO) {
+            try {
+                if (!repository.isLoggedIn()) {
+                    // Cancel any alarms left over from a previous logged-in session
+                    // and flip the boot receiver off.
+                    EpisodeAlarmScheduler(applicationContext).rescheduleAll(emptyList())
+                    Log.d(tag = TAG, message = "Not logged in — cleared alarms, skipping check")
+                    return@withContext Result.success()
+                }
 
-            val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val firstRun = !prefs.getBoolean(KEY_FIRST_RUN, false)
+                val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                val firstRun = !prefs.getBoolean(KEY_FIRST_RUN, false)
 
-            // Fetch user's currently watching anime
-            val watching = repository.getUserAnimeList("CURRENT")
-            Log.d(tag = TAG, message = "Checking ${watching.size} anime on CURRENT list")
+                // Fetch user's currently watching anime
+                val watching = repository.getUserAnimeList("CURRENT")
+                Log.d(tag = TAG, message = "Checking ${watching.size} anime on CURRENT list")
 
-            var notified = 0
-            val editor = prefs.edit()
+                var notified = 0
+                val editor = prefs.edit()
 
-            for (media in watching) {
-                // `nextAiringEpisode` in our parser = last AIRED episode (AniList's upcoming - 1)
-                val lastAired = media.nextAiringEpisode ?: continue
-                val key = "$KEY_LAST_EP_PREFIX${media.id}"
-                val previouslyKnownEp = prefs.getInt(key, -1)
+                for (media in watching) {
+                    // `nextAiringEpisode` in our parser = last AIRED episode (AniList's upcoming - 1)
+                    val lastAired = media.nextAiringEpisode ?: continue
+                    val key = "$KEY_LAST_EP_PREFIX${media.id}"
+                    val previouslyKnownEp = prefs.getInt(key, -1)
 
-                Log.d(
-                    tag = TAG,
-                    message = "${media.displayTitle}: last aired = $lastAired, previously known = $previouslyKnownEp",
-                )
+                    Log.d(
+                        tag = TAG,
+                        message = "${media.displayTitle}: last aired = $lastAired, previously known = $previouslyKnownEp",
+                    )
 
-                when {
-                    // First time seeing this anime — just record, don't notify
-                    previouslyKnownEp == -1 -> {
-                        editor.putInt(key, lastAired)
-                    }
-                    // New episode detected — notify!
-                    lastAired > previouslyKnownEp && !firstRun -> {
-                        val cover = loadCoverBitmap(media.cover)
-                        EpisodeNotificationChannel.showEpisodeNotification(
-                            context = applicationContext,
-                            mediaId = media.id,
-                            title = media.displayTitle,
-                            episode = lastAired,
-                            coverBitmap = cover,
-                        )
-                        editor.putInt(key, lastAired)
-                        notified++
-                        Log.i(tag = TAG, message = "✓ Notified for ${media.displayTitle} ep $lastAired")
-                    }
-                    // First run after install — seed baseline without notifying
-                    firstRun -> {
-                        editor.putInt(key, lastAired)
+                    when {
+                        // First time seeing this anime — just record, don't notify
+                        previouslyKnownEp == -1 -> {
+                            editor.putInt(key, lastAired)
+                        }
+                        // New episode detected — notify!
+                        lastAired > previouslyKnownEp && !firstRun -> {
+                            val cover = loadCoverBitmap(media.cover)
+                            EpisodeNotificationChannel.showEpisodeNotification(
+                                context = applicationContext,
+                                mediaId = media.id,
+                                title = media.displayTitle,
+                                episode = lastAired,
+                                coverBitmap = cover,
+                            )
+                            editor.putInt(key, lastAired)
+                            notified++
+                            Log.i(tag = TAG, message = "✓ Notified for ${media.displayTitle} ep $lastAired")
+                        }
+                        // First run after install — seed baseline without notifying
+                        firstRun -> {
+                            editor.putInt(key, lastAired)
+                        }
                     }
                 }
+
+                if (firstRun) {
+                    editor.putBoolean(KEY_FIRST_RUN, true)
+                    Log.i(tag = TAG, message = "First run — seeded baseline for ${watching.size} anime, no notifications fired")
+                }
+
+                editor.apply()
+                Log.i(tag = TAG, message = "Check complete — $notified notifications sent")
+
+                // Schedule per-airing alarms so notifications fire at airing time
+                // without requiring the app to be opened.
+                val airings =
+                    watching.mapNotNull { media ->
+                        val airingTime = media.nextAiringEpisodeTime ?: return@mapNotNull null
+                        val nextEp = (media.nextAiringEpisode ?: 0) + 1
+                        EpisodeAlarmScheduler.Airing(
+                            mediaId = media.id,
+                            title = media.displayTitle,
+                            coverUrl = media.cover,
+                            episode = nextEp,
+                            airingTimeMs = airingTime,
+                        )
+                    }
+                EpisodeAlarmScheduler(applicationContext).rescheduleAll(airings)
+
+                Result.success()
+            } catch (e: Exception) {
+                Log.e(tag = TAG, message = "Episode check failed", throwable = e)
+                Result.retry()
             }
-
-            if (firstRun) {
-                editor.putBoolean(KEY_FIRST_RUN, true)
-                Log.i(tag = TAG, message = "First run — seeded baseline for ${watching.size} anime, no notifications fired")
-            }
-
-            editor.apply()
-            Log.i(tag = TAG, message = "Check complete — $notified notifications sent")
-
-            // Schedule per-airing alarms so notifications fire at airing time
-            // without requiring the app to be opened.
-            val airings = watching.mapNotNull { media ->
-                val airingTime = media.nextAiringEpisodeTime ?: return@mapNotNull null
-                val nextEp = (media.nextAiringEpisode ?: 0) + 1
-                EpisodeAlarmScheduler.Airing(
-                    mediaId = media.id,
-                    title = media.displayTitle,
-                    coverUrl = media.cover,
-                    episode = nextEp,
-                    airingTimeMs = airingTime,
-                )
-            }
-            EpisodeAlarmScheduler(applicationContext).rescheduleAll(airings)
-
-            Result.success()
-        } catch (e: Exception) {
-            Log.e(tag = TAG, message = "Episode check failed", throwable = e)
-            Result.retry()
         }
-    }
 
     private suspend fun loadCoverBitmap(url: String?): Bitmap? {
         if (url.isNullOrEmpty()) return null
         return try {
             val loader = ImageLoader(applicationContext)
-            val request = ImageRequest.Builder(applicationContext)
-                .data(url)
-                .allowHardware(false)
-                .size(128, 128)
-                .build()
+            val request =
+                ImageRequest
+                    .Builder(applicationContext)
+                    .data(url)
+                    .allowHardware(false)
+                    .size(128, 128)
+                    .build()
             val result = loader.execute(request)
             if (result is SuccessResult) {
                 (result.drawable as? BitmapDrawable)?.bitmap
-            } else null
+            } else {
+                null
+            }
         } catch (_: Exception) {
             null
         }

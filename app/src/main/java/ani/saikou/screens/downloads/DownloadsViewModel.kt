@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 class DownloadsViewModel(
     private val downloadRepo: DownloadRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(DownloadsUiState())
     val uiState: StateFlow<DownloadsUiState> = _uiState
 
@@ -23,12 +22,14 @@ class DownloadsViewModel(
                 downloadRepo.observeAllDownloadedManga(),
                 downloadRepo.observeAllDownloads(),
             ) { manga, downloads ->
-                val grouped = manga.map { m ->
-                    MangaWithDownloads(
-                        manga = m,
-                        chapters = downloads.filter { it.mangaId == m.mangaId },
-                    )
-                }.filter { it.chapters.isNotEmpty() }
+                val grouped =
+                    manga
+                        .map { m ->
+                            MangaWithDownloads(
+                                manga = m,
+                                chapters = downloads.filter { it.mangaId == m.mangaId },
+                            )
+                        }.filter { it.chapters.isNotEmpty() }
 
                 // Re-query the evictable set every time downloads change. Cheap —
                 // it's a small index-backed join inside the DAO.

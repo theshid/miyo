@@ -4,8 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 
-class TokenStorage(context: Context) {
-
+class TokenStorage(
+    context: Context,
+) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("saikou_auth", Context.MODE_PRIVATE)
 

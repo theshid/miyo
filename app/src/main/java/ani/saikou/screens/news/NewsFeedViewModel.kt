@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class NewsFeedViewModel : ViewModel() {
-
     private val jikan = JikanNewsSource()
     private val reddit = RedditNewsSource()
     private val ann = ANNNewsSource()
@@ -26,7 +25,10 @@ class NewsFeedViewModel : ViewModel() {
     private val dayLabels = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
 
     init {
-        val today = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
+        val today =
+            java.util.Calendar
+                .getInstance()
+                .get(java.util.Calendar.DAY_OF_WEEK)
         // Calendar.MONDAY=2..SUNDAY=1 → map to 0-6
         val dayIndex = if (today == 1) 6 else today - 2
         selectDay(dayIndex)
@@ -37,10 +39,11 @@ class NewsFeedViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(selectedDayIndex = index, scheduleLoading = true)
         viewModelScope.launch {
             val schedule = jikan.getSchedule(days[index])
-            _uiState.value = _uiState.value.copy(
-                schedule = schedule,
-                scheduleLoading = false,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    schedule = schedule,
+                    scheduleLoading = false,
+                )
         }
     }
 
@@ -48,21 +51,24 @@ class NewsFeedViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            val results = listOf(
-                async { jikan.getLatestNews() },
-                async { reddit.getLatestNews() },
-                async { ann.getLatestNews() },
-            ).awaitAll().flatten()
+            val results =
+                listOf(
+                    async { jikan.getLatestNews() },
+                    async { reddit.getLatestNews() },
+                    async { ann.getLatestNews() },
+                ).awaitAll().flatten()
 
             // Deduplicate by title similarity and sort by date
-            val deduped = results
-                .distinctBy { it.title.lowercase().take(50) }
-                .sortedByDescending { it.date }
+            val deduped =
+                results
+                    .distinctBy { it.title.lowercase().take(50) }
+                    .sortedByDescending { it.date }
 
-            _uiState.value = _uiState.value.copy(
-                news = deduped,
-                isLoading = false,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    news = deduped,
+                    isLoading = false,
+                )
         }
     }
 
@@ -72,8 +78,11 @@ class NewsFeedViewModel : ViewModel() {
 
     fun getFilteredNews(): List<NewsItem> {
         val state = _uiState.value
-        return if (state.sourceFilter == null) state.news
-        else state.news.filter { it.source == state.sourceFilter }
+        return if (state.sourceFilter == null) {
+            state.news
+        } else {
+            state.news.filter { it.source == state.sourceFilter }
+        }
     }
 
     companion object {

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,40 +41,44 @@ fun MediaBannerCard(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(SurfaceContainer)
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
+                .background(SurfaceContainer)
+                .clickable(onClick = onClick),
     ) {
         // Banner
         AsyncImage(
             model = media.banner ?: media.cover,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(160.dp),
         )
 
         // Gradient overlay
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, SurfaceContainer),
-                        startY = 40f,
-                    )
-                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, SurfaceContainer),
+                            startY = 40f,
+                        ),
+                    ),
         )
 
         // Content row: poster + info
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 12.dp, end = 12.dp, top = 60.dp, bottom = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, top = 60.dp, bottom = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Poster thumbnail
@@ -83,10 +86,11 @@ fun MediaBannerCard(
                 model = media.cover,
                 contentDescription = media.displayTitle,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .width(80.dp)
-                    .height(120.dp)
-                    .clip(MaterialTheme.shapes.small),
+                modifier =
+                    Modifier
+                        .width(80.dp)
+                        .height(120.dp)
+                        .clip(MaterialTheme.shapes.small),
             )
 
             // Info
@@ -114,11 +118,12 @@ fun MediaBannerCard(
                             color = Primary,
                         )
                     }
-                    val epText = when {
-                        media.totalEpisodes != null -> "${media.totalEpisodes} eps"
-                        media.totalChapters != null -> "${media.totalChapters} ch"
-                        else -> null
-                    }
+                    val epText =
+                        when {
+                            media.totalEpisodes != null -> "${media.totalEpisodes} eps"
+                            media.totalChapters != null -> "${media.totalChapters} ch"
+                            else -> null
+                        }
                     if (epText != null) {
                         Text(
                             text = epText,
@@ -130,9 +135,10 @@ fun MediaBannerCard(
 
                 if (media.isOngoing) {
                     Box(
-                        modifier = Modifier
-                            .background(Secondary.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall)
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        modifier =
+                            Modifier
+                                .background(Secondary.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall)
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {
                         Text(
                             text = "ONGOING",

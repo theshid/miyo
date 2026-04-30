@@ -20,24 +20,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
-import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.PlayCircle
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,9 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.ActivityHeatmap
 import ani.saikou.components.DefaultHomeTourSteps
 import ani.saikou.components.GlassCard
@@ -62,12 +60,13 @@ import ani.saikou.components.TourTarget
 import ani.saikou.components.rememberTourState
 import ani.saikou.components.tourTarget
 import ani.saikou.data.local.OnboardingPrefs
-import org.koin.compose.koinInject
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
+import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 
 @Composable
 fun HomeScreen(
@@ -96,25 +95,26 @@ fun HomeScreen(
 
     // Filter the tour to only the sections that will actually render for THIS user.
     // First-time users won't have airing-list anime or in-progress watching/reading.
-    val activeTourSteps = remember(
-        state.airingSchedule.size,
-        state.continueWatchingLocal.size,
-        state.continueWatching.size,
-        state.readingHistory.size,
-        state.continueReading.size,
-    ) {
-        DefaultHomeTourSteps.filter { step ->
-            when (step.target) {
-                TourTarget.AIRING -> state.airingSchedule.isNotEmpty()
-                TourTarget.CONTINUE_WATCHING ->
-                    state.continueWatchingLocal.isNotEmpty() ||
-                        state.continueWatching.isNotEmpty() ||
-                        state.readingHistory.isNotEmpty() ||
-                        state.continueReading.isNotEmpty()
-                else -> true
+    val activeTourSteps =
+        remember(
+            state.airingSchedule.size,
+            state.continueWatchingLocal.size,
+            state.continueWatching.size,
+            state.readingHistory.size,
+            state.continueReading.size,
+        ) {
+            DefaultHomeTourSteps.filter { step ->
+                when (step.target) {
+                    TourTarget.AIRING -> state.airingSchedule.isNotEmpty()
+                    TourTarget.CONTINUE_WATCHING ->
+                        state.continueWatchingLocal.isNotEmpty() ||
+                            state.continueWatching.isNotEmpty() ||
+                            state.readingHistory.isNotEmpty() ||
+                            state.continueReading.isNotEmpty()
+                    else -> true
+                }
             }
         }
-    }
 
     androidx.compose.runtime.LaunchedEffect(state.isLoading) {
         if (!state.isLoading && !onboardingPrefs.hasSeenHomeTour()) {
@@ -175,270 +175,369 @@ fun HomeScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .verticalScroll(scrollState)
-            .padding(vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        // ── User Header ──────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                PulseAvatar(imageUrl = state.user?.avatar, size = 48.dp)
-                Column {
-                    Text(
-                        text = "Hey, ${state.user?.name ?: "User"}",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = OnSurface,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-            Row {
-                IconButton(onClick = onNavigateToStats) {
-                    Icon(
-                        Icons.Default.BarChart,
-                        contentDescription = "Stats",
-                        tint = OnSurfaceVariant,
-                    )
-                }
-                IconButton(onClick = onNavigateToNews) {
-                    Icon(
-                        Icons.Default.Notifications,
-                        contentDescription = "News",
-                        tint = OnSurfaceVariant,
-                    )
-                }
-                IconButton(
-                    onClick = onNavigateToFeedback,
-                    modifier = Modifier.tourTarget(tourState, TourTarget.FEEDBACK),
-                ) {
-                    Icon(
-                        Icons.Default.Feedback,
-                        contentDescription = "Send feedback",
-                        tint = OnSurfaceVariant,
-                    )
-                }
-                IconButton(onClick = { showLogoutDialog = true }) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Logout,
-                        contentDescription = "Log out",
-                        tint = OnSurfaceVariant,
-                    )
-                }
-            }
-        }
-
-        // ── Load failure banner ──────────────────────────────
-        state.error?.let { msg ->
-            ani.saikou.components.LoadErrorBanner(
-                message = msg,
-                onRetry = { viewModel.retryLoadHomeData() },
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        // ── Stats Cards ──────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .tourTarget(tourState, TourTarget.STATS),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            StatCard(
-                value = "${state.localEpisodesWatched}",
-                label = "Episodes Watched",
-                accentColor = Secondary,
-                modifier = Modifier.weight(1f),
-            )
-            StatCard(
-                value = "${state.localChaptersRead}",
-                label = "Chapters Read",
-                accentColor = Primary,
-                modifier = Modifier.weight(1f),
-            )
-        }
-
-        // ── Activity Heatmap ─────────────────────────────────
-        val airingsThisMonth = remember(state.airingSchedule) {
-            val zone = java.time.ZoneId.systemDefault()
-            val thisMonth = java.time.LocalDate.now().month
-            val thisYear = java.time.LocalDate.now().year
-            state.airingSchedule
-                .mapNotNull { media ->
-                    val time = media.nextAiringEpisodeTime ?: return@mapNotNull null
-                    val date = java.time.Instant.ofEpochMilli(time).atZone(zone).toLocalDate()
-                    if (date.month != thisMonth || date.year != thisYear) return@mapNotNull null
-                    date to ani.saikou.components.AiringInfo(
-                        mediaId = media.id,
-                        title = media.displayTitle,
-                        coverUrl = media.cover,
-                        episodeNumber = (media.nextAiringEpisode ?: 0) + 1,
-                        airingTimeMs = time,
-                    )
-                }
-                .groupBy({ it.first }, { it.second })
-                .mapValues { (_, list) -> list.sortedBy { it.airingTimeMs } }
-        }
-        ActivityHeatmap(
-            countsByDay = state.activityByDay,
-            airingsByDay = airingsThisMonth,
-            activitiesByDay = state.activitiesByDay,
-            onAiringClick = onNavigateToMedia,
-            onActivityClick = onNavigateToMedia,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .tourTarget(tourState, TourTarget.ACTIVITY),
-        )
-
-        // ── Quick Action Cards (grouped: Anime/Manga, News/Torrents, Offline/Calendar, Miyo AI) ──
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .tourTarget(tourState, TourTarget.ACTIONS),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Background)
+                    .verticalScroll(scrollState)
+                    .padding(vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
+            // ── User Header ──────────────────────────────────────
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                ActionCard(
-                    title = "Anime List",
-                    icon = Icons.Outlined.PlayCircle,
-                    onClick = onNavigateToAnimeList,
-                    modifier = Modifier.weight(1f),
-                )
-                ActionCard(
-                    title = "Manga List",
-                    icon = Icons.Outlined.MenuBook,
-                    onClick = onNavigateToMangaList,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                ActionCard(
-                    title = "News",
-                    icon = Icons.Default.Notifications,
-                    onClick = onNavigateToNews,
-                    modifier = Modifier.weight(1f),
-                )
-                ActionCard(
-                    title = "Torrents",
-                    icon = Icons.Default.Download,
-                    onClick = onNavigateToTorrent,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                ActionCard(
-                    title = "Offline",
-                    icon = Icons.Default.DownloadDone,
-                    onClick = onNavigateToDownloads,
-                    modifier = Modifier.weight(1f),
-                )
-                ActionCard(
-                    title = "Calendar",
-                    icon = Icons.Default.CalendarMonth,
-                    onClick = onNavigateToCalendar,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                ActionCard(
-                    title = "Miyo AI",
-                    icon = Icons.Default.AutoAwesome,
-                    onClick = onNavigateToAiChat,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        // ── Airing Soon ─────────────────────────────────────
-        if (state.airingSchedule.isNotEmpty()) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.tourTarget(tourState, TourTarget.AIRING),
-            ) {
-                SectionHeader(
-                    title = "Airing Soon",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(
-                        items = state.airingSchedule,
-                        key = { "airing_${it.id}" },
-                    ) { media ->
-                        AiringCard(
-                            title = media.displayTitle,
-                            coverUrl = media.cover,
-                            episodeNumber = (media.nextAiringEpisode ?: 0) + 1,
-                            airingAtMs = media.nextAiringEpisodeTime ?: 0L,
-                            onClick = { onNavigateToMedia(media.id) },
+                    PulseAvatar(imageUrl = state.user?.avatar, size = 48.dp)
+                    Column {
+                        Text(
+                            text = "Hey, ${state.user?.name ?: "User"}",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = OnSurface,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+                Row {
+                    IconButton(onClick = onNavigateToStats) {
+                        Icon(
+                            Icons.Default.BarChart,
+                            contentDescription = "Stats",
+                            tint = OnSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = onNavigateToNews) {
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = "News",
+                            tint = OnSurfaceVariant,
+                        )
+                    }
+                    IconButton(
+                        onClick = onNavigateToFeedback,
+                        modifier = Modifier.tourTarget(tourState, TourTarget.FEEDBACK),
+                    ) {
+                        Icon(
+                            Icons.Default.Feedback,
+                            contentDescription = "Send feedback",
+                            tint = OnSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = { showLogoutDialog = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = "Log out",
+                            tint = OnSurfaceVariant,
                         )
                     }
                 }
             }
-        }
 
-        // ── Continue Watching (merged: local resume + AniList CURRENT) ──
-        run {
-            // Local entries with resume position take priority
-            val localIds = state.continueWatchingLocal.map { it.mediaId }.toSet()
-            // AniList entries that aren't already in local history
-            val anilistOnly = state.continueWatching.filter { it.id !in localIds }
+            // ── Load failure banner ──────────────────────────────
+            state.error?.let { msg ->
+                ani.saikou.components.LoadErrorBanner(
+                    message = msg,
+                    onRetry = { viewModel.retryLoadHomeData() },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
 
-            if (state.continueWatchingLocal.isNotEmpty() || anilistOnly.isNotEmpty()) {
+            // ── Stats Cards ──────────────────────────────────────
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .tourTarget(tourState, TourTarget.STATS),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                StatCard(
+                    value = "${state.localEpisodesWatched}",
+                    label = "Episodes Watched",
+                    accentColor = Secondary,
+                    modifier = Modifier.weight(1f),
+                )
+                StatCard(
+                    value = "${state.localChaptersRead}",
+                    label = "Chapters Read",
+                    accentColor = Primary,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            // ── Activity Heatmap ─────────────────────────────────
+            var displayedMonth by remember { mutableStateOf(java.time.YearMonth.now()) }
+            val airingsForMonth =
+                remember(state.airingSchedule, displayedMonth) {
+                    val zone = java.time.ZoneId.systemDefault()
+                    state.airingSchedule
+                        .mapNotNull { media ->
+                            val time = media.nextAiringEpisodeTime ?: return@mapNotNull null
+                            val date =
+                                java.time.Instant
+                                    .ofEpochMilli(time)
+                                    .atZone(zone)
+                                    .toLocalDate()
+                            if (java.time.YearMonth.from(date) != displayedMonth) return@mapNotNull null
+                            date to
+                                ani.saikou.components.AiringInfo(
+                                    mediaId = media.id,
+                                    title = media.displayTitle,
+                                    coverUrl = media.cover,
+                                    episodeNumber = (media.nextAiringEpisode ?: 0) + 1,
+                                    airingTimeMs = time,
+                                )
+                        }.groupBy({ it.first }, { it.second })
+                        .mapValues { (_, list) -> list.sortedBy { it.airingTimeMs } }
+                }
+            ActivityHeatmap(
+                countsByDay = state.activityByDay,
+                airingsByDay = airingsForMonth,
+                activitiesByDay = state.activitiesByDay,
+                onAiringClick = onNavigateToMedia,
+                onActivityClick = onNavigateToMedia,
+                displayedMonth = displayedMonth,
+                onMonthChange = { displayedMonth = it },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .tourTarget(tourState, TourTarget.ACTIVITY),
+            )
+
+            // ── Quick Action Cards (grouped: Anime/Manga, News/Torrents, Offline/Calendar, Miyo AI) ──
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .tourTarget(tourState, TourTarget.ACTIONS),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    ActionCard(
+                        title = "Anime List",
+                        icon = Icons.Outlined.PlayCircle,
+                        onClick = onNavigateToAnimeList,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ActionCard(
+                        title = "Manga List",
+                        icon = Icons.Outlined.MenuBook,
+                        onClick = onNavigateToMangaList,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    ActionCard(
+                        title = "News",
+                        icon = Icons.Default.Notifications,
+                        onClick = onNavigateToNews,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ActionCard(
+                        title = "Torrents",
+                        icon = Icons.Default.Download,
+                        onClick = onNavigateToTorrent,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    ActionCard(
+                        title = "Offline",
+                        icon = Icons.Default.DownloadDone,
+                        onClick = onNavigateToDownloads,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ActionCard(
+                        title = "Calendar",
+                        icon = Icons.Default.CalendarMonth,
+                        onClick = onNavigateToCalendar,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    ActionCard(
+                        title = "Miyo AI",
+                        icon = Icons.Default.AutoAwesome,
+                        onClick = onNavigateToAiChat,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            // ── Airing Soon ─────────────────────────────────────
+            if (state.airingSchedule.isNotEmpty()) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.tourTarget(tourState, TourTarget.CONTINUE_WATCHING),
+                    modifier = Modifier.tourTarget(tourState, TourTarget.AIRING),
                 ) {
                     SectionHeader(
-                        title = "Continue Watching",
-                        actionText = "SEE ALL",
-                        onAction = onNavigateToAnimeList,
+                        title = "Airing Soon",
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        // Local entries first (have resume position bar)
                         items(
-                            items = state.continueWatchingLocal,
-                            key = { "watch_${it.mediaId}" },
+                            items = state.airingSchedule,
+                            key = { "airing_${it.id}" },
+                        ) { media ->
+                            AiringCard(
+                                title = media.displayTitle,
+                                coverUrl = media.cover,
+                                episodeNumber = (media.nextAiringEpisode ?: 0) + 1,
+                                airingAtMs = media.nextAiringEpisodeTime ?: 0L,
+                                onClick = { onNavigateToMedia(media.id) },
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ── Continue Watching (merged: local resume + AniList CURRENT) ──
+            run {
+                // Local entries with resume position take priority
+                val localIds = state.continueWatchingLocal.map { it.mediaId }.toSet()
+                // AniList entries that aren't already in local history
+                val anilistOnly = state.continueWatching.filter { it.id !in localIds }
+
+                if (state.continueWatchingLocal.isNotEmpty() || anilistOnly.isNotEmpty()) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.tourTarget(tourState, TourTarget.CONTINUE_WATCHING),
+                    ) {
+                        SectionHeader(
+                            title = "Continue Watching",
+                            actionText = "SEE ALL",
+                            onAction = onNavigateToAnimeList,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            // Local entries first (have resume position bar)
+                            items(
+                                items = state.continueWatchingLocal,
+                                key = { "watch_${it.mediaId}" },
+                            ) { entry ->
+                                WatchHistoryCard(
+                                    entry = entry,
+                                    showProgress = true,
+                                    onClick = { onNavigateToPlayer(entry.mediaId, entry.episodeNumber) },
+                                )
+                            }
+                            // AniList entries that aren't in local history
+                            items(
+                                items = anilistOnly,
+                                key = { "anilist_${it.id}" },
+                            ) { media ->
+                                MediaPosterCard(
+                                    title = media.displayTitle,
+                                    coverUrl = media.cover,
+                                    subtitle = media.episodeProgress,
+                                    onClick = { onNavigateToMedia(media.id) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Continue Reading (merged: local resume + AniList CURRENT) ──
+            run {
+                val localMangaIds = state.readingHistory.map { it.mangaId }.toSet()
+                val anilistOnlyManga = state.continueReading.filter { it.id !in localMangaIds }
+
+                if (state.readingHistory.isNotEmpty() || anilistOnlyManga.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SectionHeader(
+                            title = "Continue Reading",
+                            actionText = "SEE ALL",
+                            onAction = onNavigateToMangaList,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            // Local entries first (have page progress)
+                            items(
+                                items = state.readingHistory,
+                                key = { "history_${it.mangaId}" },
+                            ) { entry ->
+                                MediaPosterCard(
+                                    title = entry.mangaTitle,
+                                    coverUrl = entry.coverUrl,
+                                    subtitle = "Ch. ${entry.chapterNumber} · p.${entry.lastPage + 1}/${entry.totalPages}",
+                                    onClick = { onNavigateToReader(entry.mangaId, entry.chapterNumber) },
+                                )
+                            }
+                            // AniList entries that aren't in local history
+                            items(
+                                items = anilistOnlyManga,
+                                key = { "anilist_manga_${it.id}" },
+                            ) { media ->
+                                MediaPosterCard(
+                                    title = media.displayTitle,
+                                    coverUrl = media.cover,
+                                    subtitle = media.episodeProgress,
+                                    onClick = { onNavigateToMedia(media.id) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Watch History (last 10) ──────────────────────────
+            if (state.watchHistory.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SectionHeader(
+                        title = "History",
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        items(
+                            items = state.watchHistory,
+                            key = { "history_watch_${it.mediaId}_${it.episodeNumber}" },
                         ) { entry ->
                             WatchHistoryCard(
                                 entry = entry,
@@ -446,122 +545,38 @@ fun HomeScreen(
                                 onClick = { onNavigateToPlayer(entry.mediaId, entry.episodeNumber) },
                             )
                         }
-                        // AniList entries that aren't in local history
-                        items(
-                            items = anilistOnly,
-                            key = { "anilist_${it.id}" },
-                        ) { media ->
-                            MediaPosterCard(
-                                title = media.displayTitle,
-                                coverUrl = media.cover,
-                                subtitle = media.episodeProgress,
-                                onClick = { onNavigateToMedia(media.id) },
-                            )
-                        }
                     }
                 }
             }
-        }
 
-        // ── Continue Reading (merged: local resume + AniList CURRENT) ──
-        run {
-            val localMangaIds = state.readingHistory.map { it.mangaId }.toSet()
-            val anilistOnlyManga = state.continueReading.filter { it.id !in localMangaIds }
-
-            if (state.readingHistory.isNotEmpty() || anilistOnlyManga.isNotEmpty()) {
+            // ── Recommended For You ──────────────────────────────
+            if (state.recommendations.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionHeader(
-                        title = "Continue Reading",
-                        actionText = "SEE ALL",
-                        onAction = onNavigateToMangaList,
+                        title = "Recommended For You",
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        // Local entries first (have page progress)
                         items(
-                            items = state.readingHistory,
-                            key = { "history_${it.mangaId}" },
-                        ) { entry ->
-                            MediaPosterCard(
-                                title = entry.mangaTitle,
-                                coverUrl = entry.coverUrl,
-                                subtitle = "Ch. ${entry.chapterNumber} · p.${entry.lastPage + 1}/${entry.totalPages}",
-                                onClick = { onNavigateToReader(entry.mangaId, entry.chapterNumber) },
-                            )
-                        }
-                        // AniList entries that aren't in local history
-                        items(
-                            items = anilistOnlyManga,
-                            key = { "anilist_manga_${it.id}" },
+                            items = state.recommendations,
+                            key = { it.id },
                         ) { media ->
                             MediaPosterCard(
                                 title = media.displayTitle,
                                 coverUrl = media.cover,
-                                subtitle = media.episodeProgress,
                                 onClick = { onNavigateToMedia(media.id) },
                             )
                         }
                     }
                 }
             }
-        }
 
-        // ── Watch History (last 10) ──────────────────────────
-        if (state.watchHistory.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionHeader(
-                    title = "History",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(
-                        items = state.watchHistory,
-                        key = { "history_watch_${it.mediaId}_${it.episodeNumber}" },
-                    ) { entry ->
-                        WatchHistoryCard(
-                            entry = entry,
-                            showProgress = true,
-                            onClick = { onNavigateToPlayer(entry.mediaId, entry.episodeNumber) },
-                        )
-                    }
-                }
-            }
+            // Bottom spacing for nav bar clearance
+            Spacer(modifier = Modifier.height(32.dp))
         }
-
-        // ── Recommended For You ──────────────────────────────
-        if (state.recommendations.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionHeader(
-                    title = "Recommended For You",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(
-                        items = state.recommendations,
-                        key = { it.id },
-                    ) { media ->
-                        MediaPosterCard(
-                            title = media.displayTitle,
-                            coverUrl = media.cover,
-                            onClick = { onNavigateToMedia(media.id) },
-                        )
-                    }
-                }
-            }
-        }
-
-        // Bottom spacing for nav bar clearance
-        Spacer(modifier = Modifier.height(32.dp))
-    }
 
         if (showTour && activeTourSteps.isNotEmpty()) {
             TourOverlay(
@@ -585,15 +600,17 @@ private fun WatchHistoryCard(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .width(120.dp)
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .width(120.dp)
+                .clickable(onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
-            modifier = Modifier
-                .size(width = 120.dp, height = 170.dp)
-                .clip(MaterialTheme.shapes.medium),
+            modifier =
+                Modifier
+                    .size(width = 120.dp, height = 170.dp)
+                    .clip(MaterialTheme.shapes.medium),
         ) {
             coil.compose.AsyncImage(
                 model = entry.coverUrl,
@@ -603,11 +620,12 @@ private fun WatchHistoryCard(
             )
             if (showProgress) {
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .fillMaxWidth(entry.progressFraction)
-                        .height(3.dp)
-                        .background(ani.saikou.ui.theme.Primary),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth(entry.progressFraction)
+                            .height(3.dp)
+                            .background(ani.saikou.ui.theme.Primary),
                 )
             }
         }
@@ -668,9 +686,10 @@ private fun ActionCard(
     modifier: Modifier = Modifier,
 ) {
     GlassCard(
-        modifier = modifier
-            .clip(MaterialTheme.shapes.large)
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .clip(MaterialTheme.shapes.large)
+                .clickable(onClick = onClick),
         contentPadding = 16.dp,
     ) {
         Row(
@@ -704,15 +723,17 @@ private fun AiringCard(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .width(130.dp)
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .width(130.dp)
+                .clickable(onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
-            modifier = Modifier
-                .size(width = 130.dp, height = 180.dp)
-                .clip(MaterialTheme.shapes.medium),
+            modifier =
+                Modifier
+                    .size(width = 130.dp, height = 180.dp)
+                    .clip(MaterialTheme.shapes.medium),
         ) {
             coil.compose.AsyncImage(
                 model = coverUrl,
@@ -722,11 +743,12 @@ private fun AiringCard(
             )
             // Episode badge
             Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(6.dp)
-                    .background(Primary, MaterialTheme.shapes.extraSmall)
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .background(Primary, MaterialTheme.shapes.extraSmall)
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
             ) {
                 Text(
                     text = "Ep $episodeNumber",

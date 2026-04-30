@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
@@ -30,8 +29,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +41,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +52,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
@@ -80,15 +77,17 @@ fun TorrentSearchScreen(
     val context = LocalContext.current
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background),
     ) {
         // ── Top Bar ──────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 4.dp, end = 8.dp, top = 16.dp, bottom = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 8.dp, top = 16.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
@@ -158,11 +157,12 @@ fun TorrentSearchScreen(
                 text = "Sort: ${state.sortBy.name.lowercase().replaceFirstChar { it.uppercase() }}",
                 selected = true,
                 onClick = {
-                    val next = when (state.sortBy) {
-                        SortOption.SEEDERS -> SortOption.SIZE
-                        SortOption.SIZE -> SortOption.DATE
-                        SortOption.DATE -> SortOption.SEEDERS
-                    }
+                    val next =
+                        when (state.sortBy) {
+                            SortOption.SEEDERS -> SortOption.SIZE
+                            SortOption.SIZE -> SortOption.DATE
+                            SortOption.DATE -> SortOption.SEEDERS
+                        }
                     viewModel.setSortBy(next)
                 },
             )
@@ -186,9 +186,12 @@ fun TorrentSearchScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = 16.dp, end = 16.dp, bottom = 80.dp
-                    ),
+                    contentPadding =
+                        androidx.compose.foundation.layout.PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            bottom = 80.dp,
+                        ),
                 ) {
                     items(items = state.results, key = { it.magnetLink.hashCode() }) { result ->
                         TorrentCard(
@@ -232,12 +235,13 @@ private fun SearchInput(
 ) {
     val shape = MaterialTheme.shapes.medium
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(SurfaceVariant.copy(alpha = 0.4f))
-            .border(1.dp, GhostBorder, shape)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(SurfaceVariant.copy(alpha = 0.4f))
+                .border(1.dp, GhostBorder, shape)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Default.Search, "Search", tint = OnSurfaceVariant.copy(0.6f), modifier = Modifier.size(20.dp))
@@ -247,9 +251,10 @@ private fun SearchInput(
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = OnSurface),
             cursorBrush = SolidColor(Primary),
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 12.dp),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp),
             decorationBox = { inner ->
                 if (query.isEmpty()) {
                     Text("Chainsaw Man", style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant.copy(0.4f))
@@ -259,7 +264,8 @@ private fun SearchInput(
         )
         if (query.isNotEmpty()) {
             Icon(
-                Icons.Default.Close, "Clear",
+                Icons.Default.Close,
+                "Clear",
                 tint = OnSurfaceVariant,
                 modifier = Modifier.size(18.dp).clickable { onQueryChange("") },
             )
@@ -273,12 +279,13 @@ private fun TorrentCard(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(SurfaceContainer)
-            .clickable(onClick = onClick)
-            .padding(12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
+                .background(SurfaceContainer)
+                .clickable(onClick = onClick)
+                .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // Title
@@ -338,9 +345,10 @@ private fun TorrentCard(
 @Composable
 private fun QualityBadge(text: String) {
     Box(
-        modifier = Modifier
-            .background(Primary.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+        modifier =
+            Modifier
+                .background(Primary.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall)
+                .padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
         Text(text, style = MaterialTheme.typography.labelSmall, color = Primary)
     }
@@ -348,16 +356,18 @@ private fun QualityBadge(text: String) {
 
 @Composable
 private fun SourceBadge(source: String) {
-    val color = when (source) {
-        "NYAA" -> Secondary
-        "BTDIGG" -> Tertiary
-        "ANIDEX" -> Color(0xFF4CAF50)
-        else -> OnSurfaceVariant
-    }
+    val color =
+        when (source) {
+            "NYAA" -> Secondary
+            "BTDIGG" -> Tertiary
+            "ANIDEX" -> Color(0xFF4CAF50)
+            else -> OnSurfaceVariant
+        }
     Box(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall)
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+        modifier =
+            Modifier
+                .background(color.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall)
+                .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(source, style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.Bold)
     }
@@ -366,17 +376,19 @@ private fun SourceBadge(source: String) {
 @Composable
 private fun EmptyState(onRetry: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         // Icon
         Box(
-            modifier = Modifier
-                .size(80.dp)
-                .background(SurfaceContainer, MaterialTheme.shapes.extraLarge),
+            modifier =
+                Modifier
+                    .size(80.dp)
+                    .background(SurfaceContainer, MaterialTheme.shapes.extraLarge),
             contentAlignment = Alignment.Center,
         ) {
             Text("⊕❩", style = MaterialTheme.typography.headlineMedium, color = Primary)
@@ -406,10 +418,11 @@ private fun EmptyState(onRetry: () -> Unit) {
 
         // Disclaimer
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, Primary.copy(alpha = 0.3f), MaterialTheme.shapes.medium)
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Primary.copy(alpha = 0.3f), MaterialTheme.shapes.medium)
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text("NOTICE", style = MaterialTheme.typography.labelMedium, color = Primary, fontWeight = FontWeight.Bold)
@@ -436,9 +449,10 @@ private fun TorrentDetailSheet(
         containerColor = SurfaceBright,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Title
@@ -487,15 +501,16 @@ private fun TorrentDetailSheet(
 
             // Copy link — outlined style
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(MaterialTheme.shapes.extraLarge)
-                    .border(1.dp, OnSurfaceVariant.copy(alpha = 0.3f), MaterialTheme.shapes.extraLarge)
-                    .clickable {
-                        onCopyLink()
-                        onDismiss()
-                    },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(MaterialTheme.shapes.extraLarge)
+                        .border(1.dp, OnSurfaceVariant.copy(alpha = 0.3f), MaterialTheme.shapes.extraLarge)
+                        .clickable {
+                            onCopyLink()
+                            onDismiss()
+                        },
                 contentAlignment = Alignment.Center,
             ) {
                 Row(
@@ -513,14 +528,21 @@ private fun TorrentDetailSheet(
 }
 
 @Composable
-private fun MetaItem(icon: String, value: String, color: Color = OnSurfaceVariant) {
+private fun MetaItem(
+    icon: String,
+    value: String,
+    color: Color = OnSurfaceVariant,
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(icon, style = MaterialTheme.typography.bodySmall)
         Text(value, style = MaterialTheme.typography.bodySmall, color = color, fontWeight = FontWeight.Medium)
     }
 }
 
-private fun openMagnet(context: Context, magnetLink: String) {
+private fun openMagnet(
+    context: Context,
+    magnetLink: String,
+) {
     try {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(magnetLink))
         context.startActivity(intent)
@@ -529,7 +551,10 @@ private fun openMagnet(context: Context, magnetLink: String) {
     }
 }
 
-private fun copyMagnet(context: Context, magnetLink: String) {
+private fun copyMagnet(
+    context: Context,
+    magnetLink: String,
+) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText("Magnet Link", magnetLink))
     Toast.makeText(context, "Magnet link copied", Toast.LENGTH_SHORT).show()

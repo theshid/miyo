@@ -19,11 +19,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * stale number.
  */
 object MangaChapterCountCache {
-
     private val _counts = MutableStateFlow<Map<Int, Int>>(emptyMap())
     val counts: StateFlow<Map<Int, Int>> = _counts.asStateFlow()
 
-    fun put(mediaId: Int, count: Int) {
+    fun put(
+        mediaId: Int,
+        count: Int,
+    ) {
         if (count <= 0) return
         _counts.value = _counts.value + (mediaId to count)
     }

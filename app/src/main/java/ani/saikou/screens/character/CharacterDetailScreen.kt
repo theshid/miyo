@@ -25,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,17 +39,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.domain.model.Media
 import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.Secondary
 import ani.saikou.ui.theme.SurfaceContainer
 import coil.compose.AsyncImage
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun CharacterDetailScreen(
@@ -76,9 +75,10 @@ fun CharacterDetailScreen(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background),
         contentPadding = PaddingValues(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -86,9 +86,10 @@ fun CharacterDetailScreen(
         // ── Banner Header ────────────────────────────────────
         item(span = { GridItemSpan(2) }) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(320.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(320.dp),
             ) {
                 AsyncImage(
                     model = character.image,
@@ -97,24 +98,27 @@ fun CharacterDetailScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Background.copy(alpha = 0.7f),
-                                    Background,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors =
+                                        listOf(
+                                            Color.Transparent,
+                                            Background.copy(alpha = 0.7f),
+                                            Background,
+                                        ),
+                                    startY = 120f,
                                 ),
-                                startY = 120f,
-                            )
-                        ),
+                            ),
                 )
                 IconButton(
                     onClick = onBack,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp),
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = OnSurface)
                 }
@@ -162,17 +166,22 @@ fun CharacterDetailScreen(
                     )
                     var expanded by remember { mutableStateOf(false) }
                     Text(
-                        text = biography
-                            .replace("~!", "").replace("!~", "")
-                            .replace("__", "").replace("**", "")
-                            .replace("<br>", "\n").replace(Regex("<[^>]*>"), ""),
+                        text =
+                            biography
+                                .replace("~!", "")
+                                .replace("!~", "")
+                                .replace("__", "")
+                                .replace("**", "")
+                                .replace("<br>", "\n")
+                                .replace(Regex("<[^>]*>"), ""),
                         style = MaterialTheme.typography.bodyMedium,
                         color = OnSurfaceVariant,
                         maxLines = if (expanded) Int.MAX_VALUE else 4,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .animateContentSize()
-                            .clickable { expanded = !expanded },
+                        modifier =
+                            Modifier
+                                .animateContentSize()
+                                .clickable { expanded = !expanded },
                     )
                 }
 
@@ -197,17 +206,21 @@ fun CharacterDetailScreen(
             AppearsInCard(
                 media = media,
                 onClick = { onNavigateToMedia(media.id) },
-                modifier = Modifier.padding(
-                    start = if (character.media.indexOf(media) % 2 == 0) 16.dp else 0.dp,
-                    end = if (character.media.indexOf(media) % 2 == 1) 16.dp else 0.dp,
-                ),
+                modifier =
+                    Modifier.padding(
+                        start = if (character.media.indexOf(media) % 2 == 0) 16.dp else 0.dp,
+                        end = if (character.media.indexOf(media) % 2 == 1) 16.dp else 0.dp,
+                    ),
             )
         }
     }
 }
 
 @Composable
-private fun StatItem(label: String, value: String) {
+private fun StatItem(
+    label: String,
+    value: String,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
@@ -230,17 +243,19 @@ private fun AppearsInCard(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(SurfaceContainer),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(SurfaceContainer),
         ) {
             AsyncImage(
                 model = media.banner ?: media.cover,
@@ -249,15 +264,16 @@ private fun AppearsInCard(
                 modifier = Modifier.fillMaxSize(),
             )
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, SurfaceContainer.copy(alpha = 0.9f))
-                        )
-                    ),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, SurfaceContainer.copy(alpha = 0.9f)),
+                            ),
+                        ),
             )
             Text(
                 text = media.displayTitle,
@@ -266,9 +282,10 @@ private fun AppearsInCard(
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(8.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp),
             )
         }
     }

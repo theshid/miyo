@@ -22,26 +22,31 @@ fun GenreChip(
     onClick: () -> Unit = {},
 ) {
     val shape = MaterialTheme.shapes.extraSmall
-    val bgColor = if (selected) {
-        ani.saikou.ui.theme.Primary.copy(alpha = 0.15f)
-    } else {
-        SurfaceVariant.copy(alpha = 0.5f)
-    }
-    val borderColor = if (selected) {
-        ani.saikou.ui.theme.Primary.copy(alpha = 0.5f)
-    } else {
-        GhostBorder
-    }
+    val bgColor =
+        if (selected) {
+            ani.saikou.ui.theme.Primary
+                .copy(alpha = 0.15f)
+        } else {
+            SurfaceVariant.copy(alpha = 0.5f)
+        }
+    val borderColor =
+        if (selected) {
+            ani.saikou.ui.theme.Primary
+                .copy(alpha = 0.5f)
+        } else {
+            GhostBorder
+        }
 
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall,
         color = if (selected) ani.saikou.ui.theme.Primary else OnSurface,
-        modifier = modifier
-            .clip(shape)
-            .background(bgColor)
-            .border(1.dp, borderColor, shape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier =
+            modifier
+                .clip(shape)
+                .background(bgColor)
+                .border(1.dp, borderColor, shape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
     )
 }

@@ -11,7 +11,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import ani.saikou.ui.theme.Primary
 
@@ -37,8 +36,11 @@ fun MarkdownText(
     )
 }
 
-private fun parseMarkdown(text: String, defaultColor: Color): AnnotatedString {
-    return buildAnnotatedString {
+private fun parseMarkdown(
+    text: String,
+    defaultColor: Color,
+): AnnotatedString =
+    buildAnnotatedString {
         val lines = text.split("\n")
         lines.forEachIndexed { index, line ->
             val trimmed = line.trim()
@@ -72,9 +74,11 @@ private fun parseMarkdown(text: String, defaultColor: Color): AnnotatedString {
             if (index < lines.lastIndex) append("\n")
         }
     }
-}
 
-private fun AnnotatedString.Builder.appendInlineFormatted(text: String, defaultColor: Color) {
+private fun AnnotatedString.Builder.appendInlineFormatted(
+    text: String,
+    defaultColor: Color,
+) {
     var i = 0
     while (i < text.length) {
         when {
@@ -95,10 +99,12 @@ private fun AnnotatedString.Builder.appendInlineFormatted(text: String, defaultC
             text[i] == '`' -> {
                 val end = text.indexOf('`', i + 1)
                 if (end != -1) {
-                    withStyle(SpanStyle(
-                        fontWeight = FontWeight.Medium,
-                        color = Primary,
-                    )) {
+                    withStyle(
+                        SpanStyle(
+                            fontWeight = FontWeight.Medium,
+                            color = Primary,
+                        ),
+                    ) {
                         append(text.substring(i + 1, end))
                     }
                     i = end + 1

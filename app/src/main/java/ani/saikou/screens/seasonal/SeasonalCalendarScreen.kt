@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -35,6 +34,7 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,9 +44,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.SectionHeader
 import ani.saikou.domain.model.AiringEntry
@@ -55,8 +53,8 @@ import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.SurfaceContainerHigh
 import coil.compose.AsyncImage
+import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -70,15 +68,17 @@ fun SeasonalCalendarScreen(
     val state by viewModel.uiState.collectAsState()
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background),
     ) {
         // ── Top bar ──────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 48.dp, start = 4.dp, end = 16.dp, bottom = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 48.dp, start = 4.dp, end = 16.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
@@ -124,7 +124,7 @@ fun SeasonalCalendarScreen(
                     selected = index == selectedIndex,
                     onClick = {
                         viewModel.selectTab(
-                            if (index == 0) CalendarTab.SEASONAL else CalendarTab.SCHEDULE
+                            if (index == 0) CalendarTab.SEASONAL else CalendarTab.SCHEDULE,
                         )
                     },
                     text = {
@@ -147,16 +147,18 @@ fun SeasonalCalendarScreen(
             }
         } else {
             when (state.selectedTab) {
-                CalendarTab.SEASONAL -> SeasonalGrid(
-                    anime = state.seasonalAnime,
-                    onItemClick = onNavigateToMedia,
-                    onLoadMore = viewModel::loadMore,
-                )
-                CalendarTab.SCHEDULE -> WeeklySchedule(
-                    schedule = state.weeklySchedule,
-                    weekDayLabels = state.weekDayLabels,
-                    onItemClick = onNavigateToMedia,
-                )
+                CalendarTab.SEASONAL ->
+                    SeasonalGrid(
+                        anime = state.seasonalAnime,
+                        onItemClick = onNavigateToMedia,
+                        onLoadMore = viewModel::loadMore,
+                    )
+                CalendarTab.SCHEDULE ->
+                    WeeklySchedule(
+                        schedule = state.weeklySchedule,
+                        weekDayLabels = state.weekDayLabels,
+                        onItemClick = onNavigateToMedia,
+                    )
             }
         }
     }
@@ -262,17 +264,19 @@ private fun SeasonalAnimeCard(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         // Poster
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp)
-                .clip(RoundedCornerShape(8.dp)),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .clip(RoundedCornerShape(8.dp)),
         ) {
             AsyncImage(
                 model = media.cover,
@@ -284,14 +288,14 @@ private fun SeasonalAnimeCard(
             // Score badge
             media.meanScore?.takeIf { it > 0 }?.let { score ->
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                        .background(
-                            Color.Black.copy(alpha = 0.7f),
-                            RoundedCornerShape(4.dp),
-                        )
-                        .padding(horizontal = 5.dp, vertical = 2.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                            .background(
+                                Color.Black.copy(alpha = 0.7f),
+                                RoundedCornerShape(4.dp),
+                            ).padding(horizontal = 5.dp, vertical = 2.dp),
                 ) {
                     Text(
                         text = "★ ${score / 10.0}",
@@ -304,11 +308,12 @@ private fun SeasonalAnimeCard(
             // Status badge (airing, finished, etc.)
             if (media.isOngoing) {
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(4.dp)
-                        .background(Primary.copy(alpha = 0.9f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 5.dp, vertical = 2.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(4.dp)
+                            .background(Primary.copy(alpha = 0.9f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 2.dp),
                 ) {
                     Text(
                         text = "AIRING",
@@ -332,11 +337,12 @@ private fun SeasonalAnimeCard(
 
         // Episode count
         val epCount = media.totalEpisodes
-        val epText = when {
-            epCount != null && epCount > 0 -> "$epCount eps"
-            media.isOngoing -> "Airing"
-            else -> null
-        }
+        val epText =
+            when {
+                epCount != null && epCount > 0 -> "$epCount eps"
+                media.isOngoing -> "Airing"
+                else -> null
+            }
         if (epText != null) {
             Text(
                 text = epText,
@@ -424,18 +430,20 @@ private fun ScheduleCard(
     val timeStr = timeFormat.format(Date(entry.airingAt * 1000))
 
     Column(
-        modifier = Modifier
-            .width(120.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .width(120.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onClick),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         // Poster
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(160.dp)
-                .clip(RoundedCornerShape(8.dp)),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .clip(RoundedCornerShape(8.dp)),
         ) {
             AsyncImage(
                 model = entry.media.cover,
@@ -446,14 +454,14 @@ private fun ScheduleCard(
 
             // Episode + time badge
             Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(4.dp)
-                    .background(
-                        Primary.copy(alpha = 0.9f),
-                        RoundedCornerShape(4.dp),
-                    )
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(4.dp)
+                        .background(
+                            Primary.copy(alpha = 0.9f),
+                            RoundedCornerShape(4.dp),
+                        ).padding(horizontal = 6.dp, vertical = 2.dp),
             ) {
                 Text(
                     text = "Ep ${entry.episode}",

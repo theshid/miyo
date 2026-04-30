@@ -31,6 +31,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,9 +46,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
 import ani.saikou.domain.model.Download
@@ -59,6 +58,7 @@ import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.SurfaceContainer
 import ani.saikou.ui.theme.SurfaceContainerHigh
 import coil.compose.AsyncImage
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun DownloadsScreen(
@@ -77,9 +77,10 @@ fun DownloadsScreen(
             // ── Top Bar ──────────────────────────────────────
             item {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 4.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 4.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
@@ -119,15 +120,19 @@ fun DownloadsScreen(
                             color = OnSurfaceVariant,
                         )
                     }
-                    val usedFraction = if (state.freeSpace + state.totalStorageUsed > 0)
-                        state.totalStorageUsed.toFloat() / (state.freeSpace + state.totalStorageUsed)
-                    else 0f
+                    val usedFraction =
+                        if (state.freeSpace + state.totalStorageUsed > 0) {
+                            state.totalStorageUsed.toFloat() / (state.freeSpace + state.totalStorageUsed)
+                        } else {
+                            0f
+                        }
                     LinearProgressIndicator(
                         progress = { usedFraction.coerceIn(0f, 1f) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(MaterialTheme.shapes.extraSmall),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(MaterialTheme.shapes.extraSmall),
                         color = Primary,
                         trackColor = SurfaceContainerHigh,
                         strokeCap = StrokeCap.Round,
@@ -139,13 +144,14 @@ fun DownloadsScreen(
             if (state.readChapterCount > 0) {
                 item {
                     Row(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(SurfaceContainerHigh)
-                            .clickable { showCleanupDialog = true }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        modifier =
+                            Modifier
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(SurfaceContainerHigh)
+                                .clickable { showCleanupDialog = true }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
@@ -189,8 +195,10 @@ fun DownloadsScreen(
             }
 
             // ── Active Downloads ─────────────────────────────
-            val activeDownloads = state.mangaList.flatMap { it.chapters }
-                .filter { it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.QUEUED }
+            val activeDownloads =
+                state.mangaList
+                    .flatMap { it.chapters }
+                    .filter { it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.QUEUED }
 
             if (activeDownloads.isNotEmpty()) {
                 item {
@@ -206,16 +214,21 @@ fun DownloadsScreen(
                 items(activeDownloads, key = { "active_${it.id}" }) { download ->
                     ActiveDownloadCard(
                         download = download,
-                        coverUrl = state.mangaList.find { it.manga.mangaId == download.mangaId }?.manga?.coverUrl,
+                        coverUrl =
+                            state.mangaList
+                                .find { it.manga.mangaId == download.mangaId }
+                                ?.manga
+                                ?.coverUrl,
                         onPause = { viewModel.pauseDownload(download.id) },
                     )
                 }
             }
 
             // ── Library Storage ──────────────────────────────
-            val completedManga = state.mangaList.filter { group ->
-                group.chapters.any { it.status == DownloadStatus.COMPLETED }
-            }
+            val completedManga =
+                state.mangaList.filter { group ->
+                    group.chapters.any { it.status == DownloadStatus.COMPLETED }
+                }
 
             if (completedManga.isNotEmpty()) {
                 item {
@@ -265,11 +278,12 @@ fun DownloadsScreen(
         // ── Delete Selected Bottom Bar ───────────────────────
         if (selectedIds.isNotEmpty()) {
             Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(SurfaceContainer)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(SurfaceContainer)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -327,12 +341,13 @@ private fun ActiveDownloadCard(
     onPause: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .background(SurfaceContainer)
-            .padding(12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(SurfaceContainer)
+                .padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -342,9 +357,10 @@ private fun ActiveDownloadCard(
                 model = coverUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(MaterialTheme.shapes.small),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.small),
             )
             val progress = if (download.totalPages > 0) download.downloadedPages.toFloat() / download.totalPages else 0f
             CircularProgressIndicator(
@@ -377,9 +393,10 @@ private fun ActiveDownloadCard(
 
         IconButton(
             onClick = onPause,
-            modifier = Modifier
-                .size(36.dp)
-                .background(SurfaceContainerHigh, CircleShape),
+            modifier =
+                Modifier
+                    .size(36.dp)
+                    .background(SurfaceContainerHigh, CircleShape),
         ) {
             Icon(Icons.Default.Pause, "Pause", tint = OnSurface, modifier = Modifier.size(18.dp))
         }
@@ -396,19 +413,21 @@ private fun MangaGroupCard(
     val completedChapters = mangaGroup.chapters.filter { it.status == DownloadStatus.COMPLETED }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .animateContentSize(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .animateContentSize(),
     ) {
         // Manga header
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(SurfaceContainer)
-                .clickable { expanded = !expanded }
-                .padding(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(SurfaceContainer)
+                    .clickable { expanded = !expanded }
+                    .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -416,9 +435,10 @@ private fun MangaGroupCard(
                 model = mangaGroup.manga.coverUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(40.dp, 56.dp)
-                    .clip(MaterialTheme.shapes.small),
+                modifier =
+                    Modifier
+                        .size(40.dp, 56.dp)
+                        .clip(MaterialTheme.shapes.small),
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -449,13 +469,14 @@ private fun MangaGroupCard(
             completedChapters.forEach { chapter ->
                 val isSelected = chapter.id in selectedIds
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 8.dp)
-                        .clip(MaterialTheme.shapes.small)
-                        .background(if (isSelected) Primary.copy(alpha = 0.1f) else Color.Transparent)
-                        .clickable { onToggleSelect(chapter.id) }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 8.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(if (isSelected) Primary.copy(alpha = 0.1f) else Color.Transparent)
+                            .clickable { onToggleSelect(chapter.id) }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -485,11 +506,10 @@ private fun MangaGroupCard(
     }
 }
 
-private fun formatSize(bytes: Long): String {
-    return when {
+private fun formatSize(bytes: Long): String =
+    when {
         bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
         bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
         bytes >= 1024 -> "%.1f KB".format(bytes / 1024.0)
         else -> "$bytes B"
     }
-}

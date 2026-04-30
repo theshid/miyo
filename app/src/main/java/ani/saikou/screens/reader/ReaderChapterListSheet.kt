@@ -1,6 +1,5 @@
 package ani.saikou.screens.reader
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,9 +65,10 @@ fun ReaderChapterListSheet(
         Column(modifier = Modifier.fillMaxHeight(0.85f)) {
             // Header
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -80,12 +80,13 @@ fun ReaderChapterListSheet(
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = when {
-                            isLoading && chapterNumbers.isNotEmpty() ->
-                                "${chapterNumbers.size} cached · fetching more…"
-                            isLoading -> "Fetching chapters…"
-                            else -> "${chapterNumbers.size} available"
-                        },
+                        text =
+                            when {
+                                isLoading && chapterNumbers.isNotEmpty() ->
+                                    "${chapterNumbers.size} cached · fetching more…"
+                                isLoading -> "Fetching chapters…"
+                                else -> "${chapterNumbers.size} available"
+                            },
                         style = MaterialTheme.typography.labelSmall,
                         color = OnSurfaceVariant,
                     )
@@ -99,9 +100,10 @@ fun ReaderChapterListSheet(
 
             if (chapterNumbers.isEmpty()) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(48.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(48.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (isLoading) {
@@ -121,10 +123,11 @@ fun ReaderChapterListSheet(
             val bucketSize = 100
             val totalBuckets = (chapterNumbers.size + bucketSize - 1) / bucketSize
             // Start on the bucket containing the current chapter
-            val initialBucket = remember(chapterNumbers, currentChapterNumber) {
-                val idx = chapterNumbers.indexOf(currentChapterNumber).takeIf { it >= 0 } ?: 0
-                (idx / bucketSize).coerceAtLeast(0)
-            }
+            val initialBucket =
+                remember(chapterNumbers, currentChapterNumber) {
+                    val idx = chapterNumbers.indexOf(currentChapterNumber).takeIf { it >= 0 } ?: 0
+                    (idx / bucketSize).coerceAtLeast(0)
+                }
             var selectedBucket by remember(chapterNumbers, currentChapterNumber) {
                 mutableIntStateOf(initialBucket)
             }

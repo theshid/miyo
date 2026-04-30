@@ -13,7 +13,9 @@ sealed class Screen(
 ) {
     // ── Bottom Nav Screens ────────────────────────────────────
     data object Anime : Screen("anime", "Anime", Icons.Default.PlayArrow)
+
     data object Home : Screen("home", "Home", Icons.Default.Home)
+
     data object Manga : Screen("manga", "Manga", Icons.Default.Book)
 
     // ── News ──────────────────────────────────────────────────
@@ -36,7 +38,11 @@ sealed class Screen(
 
     // ── Search & Lists ────────────────────────────────────────
     data object Search : Screen("search?genre={genre}&type={type}&sort={sort}") {
-        fun createRoute(genre: String? = null, type: String? = null, sort: String? = null): String {
+        fun createRoute(
+            genre: String? = null,
+            type: String? = null,
+            sort: String? = null,
+        ): String {
             val base = "search"
             val params = mutableListOf<String>()
             if (genre != null) params.add("genre=$genre")
@@ -52,14 +58,22 @@ sealed class Screen(
 
     // ── Players / Readers ─────────────────────────────────────
     data object VideoPlayer : Screen("player/{mediaId}/{episodeNum}?sourceSlug={sourceSlug}") {
-        fun createRoute(mediaId: Int, episodeNum: Int, sourceSlug: String? = null): String {
+        fun createRoute(
+            mediaId: Int,
+            episodeNum: Int,
+            sourceSlug: String? = null,
+        ): String {
             val base = "player/$mediaId/$episodeNum"
             return if (sourceSlug != null) "$base?sourceSlug=$sourceSlug" else base
         }
     }
 
     data object MangaReader : Screen("reader/{mediaId}/{chapterNum}?sourceId={sourceId}") {
-        fun createRoute(mediaId: Int, chapterNum: Int, sourceId: String? = null): String {
+        fun createRoute(
+            mediaId: Int,
+            chapterNum: Int,
+            sourceId: String? = null,
+        ): String {
             val base = "reader/$mediaId/$chapterNum"
             return if (sourceId != null) "$base?sourceId=$sourceId" else base
         }
@@ -70,8 +84,7 @@ sealed class Screen(
 
     // ── Torrent Search ──────────────────────────────────────────
     data object TorrentSearch : Screen("torrent?query={query}") {
-        fun createRoute(query: String? = null): String =
-            if (query != null) "torrent?query=$query" else "torrent"
+        fun createRoute(query: String? = null): String = if (query != null) "torrent?query=$query" else "torrent"
     }
 
     // ── Seasonal Calendar ─────────────────────────────────────

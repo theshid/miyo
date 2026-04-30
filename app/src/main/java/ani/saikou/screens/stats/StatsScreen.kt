@@ -31,6 +31,7 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -46,13 +47,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.koin.androidx.compose.koinViewModel
 import ani.saikou.components.GlassCard
-import ani.saikou.domain.model.AnimeStats
 import ani.saikou.domain.model.GenreStat
-import ani.saikou.domain.model.MangaStats
 import ani.saikou.domain.model.ScoreStat
 import ani.saikou.domain.model.StatusStat
 import ani.saikou.domain.model.UserStats
@@ -64,9 +61,9 @@ import ani.saikou.ui.theme.Secondary
 import ani.saikou.ui.theme.SurfaceContainerHigh
 import ani.saikou.ui.theme.Tertiary
 import ani.saikou.util.ShareCardGenerator
-import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun StatsScreen(
@@ -78,15 +75,17 @@ fun StatsScreen(
     val scope = rememberCoroutineScope()
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background),
     ) {
         // ── Top bar ──────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 48.dp, start = 4.dp, end = 8.dp, bottom = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 48.dp, start = 4.dp, end = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
@@ -346,13 +345,14 @@ private fun SectionTitle(text: String) {
 @Composable
 private fun StatusBreakdown(statuses: List<StatusStat>) {
     val total = statuses.sumOf { it.count }.coerceAtLeast(1)
-    val colors = listOf(
-        Color(0xFF4CAF50), // Watching/Reading
-        Color(0xFF2196F3), // Completed
-        Color(0xFFFF9800), // Paused
-        Color(0xFFE91E63), // Dropped
-        Color(0xFF9C27B0), // Planning
-    )
+    val colors =
+        listOf(
+            Color(0xFF4CAF50), // Watching/Reading
+            Color(0xFF2196F3), // Completed
+            Color(0xFFFF9800), // Paused
+            Color(0xFFE91E63), // Dropped
+            Color(0xFF9C27B0), // Planning
+        )
 
     GlassCard {
         Column(
@@ -361,19 +361,21 @@ private fun StatusBreakdown(statuses: List<StatusStat>) {
         ) {
             // Stacked bar
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(12.dp)
-                    .clip(RoundedCornerShape(6.dp)),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(6.dp)),
             ) {
                 statuses.forEachIndexed { index, status ->
                     val fraction = status.count.toFloat() / total
                     if (fraction > 0f) {
                         Box(
-                            modifier = Modifier
-                                .weight(fraction)
-                                .fillMaxHeight()
-                                .background(colors.getOrElse(index) { OnSurfaceVariant }),
+                            modifier =
+                                Modifier
+                                    .weight(fraction)
+                                    .fillMaxHeight()
+                                    .background(colors.getOrElse(index) { OnSurfaceVariant }),
                         )
                     }
                 }
@@ -386,10 +388,11 @@ private fun StatusBreakdown(statuses: List<StatusStat>) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(colors.getOrElse(index) { OnSurfaceVariant }),
+                        modifier =
+                            Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(colors.getOrElse(index) { OnSurfaceVariant }),
                     )
                     Text(
                         text = formatStatus(status.status),
@@ -430,25 +433,28 @@ private fun GenreChart(genres: List<GenreStat>) {
                         modifier = Modifier.width(80.dp),
                     )
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(16.dp),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(16.dp),
                     ) {
                         // Track
                         Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(SurfaceContainerHigh),
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(SurfaceContainerHigh),
                         )
                         // Fill
                         val fraction = genre.count.toFloat() / maxCount
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth(fraction)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Primary),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth(fraction)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Primary),
                         )
                     }
                     Text(
@@ -470,9 +476,10 @@ private fun ScoreHistogram(scores: List<ScoreStat>) {
     GlassCard {
         Column(modifier = Modifier.padding(16.dp)) {
             Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(140.dp),
             ) {
                 val barWidth = size.width / 10f
                 val gap = 4.dp.toPx()
@@ -521,29 +528,37 @@ private fun formatWatchTime(minutes: Int): String {
     }
 }
 
-private fun formatStatus(status: String): String = when (status) {
-    "CURRENT" -> "Watching"
-    "PLANNING" -> "Planning"
-    "COMPLETED" -> "Completed"
-    "DROPPED" -> "Dropped"
-    "PAUSED" -> "Paused"
-    "REPEATING" -> "Rewatching"
-    else -> status.lowercase().replaceFirstChar { it.uppercase() }
-}
+private fun formatStatus(status: String): String =
+    when (status) {
+        "CURRENT" -> "Watching"
+        "PLANNING" -> "Planning"
+        "COMPLETED" -> "Completed"
+        "DROPPED" -> "Dropped"
+        "PAUSED" -> "Paused"
+        "REPEATING" -> "Rewatching"
+        else -> status.lowercase().replaceFirstChar { it.uppercase() }
+    }
 
-private suspend fun shareStats(context: Context, stats: UserStats) {
-    val bitmap = ShareCardGenerator.generateStatsCard(
-        context = context,
-        userName = stats.userName,
-        avatarUrl = stats.avatar,
-        episodesWatched = stats.anime.episodesWatched,
-        minutesWatched = stats.anime.minutesWatched,
-        animeCount = stats.anime.count,
-        meanScore = stats.anime.meanScore,
-        topGenres = stats.anime.genres.take(5).map { it.genre },
-        chaptersRead = stats.manga.chaptersRead,
-        mangaCount = stats.manga.count,
-    )
+private suspend fun shareStats(
+    context: Context,
+    stats: UserStats,
+) {
+    val bitmap =
+        ShareCardGenerator.generateStatsCard(
+            context = context,
+            userName = stats.userName,
+            avatarUrl = stats.avatar,
+            episodesWatched = stats.anime.episodesWatched,
+            minutesWatched = stats.anime.minutesWatched,
+            animeCount = stats.anime.count,
+            meanScore = stats.anime.meanScore,
+            topGenres =
+                stats.anime.genres
+                    .take(5)
+                    .map { it.genre },
+            chaptersRead = stats.manga.chaptersRead,
+            mangaCount = stats.manga.count,
+        )
     val uri = ShareCardGenerator.saveToCacheAndGetUri(context, bitmap, "miyo_stats.png")
     ShareCardGenerator.shareImage(context, uri, "My anime stats on Miyo")
 }

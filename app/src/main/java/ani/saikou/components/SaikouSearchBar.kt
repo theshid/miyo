@@ -30,13 +30,14 @@ fun SaikouSearchBar(
     val shape = MaterialTheme.shapes.extraLarge
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(SurfaceVariant.copy(alpha = 0.4f))
-            .border(1.dp, GhostBorder, shape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(SurfaceVariant.copy(alpha = 0.4f))
+                .border(1.dp, GhostBorder, shape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(

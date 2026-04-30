@@ -32,7 +32,10 @@ interface MangaSourceRepository {
      *   MangaDex's catalog is grossly behind AniList's count. Pass the
      *   `Media.totalChapters` for this title; pass null when unknown.
      */
-    suspend fun resolveChapterCount(title: String, anilistTotal: Int? = null): Int?
+    suspend fun resolveChapterCount(
+        title: String,
+        anilistTotal: Int? = null,
+    ): Int?
 
     /**
      * Pick the most-complete source for [title] and return its chapter

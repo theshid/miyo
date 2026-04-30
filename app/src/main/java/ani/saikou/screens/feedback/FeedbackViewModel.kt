@@ -10,7 +10,6 @@ import kotlinx.coroutines.launch
 class FeedbackViewModel(
     private val service: FeedbackService,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(FeedbackUiState())
     val uiState: StateFlow<FeedbackUiState> = _uiState
 

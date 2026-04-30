@@ -58,47 +58,51 @@ data class TourStep(
     val description: String,
 )
 
-val DefaultHomeTourSteps = listOf(
-    TourStep(
-        target = TourTarget.STATS,
-        title = "Your stats",
-        description = "Episodes you've watched and chapters you've read locally — counted as you go.",
-    ),
-    TourStep(
-        target = TourTarget.ACTIVITY,
-        title = "Activity calendar",
-        description = "Every day you read or watch lights up. Days with airing episodes show the cover — tap to see what's coming.",
-    ),
-    TourStep(
-        target = TourTarget.ACTIONS,
-        title = "Quick actions",
-        description = "Jump to your anime list, manga list, news, downloads, the calendar and more.",
-    ),
-    TourStep(
-        target = TourTarget.AIRING,
-        title = "Airing soon",
-        description = "Upcoming episodes for shows on your CURRENT list, sorted by what's airing next.",
-    ),
-    TourStep(
-        target = TourTarget.CONTINUE_WATCHING,
-        title = "Continue watching",
-        description = "Pick up the show or chapter you last left off — synced from your watch and read history.",
-    ),
-    TourStep(
-        target = TourTarget.FEEDBACK,
-        title = "Send us feedback",
-        description = "Found a bug or have an idea? Tap here to send a quick note — it lands directly in our team chat.",
-    ),
-)
+val DefaultHomeTourSteps =
+    listOf(
+        TourStep(
+            target = TourTarget.STATS,
+            title = "Your stats",
+            description = "Episodes you've watched and chapters you've read locally — counted as you go.",
+        ),
+        TourStep(
+            target = TourTarget.ACTIVITY,
+            title = "Activity calendar",
+            description = "Every day you read or watch lights up. Days with airing episodes show the cover — tap to see what's coming.",
+        ),
+        TourStep(
+            target = TourTarget.ACTIONS,
+            title = "Quick actions",
+            description = "Jump to your anime list, manga list, news, downloads, the calendar and more.",
+        ),
+        TourStep(
+            target = TourTarget.AIRING,
+            title = "Airing soon",
+            description = "Upcoming episodes for shows on your CURRENT list, sorted by what's airing next.",
+        ),
+        TourStep(
+            target = TourTarget.CONTINUE_WATCHING,
+            title = "Continue watching",
+            description = "Pick up the show or chapter you last left off — synced from your watch and read history.",
+        ),
+        TourStep(
+            target = TourTarget.FEEDBACK,
+            title = "Send us feedback",
+            description = "Found a bug or have an idea? Tap here to send a quick note — it lands directly in our team chat.",
+        ),
+    )
 
 /** Reader-specific tour, fired the first time a user opens a chapter. */
-val DefaultReaderTourSteps = listOf(
-    TourStep(
-        target = TourTarget.READER_CHAPTERS,
-        title = "Browse and download chapters",
-        description = "Tap here to see every chapter in the series. From the list you can jump around or download chapters for offline reading.",
-    ),
-)
+val DefaultReaderTourSteps =
+    listOf(
+        TourStep(
+            target = TourTarget.READER_CHAPTERS,
+            title = "Browse and download chapters",
+            description =
+                "Tap here to see every chapter in the series. " +
+                    "From the list you can jump around or download chapters for offline reading.",
+        ),
+    )
 
 class TourState {
     /**
@@ -112,7 +116,10 @@ class TourState {
 @Composable
 fun rememberTourState(): TourState = remember { TourState() }
 
-fun Modifier.tourTarget(state: TourState, target: TourTarget): Modifier =
+fun Modifier.tourTarget(
+    state: TourState,
+    target: TourTarget,
+): Modifier =
     this.onGloballyPositioned { c ->
         if (c.isAttached) state.bounds[target] = c.boundsInRoot()
     }
@@ -126,10 +133,11 @@ fun TourOverlay(
     onComplete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val step = steps.getOrNull(currentStep) ?: run {
-        onComplete()
-        return
-    }
+    val step =
+        steps.getOrNull(currentStep) ?: run {
+            onComplete()
+            return
+        }
     var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
@@ -141,27 +149,30 @@ fun TourOverlay(
     val cardAtTop = targetBounds != null && targetBounds.top > screenHeightPx * 0.55f
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .onGloballyPositioned { overlayOrigin = it.positionInRoot() }
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {},
-            ),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .onGloballyPositioned { overlayOrigin = it.positionInRoot() }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                ),
     ) {
         if (targetBounds != null && targetBounds.width > 0 && targetBounds.height > 0) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val dim = Color.Black.copy(alpha = 0.78f)
                 val pad = 8.dp.toPx()
-                val tl = Offset(
-                    (targetBounds.left - pad).coerceAtLeast(0f),
-                    (targetBounds.top - pad).coerceAtLeast(0f),
-                )
-                val br = Offset(
-                    (targetBounds.right + pad).coerceAtMost(size.width),
-                    (targetBounds.bottom + pad).coerceAtMost(size.height),
-                )
+                val tl =
+                    Offset(
+                        (targetBounds.left - pad).coerceAtLeast(0f),
+                        (targetBounds.top - pad).coerceAtLeast(0f),
+                    )
+                val br =
+                    Offset(
+                        (targetBounds.right + pad).coerceAtMost(size.width),
+                        (targetBounds.bottom + pad).coerceAtMost(size.height),
+                    )
                 if (tl.y > 0f) {
                     drawRect(dim, topLeft = Offset(0f, 0f), size = Size(size.width, tl.y))
                 }
@@ -184,18 +195,20 @@ fun TourOverlay(
             }
         } else {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.78f)),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.78f)),
             )
         }
 
         Box(
-            modifier = Modifier
-                .align(if (cardAtTop) Alignment.TopCenter else Alignment.BottomCenter)
-                .padding(horizontal = 16.dp)
-                .padding(top = if (cardAtTop) 32.dp else 0.dp)
-                .padding(bottom = if (cardAtTop) 0.dp else 32.dp),
+            modifier =
+                Modifier
+                    .align(if (cardAtTop) Alignment.TopCenter else Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp)
+                    .padding(top = if (cardAtTop) 32.dp else 0.dp)
+                    .padding(bottom = if (cardAtTop) 0.dp else 32.dp),
         ) {
             TooltipCard(
                 step = step,
@@ -203,8 +216,11 @@ fun TourOverlay(
                 totalSteps = steps.size,
                 onSkip = onComplete,
                 onNext = {
-                    if (currentStep >= steps.lastIndex) onComplete()
-                    else onStepChanged(currentStep + 1)
+                    if (currentStep >= steps.lastIndex) {
+                        onComplete()
+                    } else {
+                        onStepChanged(currentStep + 1)
+                    }
                 },
             )
         }
@@ -220,11 +236,12 @@ private fun TooltipCard(
     onNext: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(SurfaceContainerHigh)
-            .padding(20.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(SurfaceContainerHigh)
+                .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
@@ -247,10 +264,11 @@ private fun TooltipCard(
             )
             Spacer(Modifier.weight(1f))
             Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onSkip)
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onSkip)
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
                     text = "Skip",
@@ -260,11 +278,12 @@ private fun TooltipCard(
             }
             Spacer(Modifier.padding(horizontal = 4.dp))
             Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Primary)
-                    .clickable(onClick = onNext)
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Primary)
+                        .clickable(onClick = onNext)
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
             ) {
                 Text(
                     text = if (stepNumber >= totalSteps) "Done" else "Next",

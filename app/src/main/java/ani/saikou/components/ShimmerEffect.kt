@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -33,34 +32,36 @@ import ani.saikou.ui.theme.SurfaceContainerHigh
 @Composable
 fun shimmerBrush(): Brush {
     val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim = transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "shimmer_translate",
-    )
+    val translateAnim =
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1000f,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = 1200, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+            label = "shimmer_translate",
+        )
     return Brush.linearGradient(
-        colors = listOf(
-            SurfaceContainer,
-            SurfaceContainerHigh,
-            SurfaceContainer,
-        ),
+        colors =
+            listOf(
+                SurfaceContainer,
+                SurfaceContainerHigh,
+                SurfaceContainer,
+            ),
         start = Offset(translateAnim.value - 200f, 0f),
         end = Offset(translateAnim.value, 0f),
     )
 }
 
 @Composable
-fun ShimmerBox(
-    modifier: Modifier = Modifier,
-) {
+fun ShimmerBox(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .clip(MaterialTheme.shapes.medium)
-            .background(shimmerBrush()),
+        modifier =
+            modifier
+                .clip(MaterialTheme.shapes.medium)
+                .background(shimmerBrush()),
     )
 }
 
@@ -176,7 +177,10 @@ private fun PosterRowShimmer() {
 
 /** Section header (with optional "SEE ALL" hint) + a poster row underneath. */
 @Composable
-private fun SectionShimmer(headerWidth: androidx.compose.ui.unit.Dp, hasSeeAll: Boolean = false) {
+private fun SectionShimmer(
+    headerWidth: androidx.compose.ui.unit.Dp,
+    hasSeeAll: Boolean = false,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),

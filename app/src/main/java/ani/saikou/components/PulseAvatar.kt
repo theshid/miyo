@@ -26,22 +26,24 @@ fun PulseAvatar(
     val gradientBorder = Brush.linearGradient(listOf(Primary, Secondary))
 
     Box(
-        modifier = modifier
-            .size(size + 6.dp)
-            .border(width = 2.dp, brush = gradientBorder, shape = CircleShape)
-            .padding(3.dp)
+        modifier =
+            modifier
+                .size(size + 6.dp)
+                .border(width = 2.dp, brush = gradientBorder, shape = CircleShape)
+                .padding(3.dp),
     ) {
         AsyncImage(
             model = imageUrl,
             contentDescription = "Avatar",
             contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(
-                    ani.saikou.ui.theme.SurfaceContainerHigh,
-                    CircleShape,
-                ),
+            modifier =
+                Modifier
+                    .size(size)
+                    .clip(CircleShape)
+                    .background(
+                        ani.saikou.ui.theme.SurfaceContainerHigh,
+                        CircleShape,
+                    ),
         )
     }
 }

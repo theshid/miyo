@@ -28,14 +28,14 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Brightness6
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +50,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -65,11 +66,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.collectAsState
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
 import ani.saikou.components.TourOverlay
@@ -97,13 +96,14 @@ data class ReaderSettings(
     val suggestDownloads: Boolean = true,
 )
 
-private val backgroundOptions = listOf(
-    Color.Black,
-    Color(0xFF2A2A2A),
-    Color.White,
-    Color(0xFFF5E6C8),
-    Color(0xFFFFF8F0),
-)
+private val backgroundOptions =
+    listOf(
+        Color.Black,
+        Color(0xFF2A2A2A),
+        Color.White,
+        Color(0xFFF5E6C8),
+        Color(0xFFFFF8F0),
+    )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,7 +112,9 @@ fun MangaReaderScreen(
     chapterNum: Int,
     onBack: () -> Unit,
     onNextChapter: ((chapter: Int, sourceId: String?) -> Unit)? = null,
-    viewModel: MangaReaderViewModel = org.koin.androidx.compose.koinViewModel(),
+    viewModel: MangaReaderViewModel =
+        org.koin.androidx.compose
+            .koinViewModel(),
 ) {
     val context = LocalContext.current
     val readerState by viewModel.uiState.collectAsState()
@@ -184,21 +186,24 @@ fun MangaReaderScreen(
     var downloadQueued by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
     val isOnline by connectivity.isConnected.collectAsState(initial = true)
 
-    val atEndOfChapter = !readerState.isLoading &&
-        readerState.error == null &&
-        totalPages > 1 &&
-        currentPage == totalPages &&
-        nextChapterMissing == true
+    val atEndOfChapter =
+        !readerState.isLoading &&
+            readerState.error == null &&
+            totalPages > 1 &&
+            currentPage == totalPages &&
+            nextChapterMissing == true
 
-    val showSuggestionBanner = atEndOfChapter &&
-        settings.suggestDownloads &&
-        !suggestionDismissed &&
-        !downloadQueued &&
-        isOnline
+    val showSuggestionBanner =
+        atEndOfChapter &&
+            settings.suggestDownloads &&
+            !suggestionDismissed &&
+            !downloadQueued &&
+            isOnline
 
-    val showOfflineBanner = atEndOfChapter &&
-        !offlineBannerDismissed &&
-        !isOnline
+    val showOfflineBanner =
+        atEndOfChapter &&
+            !offlineBannerDismissed &&
+            !isOnline
 
     // Kick off the cache check once the user hits the last page. Runs even when
     // download suggestions are off, since the offline banner depends on it too.
@@ -214,7 +219,8 @@ fun MangaReaderScreen(
 
     fun startBatchDownload() {
         viewModel.queueNextChapters(batchSize) {
-            ani.saikou.data.local.downloads.DownloadService.start(context)
+            ani.saikou.data.local.downloads.DownloadService
+                .start(context)
         }
         downloadQueued = true
     }
@@ -239,9 +245,10 @@ fun MangaReaderScreen(
     // Error screen
     if (readerState.error != null) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
             contentAlignment = Alignment.Center,
         ) {
             Column(
@@ -252,9 +259,10 @@ fun MangaReaderScreen(
                 coil.compose.AsyncImage(
                     model = ani.saikou.R.drawable.error_samurai,
                     contentDescription = "Error",
-                    modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .heightIn(max = 320.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(0.7f)
+                            .heightIn(max = 320.dp),
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 )
                 Text(
@@ -265,20 +273,22 @@ fun MangaReaderScreen(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                            .background(SurfaceContainer)
-                            .clickable(onClick = onBack)
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        modifier =
+                            Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .background(SurfaceContainer)
+                                .clickable(onClick = onBack)
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
                     ) {
                         Text("Go Back", color = OnSurface, fontWeight = FontWeight.Medium)
                     }
                     Box(
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.small)
-                            .background(Primary)
-                            .clickable { viewModel.retry() }
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        modifier =
+                            Modifier
+                                .clip(MaterialTheme.shapes.small)
+                                .background(Primary)
+                                .clickable { viewModel.retry() }
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
                     ) {
                         Text("Retry", color = Color.White, fontWeight = FontWeight.Bold)
                     }
@@ -289,42 +299,44 @@ fun MangaReaderScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(settings.background)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) { showOverlay = !showOverlay },
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(settings.background)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { showOverlay = !showOverlay },
     ) {
         // ── Page Content with Pinch-to-Zoom ──────────────────
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        scale = (scale * zoom).coerceIn(0.5f, 5f)
-                        if (scale > 1f) {
-                            offsetX += pan.x
-                            offsetY += pan.y
-                        } else {
-                            offsetX = 0f
-                            offsetY = 0f
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(0.5f, 5f)
+                            if (scale > 1f) {
+                                offsetX += pan.x
+                                offsetY += pan.y
+                            } else {
+                                offsetX = 0f
+                                offsetY = 0f
+                            }
                         }
-                    }
-                }
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = offsetX,
-                    translationY = offsetY,
-                ),
+                    }.graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offsetX,
+                        translationY = offsetY,
+                    ),
         ) {
             // Wrap the parent callback so inner readers keep their simple `(Int) -> Unit`
             // signature but the resolved source id is forwarded.
-            val onNextChapterWithSource: ((Int) -> Unit)? = onNextChapter?.let { cb ->
-                { next -> cb(next, readerState.resolvedSourceId) }
-            }
+            val onNextChapterWithSource: ((Int) -> Unit)? =
+                onNextChapter?.let { cb ->
+                    { next -> cb(next, readerState.resolvedSourceId) }
+                }
             when (settings.mode) {
                 ReadingMode.WEBTOON -> {
                     WebtoonReader(
@@ -370,11 +382,12 @@ fun MangaReaderScreen(
             Box(Modifier.fillMaxSize()) {
                 // Top bar
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.7f))
-                        .padding(horizontal = 8.dp, vertical = 12.dp)
-                        .align(Alignment.TopCenter),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.7f))
+                            .padding(horizontal = 8.dp, vertical = 12.dp)
+                            .align(Alignment.TopCenter),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -411,11 +424,12 @@ fun MangaReaderScreen(
 
                 // Bottom bar: page counter + zoom reset
                 Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.7f))
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.7f))
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -428,7 +442,9 @@ fun MangaReaderScreen(
                     }
                     if (scale != 1f) {
                         GenreChip(text = "Reset Zoom", selected = true, onClick = {
-                            scale = 1f; offsetX = 0f; offsetY = 0f
+                            scale = 1f
+                            offsetX = 0f
+                            offsetY = 0f
                         })
                     }
                     Text(
@@ -518,9 +534,10 @@ fun MangaReaderScreen(
     if (showChapterList) {
         val localOnlyNumbers = chapterDownloadStates.keys
         val parserNumbers = allChapters.map { it.number.toInt() }
-        val mergedNumbers = (parserNumbers + localOnlyNumbers)
-            .toSortedSet()
-            .toList()
+        val mergedNumbers =
+            (parserNumbers + localOnlyNumbers)
+                .toSortedSet()
+                .toList()
         ReaderChapterListSheet(
             currentChapterNumber = chapterNum,
             userProgress = null, // the reader doesn't track AniList progress directly here
@@ -534,7 +551,8 @@ fun MangaReaderScreen(
             },
             onDownloadClick = { ch ->
                 viewModel.queueSingleChapterDownload(ch) {
-                    ani.saikou.data.local.downloads.DownloadService.start(context)
+                    ani.saikou.data.local.downloads.DownloadService
+                        .start(context)
                 }
             },
             onCancelDownloadClick = { ch ->
@@ -586,7 +604,9 @@ private fun WebtoonReader(
     // reliably even when several short webtoon panels share the viewport.
     val currentPageIndex by androidx.compose.runtime.remember {
         androidx.compose.runtime.derivedStateOf {
-            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+            listState.layoutInfo.visibleItemsInfo
+                .lastOrNull()
+                ?.index
                 ?: listState.firstVisibleItemIndex
         }
     }
@@ -599,15 +619,17 @@ private fun WebtoonReader(
         modifier = Modifier.fillMaxSize(),
     ) {
         itemsIndexed(pages) { index, page ->
-            val model = if (page.headers.isNotEmpty()) {
-                coil.request.ImageRequest.Builder(context)
-                    .data(page.imageUrl)
-                    .apply { page.headers.forEach { (k, v) -> addHeader(k, v) } }
-                    .crossfade(true)
-                    .build()
-            } else {
-                page.imageUrl
-            }
+            val model =
+                if (page.headers.isNotEmpty()) {
+                    coil.request.ImageRequest
+                        .Builder(context)
+                        .data(page.imageUrl)
+                        .apply { page.headers.forEach { (k, v) -> addHeader(k, v) } }
+                        .crossfade(true)
+                        .build()
+                } else {
+                    page.imageUrl
+                }
             coil.compose.SubcomposeAsyncImage(
                 model = model,
                 contentDescription = "Page ${index + 1}",
@@ -615,9 +637,10 @@ private fun WebtoonReader(
                 modifier = Modifier.fillMaxWidth(),
                 loading = {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(500.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(500.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         ani.saikou.components.CatLoader(
@@ -669,10 +692,11 @@ private fun PagerReader(
     val hasNextPage = pages.isNotEmpty() && onNextChapter != null
     val pageCount = (if (pages.isNotEmpty()) pages.size else totalPages) + if (hasNextPage) 1 else 0
 
-    val pagerState = rememberPagerState(
-        initialPage = startPage,
-        pageCount = { pageCount },
-    )
+    val pagerState =
+        rememberPagerState(
+            initialPage = startPage,
+            pageCount = { pageCount },
+        )
 
     // Track current page (don't count the bonus "next chapter" page)
     LaunchedEffect(pagerState.currentPage) {
@@ -694,15 +718,17 @@ private fun PagerReader(
         } else {
             val mangaPage = pages.getOrNull(page)
             if (mangaPage != null) {
-                val model = if (mangaPage.headers.isNotEmpty()) {
-                    coil.request.ImageRequest.Builder(context)
-                        .data(mangaPage.imageUrl)
-                        .apply { mangaPage.headers.forEach { (k, v) -> addHeader(k, v) } }
-                        .crossfade(true)
-                        .build()
-                } else {
-                    mangaPage.imageUrl
-                }
+                val model =
+                    if (mangaPage.headers.isNotEmpty()) {
+                        coil.request.ImageRequest
+                            .Builder(context)
+                            .data(mangaPage.imageUrl)
+                            .apply { mangaPage.headers.forEach { (k, v) -> addHeader(k, v) } }
+                            .crossfade(true)
+                            .build()
+                    } else {
+                        mangaPage.imageUrl
+                    }
                 coil.compose.SubcomposeAsyncImage(
                     model = model,
                     contentDescription = "Page ${page + 1}",
@@ -742,12 +768,15 @@ private fun DownloadNextChaptersBanner(
     onDismiss: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-            .background(SurfaceContainerHigh)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .clip(
+                    androidx.compose.foundation.shape
+                        .RoundedCornerShape(12.dp),
+                ).background(SurfaceContainerHigh)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -773,11 +802,14 @@ private fun DownloadNextChaptersBanner(
             }
         }
         Box(
-            modifier = Modifier
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                .background(Primary)
-                .clickable(onClick = onDownload)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .clip(
+                        androidx.compose.foundation.shape
+                            .RoundedCornerShape(8.dp),
+                    ).background(Primary)
+                    .clickable(onClick = onDownload)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             Text(
                 text = "Download",
@@ -799,16 +831,17 @@ private fun DownloadNextChaptersBanner(
 
 // ── Offline Next Chapter Banner ─────────────────────────────
 @Composable
-private fun OfflineNextChapterBanner(
-    onDismiss: () -> Unit,
-) {
+private fun OfflineNextChapterBanner(onDismiss: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-            .background(SurfaceContainerHigh)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .clip(
+                    androidx.compose.foundation.shape
+                        .RoundedCornerShape(12.dp),
+                ).background(SurfaceContainerHigh)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -849,9 +882,10 @@ private fun NextChapterCard(
     onClick: () -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Background),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -900,10 +934,11 @@ private fun ReaderSettingsSheet(
         containerColor = SurfaceBright,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             // Header
@@ -954,18 +989,21 @@ private fun ReaderSettingsSheet(
                     backgroundOptions.forEach { color ->
                         val isSelected = settings.background == color
                         Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                                .then(
-                                    if (isSelected) Modifier
-                                        .padding(2.dp)
-                                        .clip(CircleShape)
-                                        .background(color)
-                                    else Modifier
-                                )
-                                .clickable { onSettingsChange(settings.copy(background = color)) },
+                            modifier =
+                                Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .then(
+                                        if (isSelected) {
+                                            Modifier
+                                                .padding(2.dp)
+                                                .clip(CircleShape)
+                                                .background(color)
+                                        } else {
+                                            Modifier
+                                        },
+                                    ).clickable { onSettingsChange(settings.copy(background = color)) },
                         ) {
                             if (isSelected) {
                                 Box(
@@ -993,11 +1031,12 @@ private fun ReaderSettingsSheet(
                         value = 0.8f, // Placeholder — would need WindowManager.LayoutParams.screenBrightness
                         onValueChange = { /* set brightness */ },
                         modifier = Modifier.weight(1f),
-                        colors = SliderDefaults.colors(
-                            thumbColor = Primary,
-                            activeTrackColor = Primary,
-                            inactiveTrackColor = SurfaceContainerHigh,
-                        ),
+                        colors =
+                            SliderDefaults.colors(
+                                thumbColor = Primary,
+                                activeTrackColor = Primary,
+                                inactiveTrackColor = SurfaceContainerHigh,
+                            ),
                     )
                     Icon(Icons.Default.Brightness6, null, tint = OnSurface, modifier = Modifier.size(22.dp))
                 }
@@ -1052,10 +1091,11 @@ private fun SettingsToggle(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onCheckedChange(!checked) }
+                .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1063,12 +1103,13 @@ private fun SettingsToggle(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = OnSurface,
-                checkedTrackColor = Primary,
-                uncheckedThumbColor = OnSurfaceVariant,
-                uncheckedTrackColor = SurfaceContainer,
-            ),
+            colors =
+                SwitchDefaults.colors(
+                    checkedThumbColor = OnSurface,
+                    checkedTrackColor = Primary,
+                    uncheckedThumbColor = OnSurfaceVariant,
+                    uncheckedTrackColor = SurfaceContainer,
+                ),
         )
     }
 }
