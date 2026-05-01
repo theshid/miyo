@@ -29,3 +29,21 @@ data class MangaSearchResult(
      */
     val totalChapterHint: Int? = null,
 )
+
+/**
+ * Pick the best result for [title] from a search response. Prefers an exact
+ * (case-insensitive, whitespace-trimmed) title match; falls back to the
+ * first result if no exact match exists.
+ *
+ * Why exact-title preference: source search-relevance ranking sometimes
+ * floats colored re-releases or spin-offs above the canonical entry (the
+ * canonical example: MangaDex returns "Vagabond (Hong Kong Colored Version)"
+ * before "Vagabond"; the colored re-release only has 5 fragmentary chapters).
+ * Without this preference, the source picker silently selects the wrong
+ * series for downloads, page resolution, and chapter counts.
+ */
+fun List<MangaSearchResult>.pickBestMatch(title: String): MangaSearchResult? {
+    val normalized = title.trim()
+    return firstOrNull { it.title.trim().equals(normalized, ignoreCase = true) }
+        ?: firstOrNull()
+}

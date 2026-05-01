@@ -16,6 +16,7 @@ import ani.saikou.data.local.db.SaikouDatabase
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.model.MangaPage
+import ani.saikou.domain.model.pickBestMatch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -160,14 +161,11 @@ class DownloadService : Service() {
     ): ResolvedChapter? {
         if (chapterNumber < 0) return null
 
-        // MangaDex — prefer an exact-title match. Search relevance sometimes
-        // ranks colored re-releases or spin-offs above the canonical entry
-        // (e.g. "Vagabond (Hong Kong Colored Version)" before "Vagabond").
+        // MangaDex — exact-title preference via pickBestMatch handles the
+        // case where relevance ranking floats colored re-releases or
+        // spin-offs above the canonical entry.
         runCatching {
-            val sources = mangaDex.search(mangaTitle)
-            val source =
-                sources.firstOrNull { it.title.trim().equals(mangaTitle.trim(), ignoreCase = true) }
-                    ?: sources.firstOrNull()
+            val source = mangaDex.search(mangaTitle).pickBestMatch(mangaTitle)
             if (source != null) {
                 val chapters = mangaDex.getChapters(source.id)
                 val chapter = chapters.find { it.number.toInt() == chapterNumber }
@@ -178,12 +176,9 @@ class DownloadService : Service() {
             }
         }
 
-        // MangaPill fallback — same exact-match preference.
+        // MangaPill fallback.
         runCatching {
-            val sources = mangaPill.search(mangaTitle)
-            val source =
-                sources.firstOrNull { it.title.trim().equals(mangaTitle.trim(), ignoreCase = true) }
-                    ?: sources.firstOrNull()
+            val source = mangaPill.search(mangaTitle).pickBestMatch(mangaTitle)
             if (source != null) {
                 val chapters = mangaPill.getChapters(source.id)
                 val chapter = chapters.find { it.number.toInt() == chapterNumber }

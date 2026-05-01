@@ -3,6 +3,7 @@ package ani.saikou.data.repository
 import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.model.ResolvedChapters
+import ani.saikou.domain.model.pickBestMatch
 import ani.saikou.domain.repository.MangaSourceRepository
 import ani.saikou.domain.source.MangaSource
 
@@ -104,21 +105,16 @@ class MangaSourceRepositoryImpl(
     }
 
     /**
-     * Search [source] for [title], pick the best match (exact-title preferred
-     * over relevance order — search-relevance sometimes ranks colored
-     * re-releases above the canonical entry, e.g. Vagabond's Hong Kong
-     * coloured version), then fetch its chapter list. Returns null when
-     * the source has no hits.
+     * Search [source] for [title], pick the best match via the shared
+     * exact-title preference, then fetch its chapter list. Returns null
+     * when the source has no hits.
      */
     private suspend fun probe(
         source: MangaSource,
         title: String,
     ): SourceProbe? {
         val results = runCatching { source.search(title) }.getOrDefault(emptyList())
-        val picked =
-            results.firstOrNull { it.title.trim().equals(title.trim(), ignoreCase = true) }
-                ?: results.firstOrNull()
-                ?: return null
+        val picked = results.pickBestMatch(title) ?: return null
         val chapters = runCatching { source.getChapters(picked.id) }.getOrDefault(emptyList())
         return SourceProbe(picked.id, picked.totalChapterHint, chapters)
     }
