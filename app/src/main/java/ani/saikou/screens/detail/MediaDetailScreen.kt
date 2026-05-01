@@ -68,10 +68,10 @@ import ani.saikou.components.SourceItem
 import ani.saikou.components.SourceSelectorSheet
 import ani.saikou.data.local.db.ReadingHistoryDao
 import ani.saikou.data.local.db.WatchHistoryDao
-import ani.saikou.data.remote.parsers.GogoParser
+import ani.saikou.data.source.anime.GogoParser
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
-import ani.saikou.domain.model.AnimeSource
+import ani.saikou.domain.model.AnimeSearchResult
 import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.repository.AnilistRepository
@@ -109,6 +109,7 @@ fun MediaDetailScreen(
     val readingHistoryDao = koinInject<ReadingHistoryDao>()
     val mangaDexParser = koinInject<MangaDexParser>()
     val mangaPillParser = koinInject<MangaPillParser>()
+    val gogoParser = koinInject<GogoParser>()
     val anilistRepository = koinInject<AnilistRepository>()
     // ChaptersTab injects MangaSourceRepository on its own — no top-level lookup needed.
 
@@ -129,7 +130,7 @@ fun MediaDetailScreen(
     // ── Source picker state (shown before navigating to player) ──
     var pendingEpisode by remember { mutableStateOf<Int?>(null) }
     var sourceSearching by remember { mutableStateOf(false) }
-    var foundSources by remember { mutableStateOf<List<AnimeSource>>(emptyList()) }
+    var foundSources by remember { mutableStateOf<List<AnimeSearchResult>>(emptyList()) }
     var showSourcePicker by remember { mutableStateOf(false) }
 
     fun onEpisodeSelected(episodeNum: Int) {
@@ -144,9 +145,8 @@ fun MediaDetailScreen(
             // Search for sources
             sourceSearching = true
             pendingEpisode = episodeNum
-            val parser = GogoParser()
             val title = media.nameRomaji ?: media.name ?: media.displayTitle
-            val sources = parser.search(title)
+            val sources = gogoParser.search(title)
             sourceSearching = false
 
             when {

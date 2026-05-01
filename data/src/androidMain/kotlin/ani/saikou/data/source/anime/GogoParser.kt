@@ -1,25 +1,32 @@
-package ani.saikou.data.remote.parsers
+package ani.saikou.data.source.anime
 
 import android.net.Uri
-import ani.saikou.domain.model.AnimeSource
+import ani.saikou.domain.model.AnimeSearchResult
 import ani.saikou.domain.model.Episode
 import ani.saikou.domain.model.StreamLink
 import ani.saikou.domain.model.SubtitleTrack
-import io.github.theshid.prettylog.Log
-import io.sentry.Sentry
-import io.sentry.SentryLevel
+import ani.saikou.platform.log.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
-class GogoParser {
+/**
+ * Anime stream-URL parser scraping anitaku.to (a GogoAnime mirror).
+ * Three-step pipeline: search → episode list → embed URL → direct stream.
+ *
+ * Lives in androidMain — Jsoup is JVM-only, [Uri] is Android-specific.
+ * Mirrors the [ani.saikou.data.source.manga.MangaPillParser] pattern.
+ */
+class GogoParser(
+    private val logger: Logger,
+) {
     companion object {
         private const val HOST = "https://anitaku.to"
         private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
 
-    suspend fun search(query: String): List<AnimeSource> =
+    suspend fun search(query: String): List<AnimeSearchResult> =
         withContext(Dispatchers.IO) {
             try {
                 val doc =
@@ -30,7 +37,7 @@ class GogoParser {
                         .get()
 
                 doc.select(".last_episodes > ul > li div.img > a").map { el: Element ->
-                    AnimeSource(
+                    AnimeSearchResult(
                         slug = el.attr("href").replace("/category/", ""),
                         name = el.attr("title"),
                         cover = el.select("img").attr("src"),
@@ -139,21 +146,11 @@ class GogoParser {
                     }
                 }
 
-                Log.d("GogoParser", "── getStreamLinks: ${servers.size} servers found ──")
                 for ((name, url, subs) in servers) {
-                    Log.d("GogoParser", "  Server: $name | embed: $url | subs: ${subs.size}")
-                    subs.forEach { s -> Log.d("GogoParser", "    Sub: ${s.label} → ${s.url}") }
                     val extracted = extractDirectLink(name, url, subs)
-                    if (extracted != null) {
-                        Log.d("GogoParser", "  ✓ Extracted: ${extracted.url} | subs: ${extracted.subtitles.size}")
-                        links.add(extracted)
-                    } else {
-                        Log.d("GogoParser", "  ✗ Failed to extract direct link")
-                    }
+                    if (extracted != null) links.add(extracted)
                 }
-                Log.d("GogoParser", "── Total stream links: ${links.size} ──")
             } catch (e: Exception) {
-                Log.e("GogoParser", "getStreamLinks failed", e)
                 reportParserIssue("getStreamLinks", e, mapOf("episodeLink" to episodeLink))
             }
             links
@@ -164,17 +161,7 @@ class GogoParser {
         throwable: Throwable,
         extras: Map<String, String> = emptyMap(),
     ) {
-        try {
-            Sentry.withScope { scope ->
-                scope.level = SentryLevel.ERROR
-                scope.setTag("area", "GogoParser")
-                scope.setTag("method", method)
-                extras.forEach { (k, v) -> scope.setExtra(k, v) }
-                Sentry.captureException(throwable)
-            }
-        } catch (_: Exception) {
-            // best-effort
-        }
+        logger.reportError(area = "GogoParser", method = method, throwable = throwable, extras = extras)
     }
 
     private fun extractDirectLink(
@@ -201,63 +188,30 @@ class GogoParser {
             // 1) Direct regex on raw HTML
             val m3u8 = Regex("""(https?://[^\s"'\\]+\.m3u8[^\s"'\\]*)""").find(page)?.value
             if (m3u8 != null) {
-                Log.d("GogoParser", "    extract path=raw-m3u8 | subs=${subtitles.size}")
                 return StreamLink(server = name, url = m3u8, quality = "Auto", headers = headers, subtitles = subtitles)
             }
 
             val mp4 = Regex("""(https?://[^\s"'\\]+\.mp4[^\s"'\\]*)""").find(page)?.value
             if (mp4 != null) {
-                Log.d("GogoParser", "    extract path=raw-mp4 | subs=${subtitles.size}")
                 return StreamLink(server = name, url = mp4, quality = "Auto", headers = headers, subtitles = subtitles)
             }
 
             // 2) Unpack eval(function(p,a,c,k,e,d){...}) obfuscated JS
-            val unpacked = unpackJsPacked(page)
-            if (unpacked != null) {
-                // Also try to extract subtitle tracks from unpacked JWPlayer config
-                val allSubs =
-                    try {
-                        if (subtitles.isNotEmpty()) {
-                            subtitles
-                        } else {
-                            Log.d("GogoParser", "    no URL subs — scanning unpacked JS for VTT")
-                            parseSubtitlesFromUnpacked(unpacked)
-                        }
-                    } catch (e: Exception) {
-                        Log.e("GogoParser", "    unpacked-subs scan failed", e)
-                        subtitles
-                    }
+            val unpacked = unpackJsPacked(page) ?: return null
+            // Prefer URL-derived subs; fall back to scanning the unpacked JS for VTT tracks.
+            val allSubs = if (subtitles.isNotEmpty()) subtitles else parseSubtitlesFromUnpacked(unpacked)
 
-                val unpackedM3u8 = Regex("""(https?://[^\s"'\\]+\.m3u8[^\s"'\\]*)""").find(unpacked)?.value
-                if (unpackedM3u8 != null) {
-                    Log.d("GogoParser", "    extract path=unpacked-m3u8 | subs=${allSubs.size}")
-                    return StreamLink(
-                        server = name,
-                        url = unpackedM3u8,
-                        quality = "Auto",
-                        headers = headers,
-                        subtitles = allSubs,
-                    )
-                }
-                val unpackedMp4 = Regex("""(https?://[^\s"'\\]+\.mp4[^\s"'\\]*)""").find(unpacked)?.value
-                if (unpackedMp4 != null) {
-                    Log.d("GogoParser", "    extract path=unpacked-mp4 | subs=${allSubs.size}")
-                    return StreamLink(
-                        server = name,
-                        url = unpackedMp4,
-                        quality = "Auto",
-                        headers = headers,
-                        subtitles = allSubs,
-                    )
-                }
-                Log.d("GogoParser", "    extract path=unpacked-but-no-stream-url")
-            } else {
-                Log.d("GogoParser", "    extract path=no-raw-no-packed (page neither matched nor contained packed JS)")
+            val unpackedM3u8 = Regex("""(https?://[^\s"'\\]+\.m3u8[^\s"'\\]*)""").find(unpacked)?.value
+            if (unpackedM3u8 != null) {
+                return StreamLink(server = name, url = unpackedM3u8, quality = "Auto", headers = headers, subtitles = allSubs)
             }
-
+            val unpackedMp4 = Regex("""(https?://[^\s"'\\]+\.mp4[^\s"'\\]*)""").find(unpacked)?.value
+            if (unpackedMp4 != null) {
+                return StreamLink(server = name, url = unpackedMp4, quality = "Auto", headers = headers, subtitles = allSubs)
+            }
             null
         } catch (e: Exception) {
-            Log.e("GogoParser", "    extractDirectLink threw for $name", e)
+            reportParserIssue("extractDirectLink", e, mapOf("server" to name, "url" to url))
             null
         }
     }
@@ -312,18 +266,8 @@ class GogoParser {
                     tracks.add(SubtitleTrack(url = bareSub, label = "English"))
                 }
             }
-            if (tracks.isEmpty()) {
-                // Diagnostic: which query keys did the embed actually expose?
-                val keys =
-                    try {
-                        uri.queryParameterNames.joinToString(",")
-                    } catch (_: Exception) {
-                        "?"
-                    }
-                Log.d("GogoParser", "    parseSubtitlesFromUrl: no caption_X / sub params (queryKeys=[$keys])")
-            }
         } catch (e: Exception) {
-            Log.e("GogoParser", "    parseSubtitlesFromUrl threw", e)
+            reportParserIssue("parseSubtitlesFromUrl", e, mapOf("embedUrl" to embedUrl))
         }
         return tracks
     }
@@ -335,17 +279,13 @@ class GogoParser {
     private fun parseSubtitlesFromUnpacked(js: String): List<SubtitleTrack> =
         try {
             val vttPattern = Regex("""(https?://[^\s"'\\]+\.vtt[^\s"'\\]*)""")
-            val tracks =
-                vttPattern
-                    .findAll(js)
-                    .map { match ->
-                        SubtitleTrack(url = match.value, label = "English")
-                    }.distinctBy { it.url }
-                    .toList()
-            Log.d("GogoParser", "    parseSubtitlesFromUnpacked: found ${tracks.size} .vtt URL(s)")
-            tracks
+            vttPattern
+                .findAll(js)
+                .map { match -> SubtitleTrack(url = match.value, label = "English") }
+                .distinctBy { it.url }
+                .toList()
         } catch (e: Exception) {
-            Log.e("GogoParser", "    parseSubtitlesFromUnpacked threw", e)
+            reportParserIssue("parseSubtitlesFromUnpacked", e)
             emptyList()
         }
 

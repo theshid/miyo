@@ -1,8 +1,7 @@
 package ani.saikou.data.remote
 
-import io.github.theshid.prettylog.Log
+import ani.saikou.platform.log.Logger
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import kotlinx.serialization.json.Json
@@ -15,25 +14,21 @@ import kotlinx.serialization.json.jsonPrimitive
  * Client for the AniSkip community API — returns crowd-sourced opening/ending
  * timestamps keyed by MAL ID + episode number.
  *
+ * Pure Ktor + serialization-json — lives in commonMain. The [HttpClient] is
+ * supplied via DI so the engine choice (OkHttp on Android, Darwin/CIO on
+ * future iOS) stays out of this file.
+ *
  * Docs: https://api.aniskip.com/api-docs
  */
-class AniSkipApi {
+class AniSkipApi(
+    private val client: HttpClient,
+    private val logger: Logger,
+) {
     companion object {
         private const val BASE = "https://api.aniskip.com/v2/skip-times"
-        private const val TAG = "AniSkipApi"
     }
 
     private val json = Json { ignoreUnknownKeys = true }
-
-    private val client =
-        HttpClient(OkHttp) {
-            engine {
-                config {
-                    connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                    readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                }
-            }
-        }
 
     /**
      * Fetches OP/ED skip intervals for the given MAL ID and episode.
@@ -82,7 +77,12 @@ class AniSkipApi {
 
             SkipTimes(opStartSec = opStart, opEndSec = opEnd, edStartSec = edStart, edEndSec = edEnd)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to fetch skip times for MAL $malId ep $episodeNumber: ${e.message}")
+            logger.reportError(
+                area = "AniSkipApi",
+                method = "getSkipTimes",
+                throwable = e,
+                extras = mapOf("malId" to malId.toString(), "episode" to episodeNumber.toString()),
+            )
             SkipTimes.EMPTY
         }
     }

@@ -875,16 +875,14 @@ fun VideoPlayerScreen(
         // with a countdown progress bar. Tap skips to end of OP/ED.
         val skipTimes = playerState.skipTimes
         val currentSec = currentPosition / 1000f
-        val inOpRange =
-            skipTimes.opStartSec != null &&
-                skipTimes.opEndSec != null &&
-                currentSec >= skipTimes.opStartSec &&
-                currentSec < skipTimes.opEndSec
-        val inEdRange =
-            skipTimes.edStartSec != null &&
-                skipTimes.edEndSec != null &&
-                currentSec >= skipTimes.edStartSec &&
-                currentSec < skipTimes.edEndSec
+        // Locals to enable smart-casts — SkipTimes lives in :data, so
+        // direct property reads can't be narrowed across the module boundary.
+        val opStart = skipTimes.opStartSec
+        val opEnd = skipTimes.opEndSec
+        val edStart = skipTimes.edStartSec
+        val edEnd = skipTimes.edEndSec
+        val inOpRange = opStart != null && opEnd != null && currentSec >= opStart && currentSec < opEnd
+        val inEdRange = edStart != null && edEnd != null && currentSec >= edStart && currentSec < edEnd
         // Only activate skip when video is actually playing (not during intro or buffering)
         val inSkipRange = (inOpRange || inEdRange) && !introActive && isPlaying
 

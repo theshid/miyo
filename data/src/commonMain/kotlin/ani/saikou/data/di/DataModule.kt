@@ -1,5 +1,6 @@
 package ani.saikou.data.di
 
+import ani.saikou.data.remote.AniSkipApi
 import ani.saikou.data.source.manga.MangaDexParser
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
@@ -24,4 +25,5 @@ import org.koin.dsl.module
 val dataModule =
     module {
         singleOf(::MangaDexParser)
+        singleOf(::AniSkipApi)
     }

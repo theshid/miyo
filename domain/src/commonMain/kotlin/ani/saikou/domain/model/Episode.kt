@@ -22,7 +22,13 @@ data class SubtitleTrack(
     val language: String = "en",
 )
 
-data class AnimeSource(
+/**
+ * One hit from an [ani.saikou.domain.source.AnimeSource.search] call —
+ * mirrors [MangaSearchResult] for the manga side. Source-specific id
+ * formats are treated as opaque by callers (Gogo returns a URL slug;
+ * future sources will return their own id shape).
+ */
+data class AnimeSearchResult(
     val slug: String,
     val name: String,
     val cover: String? = null,

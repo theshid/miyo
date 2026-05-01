@@ -12,8 +12,8 @@ import ani.saikou.data.local.db.WatchHistoryDao
 import ani.saikou.data.local.db.WatchHistoryEntity
 import ani.saikou.data.remote.AniSkipApi
 import ani.saikou.data.remote.SkipTimes
-import ani.saikou.data.remote.parsers.GogoParser
-import ani.saikou.domain.model.AnimeSource
+import ani.saikou.data.source.anime.GogoParser
+import ani.saikou.domain.model.AnimeSearchResult
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.StreamLink
 import ani.saikou.domain.repository.AnilistRepository
@@ -33,10 +33,9 @@ class VideoPlayerViewModel(
     private val repository: AnilistRepository,
     private val watchHistoryDao: WatchHistoryDao,
     private val activityDao: ActivityEventDao,
+    private val aniSkipApi: AniSkipApi,
+    private val gogoParser: GogoParser,
 ) : ViewModel() {
-    private val gogoParser = GogoParser()
-    private val aniSkipApi = AniSkipApi()
-
     val mediaId: Int = savedStateHandle["mediaId"] ?: 0
     val episodeNum: Int = savedStateHandle["episodeNum"] ?: 1
     private val navSourceSlug: String? = savedStateHandle.get<String>("sourceSlug")?.takeIf { it.isNotEmpty() }
@@ -44,7 +43,7 @@ class VideoPlayerViewModel(
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState
 
-    private var animeSources: List<AnimeSource> = emptyList()
+    private var animeSources: List<AnimeSearchResult> = emptyList()
     private var resolvedSourceSlug: String? = null
     private var saveJob: Job? = null
     private var anilistProgressSynced = false
@@ -124,7 +123,7 @@ class VideoPlayerViewModel(
         }
     }
 
-    fun selectSource(source: AnimeSource) {
+    fun selectSource(source: AnimeSearchResult) {
         resolvedSourceSlug = source.slug
         _uiState.value = _uiState.value.copy(showSourceSelector = false, isLoading = true)
         viewModelScope.launch {

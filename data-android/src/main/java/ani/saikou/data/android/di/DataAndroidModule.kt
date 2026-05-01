@@ -5,6 +5,7 @@ import ani.saikou.data.local.downloads.ChapterSizeEstimator
 import ani.saikou.data.local.downloads.MangaDownloadManager
 import ani.saikou.data.repository.DownloadRepositoryImpl
 import ani.saikou.data.repository.MangaSourceRepositoryImpl
+import ani.saikou.data.source.anime.GogoParser
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.repository.DownloadRepository
@@ -63,6 +64,7 @@ val dataAndroidModule =
 
         // ─── Source parsers (JVM-only) ──────────────────────────────────────
         singleOf(::MangaPillParser)
+        singleOf(::GogoParser)
 
         // ─── Downloads ──────────────────────────────────────────────────────
         singleOf(::ChapterSizeEstimator)
