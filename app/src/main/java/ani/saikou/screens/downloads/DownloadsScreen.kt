@@ -48,10 +48,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
-import ani.saikou.components.PillButton
+import ani.saikou.components.HalftoneButton
+import ani.saikou.components.HalftoneSize
+import ani.saikou.components.HalftoneVariant
 import ani.saikou.domain.model.Download
 import ani.saikou.domain.model.DownloadStatus
-import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
@@ -69,7 +70,7 @@ fun DownloadsScreen(
     val selectedIds = remember { mutableStateListOf<String>() }
     var showCleanupDialog by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Background)) {
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = if (selectedIds.isNotEmpty()) 80.dp else 16.dp),
@@ -297,12 +298,15 @@ fun DownloadsScreen(
                     color = OnSurface,
                     fontWeight = FontWeight.Bold,
                 )
-                PillButton(
+                HalftoneButton(
                     text = "DELETE SELECTED",
                     onClick = {
                         selectedIds.toList().forEach { viewModel.deleteChapter(it) }
                         selectedIds.clear()
                     },
+                    size = HalftoneSize.LG,
+                    variant = HalftoneVariant.PURPLE,
+                    geistFamily = ani.saikou.ui.theme.Inter,
                 )
             }
         }

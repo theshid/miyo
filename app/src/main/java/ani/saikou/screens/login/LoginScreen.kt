@@ -2,6 +2,12 @@ package ani.saikou.screens.login
 
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -12,41 +18,47 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ani.saikou.R
-import ani.saikou.components.PillButton
+import ani.saikou.components.HalftoneButton
+import ani.saikou.components.HalftoneSize
+import ani.saikou.components.HalftoneVariant
 import ani.saikou.data.remote.AnilistApi
-import ani.saikou.ui.theme.Background
-import ani.saikou.ui.theme.Epilogue
+import ani.saikou.ui.theme.HiroMisake
+import ani.saikou.ui.theme.InstrumentSerif
+import ani.saikou.ui.theme.JetBrainsMono
+import ani.saikou.ui.theme.Musashi
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.Secondary
 
 /**
  * Login screen kicks off OAuth via Custom Tabs. The success path goes
@@ -58,91 +70,146 @@ import ani.saikou.ui.theme.Secondary
 fun LoginScreen() {
     val context = LocalContext.current
 
-    // Subtle diagonal gradient glow
-    val gradientBrush =
+    // ── Animated shimmer for the "manga" word ──────────────────
+    // Loops 0..1 over 6s linear; the gradient brush slides across
+    // the text bounds via this normalized offset. CSS equivalent of
+    // `background-position: 200% 0 → -200% 0`.
+    val shimmerTransition = rememberInfiniteTransition(label = "mangaShimmer")
+    val shimmerOffset by shimmerTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 6000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "mangaShimmer",
+    )
+
+    // OKLCH(0.52 0.24 300) → deep purple, OKLCH(0.65 0.28 320) → magenta-purple.
+    // sRGB approximations; OKLCH→sRGB is non-trivial so these are eyeballed
+    // to the spec colours and can be tuned without touching the gradient logic.
+    val deepPurple = Color(0xFF7028A8)
+    val magentaPurple = Color(0xFFC840C8)
+    // Gradient is wider than text so the bright stop sweeps across visibly;
+    // TileMode.Repeated makes the off-screen seams invisible (start/end colour
+    // are equal so the loop is continuous).
+    val gradientLength = 800f
+    val mangaBrush =
         Brush.linearGradient(
-            colors =
-                listOf(
-                    Background,
-                    Primary.copy(alpha = 0.06f),
-                    Secondary.copy(alpha = 0.04f),
-                    Background,
-                ),
-            start = Offset(0f, 0f),
-            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+            colors = listOf(deepPurple, magentaPurple, deepPurple),
+            start = Offset(shimmerOffset * gradientLength, 0f),
+            end = Offset(shimmerOffset * gradientLength + gradientLength, 0f),
+            tileMode = TileMode.Repeated,
         )
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Background)
-                .drawBehind { drawRect(gradientBrush) },
-        contentAlignment = Alignment.Center,
-    ) {
+    // ── Slogan typography ──────────────────────────────────────
+    val sloganFontSize = 64.sp
+    val sloganLineHeight = 61.sp // 0.95 × fontSize per spec
+
+    val serifSpan =
+        SpanStyle(
+            fontFamily = InstrumentSerif,
+            fontWeight = FontWeight.Normal,
+            fontSize = sloganFontSize,
+            letterSpacing = (-2).sp, // -2px tightening on the serif body
+        )
+    val brushSpan =
+        SpanStyle(
+            fontFamily = Musashi,
+            fontWeight = FontWeight.Normal,
+            fontSize = sloganFontSize,
+            // 0.05em downward nudge — brush glyphs sit visually slightly higher
+            // than the serif baseline; this re-aligns them inline.
+            baselineShift = BaselineShift(-0.05f),
+        )
+    val mangaSpan = brushSpan.copy(brush = mangaBrush)
+
+    val slogan =
+        buildAnnotatedString {
+            withStyle(serifSpan) { append("Every ") }
+            withStyle(brushSpan) { append("anime") }
+            withStyle(serifSpan) { append(".\n") }
+
+            withStyle(serifSpan) { append("Every ") }
+            withStyle(mangaSpan) { append("manga") }
+            withStyle(serifSpan) { append(".\n") }
+
+            withStyle(brushSpan) { append("One library") }
+            withStyle(serifSpan) { append(".") }
+        }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Background image — fills the whole screen behind the content
+        Image(
+            painter = painterResource(R.drawable.login_background),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        // Dark scrim so the white slogan stays readable over any image colour
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.45f)),
+        )
+
         Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 56.dp, bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(32.dp),
         ) {
-            // Samurai hero image
-            Image(
-                painter = painterResource(R.drawable.samurai_login),
-                contentDescription = "Miyo",
-                modifier =
-                    Modifier
-                        .fillMaxWidth(0.75f)
-                        .heightIn(max = 360.dp),
-                contentScale = ContentScale.Fit,
-            )
 
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // App name — thin weight, large display
+            // ── MIYO logo ─────────────────────────────────────
             Text(
                 text = "MIYO",
                 style =
                     MaterialTheme.typography.displayLarge.copy(
-                        fontFamily = Epilogue,
-                        fontWeight = FontWeight.W300,
-                        letterSpacing = 4.dp.value.sp,
+                        fontFamily = HiroMisake,
+                        fontSize = 96.sp,
                     ),
                 color = Primary,
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
+            // ── Slogan (focal element) ────────────────────────
             Text(
-                text = "Every anime. Every manga.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
-                textAlign = TextAlign.Center,
+                text = slogan,
+                style =
+                    TextStyle(
+                        color = Color.White,
+                        lineHeight = sloganLineHeight,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    ),
             )
 
-            Text(
-                text = "One Library.",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Primary,
-                textAlign = TextAlign.Center,
-            )
+            Spacer(modifier = Modifier.weight(1f))
 
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // Login button — launches AniList OAuth in Custom Tab
-            PillButton(
+            // ── Login button ──────────────────────────────────
+            HalftoneButton(
                 text = "LOGIN WITH ANILIST",
                 onClick = {
                     val url = "https://anilist.co/api/v2/oauth/authorize?client_id=${AnilistApi.CLIENT_ID}&response_type=token"
                     CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
                 },
                 modifier = Modifier.fillMaxWidth(),
+                size = HalftoneSize.LG,
+                variant = HalftoneVariant.PURPLE,
+                geistFamily = ani.saikou.ui.theme.Inter,
             )
 
-            Spacer(modifier = Modifier.height(64.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Social links row
+            // ── Social links row ──────────────────────────────
             Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = { /* Discord */ }) {
@@ -173,11 +240,6 @@ fun LoginScreen() {
         }
     }
 }
-
-// Helper to use dp value as sp for letter spacing
-private inline val Float.sp get() =
-    androidx.compose.ui.unit
-        .TextUnit(this, androidx.compose.ui.unit.TextUnitType.Sp)
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable

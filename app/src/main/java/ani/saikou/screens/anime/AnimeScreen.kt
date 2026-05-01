@@ -25,7 +25,6 @@ import ani.saikou.components.MediaPosterCard
 import ani.saikou.components.SaikouSearchBar
 import ani.saikou.components.SectionHeader
 import ani.saikou.components.TrendingCarousel
-import ani.saikou.ui.theme.Background
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -44,8 +43,7 @@ fun AnimeScreen(
     LazyColumn(
         modifier =
             Modifier
-                .fillMaxSize()
-                .background(Background),
+                .fillMaxSize(),
         contentPadding = PaddingValues(vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {

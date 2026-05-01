@@ -52,7 +52,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.MediaBannerCard
 import ani.saikou.domain.model.Media
-import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.GhostBorder
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -85,7 +84,6 @@ fun SearchScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Background),
     ) {
         // ── Top Bar: Back + Search Input ─────────────────────
         Row(

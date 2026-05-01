@@ -62,8 +62,10 @@ import ani.saikou.components.ChapterDownloadState
 import ani.saikou.components.ChapterRow
 import ani.saikou.components.GenreChip
 import ani.saikou.components.GlassCard
+import ani.saikou.components.HalftoneButton
+import ani.saikou.components.HalftoneSize
+import ani.saikou.components.HalftoneVariant
 import ani.saikou.components.MediaPosterCard
-import ani.saikou.components.PillButton
 import ani.saikou.components.SourceItem
 import ani.saikou.components.SourceSelectorSheet
 import ani.saikou.data.local.db.ReadingHistoryDao
@@ -114,7 +116,7 @@ fun MediaDetailScreen(
     // ChaptersTab injects MangaSourceRepository on its own — no top-level lookup needed.
 
     if (state.isLoading) {
-        Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
         }
         return
@@ -273,7 +275,6 @@ fun MediaDetailScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Background)
                 .verticalScroll(rememberScrollState()),
     ) {
         // ── Collapsing Banner Header ─────────────────────────
@@ -396,7 +397,7 @@ fun MediaDetailScreen(
             // Status picker with dropdown (shows current status or "ADD TO LIST")
             Box(modifier = Modifier.weight(1f)) {
                 var statusMenuOpen by remember { mutableStateOf(false) }
-                PillButton(
+                HalftoneButton(
                     text = displayStatusLabel(media.userStatus, media.type),
                     onClick = {
                         if (media.userStatus == null) {
@@ -406,6 +407,9 @@ fun MediaDetailScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    size = HalftoneSize.MD,
+                    variant = HalftoneVariant.PURPLE,
+                    geistFamily = ani.saikou.ui.theme.Inter,
                 )
                 androidx.compose.material3.DropdownMenu(
                     expanded = statusMenuOpen,

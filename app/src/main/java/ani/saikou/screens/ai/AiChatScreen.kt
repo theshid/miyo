@@ -51,7 +51,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.MarkdownText
-import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
@@ -79,7 +78,6 @@ fun AiChatScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Background)
                 .navigationBarsPadding()
                 .imePadding(),
     ) {

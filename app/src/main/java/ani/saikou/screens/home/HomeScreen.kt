@@ -60,7 +60,6 @@ import ani.saikou.components.TourTarget
 import ani.saikou.components.rememberTourState
 import ani.saikou.components.tourTarget
 import ani.saikou.data.local.OnboardingPrefs
-import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
@@ -179,7 +178,6 @@ fun HomeScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(Background)
                     .verticalScroll(scrollState)
                     .padding(vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),

@@ -66,8 +66,7 @@ fun NewsFeedScreen(
     LazyColumn(
         modifier =
             Modifier
-                .fillMaxSize()
-                .background(Background),
+                .fillMaxSize(),
         contentPadding = PaddingValues(bottom = 80.dp),
     ) {
         // ── Top Bar ──────────────────────────────────────────

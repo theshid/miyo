@@ -16,6 +16,14 @@ val Epilogue =
         Font(R.font.epilogue_extrabold, FontWeight.ExtraBold),
     )
 
+val HiroMisake = FontFamily(Font(R.font.hiro_misake))
+
+val Musashi = FontFamily(Font(R.font.musashi))
+
+val InstrumentSerif = FontFamily(Font(R.font.instrument_serif))
+
+val JetBrainsMono = FontFamily(Font(R.font.jetbrains_mono))
+
 val Inter =
     FontFamily(
         Font(R.font.inter_regular, FontWeight.Normal),

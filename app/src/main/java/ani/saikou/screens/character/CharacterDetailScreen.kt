@@ -61,7 +61,7 @@ fun CharacterDetailScreen(
     val state by viewModel.uiState.collectAsState()
 
     if (state.isLoading) {
-        Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
         }
         return
@@ -69,7 +69,7 @@ fun CharacterDetailScreen(
 
     val character = state.character
     if (character == null) {
-        Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Character not found", color = OnSurfaceVariant)
         }
         return
@@ -79,8 +79,7 @@ fun CharacterDetailScreen(
         columns = GridCells.Fixed(2),
         modifier =
             Modifier
-                .fillMaxSize()
-                .background(Background),
+                .fillMaxSize(),
         contentPadding = PaddingValues(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),

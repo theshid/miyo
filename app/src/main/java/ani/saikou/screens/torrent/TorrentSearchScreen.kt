@@ -54,9 +54,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
-import ani.saikou.components.PillButton
+import ani.saikou.components.HalftoneButton
+import ani.saikou.components.HalftoneSize
+import ani.saikou.components.HalftoneVariant
 import ani.saikou.domain.model.TorrentResult
-import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.GhostBorder
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -80,7 +81,6 @@ fun TorrentSearchScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Background),
     ) {
         // ── Top Bar ──────────────────────────────────────────
         Row(
@@ -509,13 +509,16 @@ private fun TorrentDetailSheet(
             HorizontalDivider(color = GhostBorder)
 
             // Actions
-            PillButton(
+            HalftoneButton(
                 text = "Open Magnet",
                 onClick = {
                     onOpenMagnet()
                     onDismiss()
                 },
                 modifier = Modifier.fillMaxWidth(),
+                size = HalftoneSize.LG,
+                variant = HalftoneVariant.PURPLE,
+                geistFamily = ani.saikou.ui.theme.Inter,
             )
 
             // Copy link — outlined style

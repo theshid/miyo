@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.data.remote.FeedbackService
-import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.GhostBorder
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
@@ -68,7 +67,6 @@ fun FeedbackScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Background),
     ) {
         // ── Top bar ──────────────────────────────────────────
         Row(

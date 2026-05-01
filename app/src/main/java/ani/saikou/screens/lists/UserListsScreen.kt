@@ -45,9 +45,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
-import ani.saikou.components.PillButton
+import ani.saikou.components.HalftoneButton
+import ani.saikou.components.HalftoneSize
+import ani.saikou.components.HalftoneVariant
 import ani.saikou.domain.model.Media
-import ani.saikou.ui.theme.Background
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
@@ -72,7 +73,6 @@ fun UserListsScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Background),
     ) {
         // ── Top Bar ──────────────────────────────────────────
         Row(
@@ -402,12 +402,15 @@ private fun EditBottomSheet(
             }
 
             // Save button
-            PillButton(
+            HalftoneButton(
                 text = "Save Changes",
                 onClick = {
                     onSave(progressValue.toInt(), scoreValue.toInt(), selectedStatus)
                 },
                 modifier = Modifier.fillMaxWidth(),
+                size = HalftoneSize.LG,
+                variant = HalftoneVariant.PURPLE,
+                geistFamily = ani.saikou.ui.theme.Inter,
             )
 
             Spacer(modifier = Modifier.height(16.dp))

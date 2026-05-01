@@ -7,12 +7,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Icon
@@ -66,8 +70,26 @@ fun SaikouApp() {
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Global app backdrop. Renders once at the nav root so screens just
+        // stop painting solid black; the same asset peeks through every
+        // route. Fixed (not scrolled) — content layers compose on top.
+        Image(
+            painter = painterResource(ani.saikou.R.drawable.login_background),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        // Dark scrim for legibility over arbitrary image colours
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f)),
+        )
+
     Scaffold(
-        containerColor = ani.saikou.ui.theme.Background,
+        containerColor = Color.Transparent,
         bottomBar = {
             if (showBottomBar) {
                 SaikouBottomBar(
@@ -122,5 +144,6 @@ fun SaikouApp() {
                 }
             }
         }
+    }
     }
 }

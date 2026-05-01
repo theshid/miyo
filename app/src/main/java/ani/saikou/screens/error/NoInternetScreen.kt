@@ -17,8 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import ani.saikou.components.PillButton
-import ani.saikou.ui.theme.Background
+import ani.saikou.components.HalftoneButton
+import ani.saikou.components.HalftoneSize
+import ani.saikou.components.HalftoneVariant
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.SurfaceContainerHigh
@@ -28,8 +29,7 @@ fun NoInternetScreen(onRetry: () -> Unit) {
     Box(
         modifier =
             Modifier
-                .fillMaxSize()
-                .background(Background),
+                .fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -68,9 +68,12 @@ fun NoInternetScreen(onRetry: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            PillButton(
+            HalftoneButton(
                 text = "Retry",
                 onClick = onRetry,
+                size = HalftoneSize.LG,
+                variant = HalftoneVariant.PURPLE,
+                geistFamily = ani.saikou.ui.theme.Inter,
             )
         }
     }
