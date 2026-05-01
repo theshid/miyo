@@ -53,6 +53,9 @@ kotlin {
                 implementation(libs.junit)
                 implementation(libs.mockk)
                 implementation(libs.kotlinx.coroutines.test)
+                // MockEngine for Ktor — feeds canned JSON to MangaDexParser
+                // without touching the network.
+                implementation(libs.ktor.client.mock)
             }
         }
     }
