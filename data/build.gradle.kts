@@ -45,6 +45,16 @@ kotlin {
                 implementation(libs.jsoup)
             }
         }
+
+        // androidUnitTest hosts JVM-side repository unit tests. Mirrors the
+        // setup in :domain — junit + mockk + coroutines-test.
+        val androidUnitTest by getting {
+            dependencies {
+                implementation(libs.junit)
+                implementation(libs.mockk)
+                implementation(libs.kotlinx.coroutines.test)
+            }
+        }
     }
 }
 
