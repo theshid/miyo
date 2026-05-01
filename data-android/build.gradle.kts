@@ -40,4 +40,11 @@ dependencies {
     // binding, which needs an Application context to instantiate.
     implementation(libs.koin.core)
     implementation(libs.koin.android)
+
+    // JVM-side unit tests for repository/adapter logic — the Room/Manager
+    // collaborators are mocked, so no Robolectric dependency.
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
 }
