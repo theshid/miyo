@@ -66,13 +66,9 @@ fun SaikouNavHost(
 
         // ── Login ─────────────────────────────────────────────
         composable(Screen.Login.route) {
-            LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
-                },
-            )
+            // OAuth success path is handled out-of-process by LoginCallbackActivity,
+            // which restarts the app cold; nav graph doesn't need a callback here.
+            LoginScreen()
         }
 
         // ── Bottom Nav Screens ────────────────────────────────
@@ -85,8 +81,16 @@ fun SaikouNavHost(
                 onNavigateToNews = { navController.navigate(Screen.News.route) },
                 onNavigateToTorrent = { navController.navigate(Screen.TorrentSearch.createRoute()) },
                 onNavigateToDownloads = { navController.navigate(Screen.Downloads.route) },
-                onNavigateToReader = { mediaId, chapterNum -> navController.navigate(Screen.MangaReader.createRoute(mediaId, chapterNum)) },
-                onNavigateToPlayer = { mediaId, episodeNum -> navController.navigate(Screen.VideoPlayer.createRoute(mediaId, episodeNum)) },
+                onNavigateToReader = { mediaId, chapterNum ->
+                    navController.navigate(
+                        Screen.MangaReader.createRoute(mediaId, chapterNum),
+                    )
+                },
+                onNavigateToPlayer = { mediaId, episodeNum ->
+                    navController.navigate(
+                        Screen.VideoPlayer.createRoute(mediaId, episodeNum),
+                    )
+                },
                 onNavigateToCalendar = { navController.navigate(Screen.SeasonalCalendar.route) },
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
                 onNavigateToAiChat = { navController.navigate(Screen.AiChat.route) },

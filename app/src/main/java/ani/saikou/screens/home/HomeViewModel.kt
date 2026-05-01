@@ -140,8 +140,10 @@ class HomeViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             val userDeferred = async { repository.getUserData() }
-            val watchingDeferred = async { repository.getUserAnimeList("CURRENT") + repository.getUserAnimeList("REPEATING") }
-            val readingDeferred = async { repository.getUserMangaList("CURRENT") + repository.getUserMangaList("REPEATING") }
+            val watchingDeferred =
+                async { repository.getUserAnimeList("CURRENT") + repository.getUserAnimeList("REPEATING") }
+            val readingDeferred =
+                async { repository.getUserMangaList("CURRENT") + repository.getUserMangaList("REPEATING") }
             val recommendationsDeferred = async { repository.getRecommendations() }
 
             val watching = watchingDeferred.await()
@@ -194,8 +196,10 @@ class HomeViewModel(
     private fun refreshAniListSections() {
         viewModelScope.launch {
             val userDeferred = async { repository.getUserData() }
-            val watchingDeferred = async { repository.getUserAnimeList("CURRENT") + repository.getUserAnimeList("REPEATING") }
-            val readingDeferred = async { repository.getUserMangaList("CURRENT") + repository.getUserMangaList("REPEATING") }
+            val watchingDeferred =
+                async { repository.getUserAnimeList("CURRENT") + repository.getUserAnimeList("REPEATING") }
+            val readingDeferred =
+                async { repository.getUserMangaList("CURRENT") + repository.getUserMangaList("REPEATING") }
 
             val watching = watchingDeferred.await()
             val now = System.currentTimeMillis()

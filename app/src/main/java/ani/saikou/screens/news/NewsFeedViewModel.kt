@@ -22,7 +22,6 @@ class NewsFeedViewModel : ViewModel() {
     val uiState: StateFlow<NewsFeedUiState> = _uiState
 
     private val days = listOf("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
-    private val dayLabels = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
 
     init {
         val today =

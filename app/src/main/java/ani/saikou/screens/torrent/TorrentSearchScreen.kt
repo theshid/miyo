@@ -257,7 +257,11 @@ private fun SearchInput(
                     .padding(start = 12.dp),
             decorationBox = { inner ->
                 if (query.isEmpty()) {
-                    Text("Chainsaw Man", style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant.copy(0.4f))
+                    Text(
+                        "Chainsaw Man",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurfaceVariant.copy(0.4f),
+                    )
                 }
                 inner()
             },
@@ -324,15 +328,25 @@ private fun TorrentCard(
 
                 // Seeders
                 if (result.seeders > 0) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
                         Icon(Icons.Default.Upload, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(14.dp))
-                        Text("${result.seeders}", style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                        Text(
+                            "${result.seeders}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF4CAF50),
+                        )
                     }
                 }
 
                 // Leechers
                 if (result.leechers > 0) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
                         Icon(Icons.Default.Download, null, tint = Primary, modifier = Modifier.size(14.dp))
                         Text("${result.leechers}", style = MaterialTheme.typography.labelSmall, color = Primary)
                     }
@@ -396,7 +410,12 @@ private fun EmptyState(onRetry: () -> Unit) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("No torrents found", style = MaterialTheme.typography.titleLarge, color = OnSurface, fontWeight = FontWeight.Bold)
+        Text(
+            "No torrents found",
+            style = MaterialTheme.typography.titleLarge,
+            color = OnSurface,
+            fontWeight = FontWeight.Bold,
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 

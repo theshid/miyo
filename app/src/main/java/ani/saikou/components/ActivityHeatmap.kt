@@ -416,7 +416,11 @@ private fun AiringMenuRow(
                         tint = Secondary,
                         modifier = Modifier.size(12.dp),
                     )
-                    Text(formatAiringTime(airing.airingTimeMs), style = MaterialTheme.typography.labelSmall, color = Secondary)
+                    Text(
+                        formatAiringTime(airing.airingTimeMs),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Secondary,
+                    )
                 }
             }
         },

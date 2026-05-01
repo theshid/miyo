@@ -59,6 +59,8 @@ class AniSkipApi {
             var edStart: Float? = null
             var edEnd: Float? = null
 
+            // Continues are guard clauses on chained JSON nullability, not jumps.
+            @Suppress("LoopWithTooManyJumpStatements")
             for (result in results) {
                 val obj = result.jsonObject
                 val type = obj["skipType"]?.jsonPrimitive?.content ?: continue

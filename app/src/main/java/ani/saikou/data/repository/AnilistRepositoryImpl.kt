@@ -28,6 +28,9 @@ class AnilistRepositoryImpl(
 
     // ── Stats ─────────────────────────────────────────────────
 
+    // TODO: split into private parseAnimeStats / parseMangaStats helpers — body is
+    //       repetitive defensive null-handling that would collapse cleanly.
+    @Suppress("CyclomaticComplexMethod")
     override suspend fun getUserStats(): UserStats? {
         val response = api.execute(AnilistQueries.USER_STATS) ?: return null
         val viewer = response["data"]?.jsonObject?.get("Viewer") ?: return null
@@ -205,19 +208,40 @@ class AnilistRepositoryImpl(
 
     // ── Discovery ─────────────────────────────────────────────
 
-    override suspend fun getTrendingAnime(page: Int): List<Media> = fetchPagedMedia(AnilistQueries.trending("ANIME", page))
+    override suspend fun getTrendingAnime(page: Int): List<Media> =
+        fetchPagedMedia(
+            AnilistQueries.trending("ANIME", page),
+        )
 
-    override suspend fun getPopularAnime(page: Int): List<Media> = fetchPagedMedia(AnilistQueries.popular("ANIME", page))
+    override suspend fun getPopularAnime(page: Int): List<Media> =
+        fetchPagedMedia(
+            AnilistQueries.popular("ANIME", page),
+        )
 
-    override suspend fun getRecentlyUpdatedAnime(page: Int): List<Media> = fetchPagedMedia(AnilistQueries.recentlyUpdated("ANIME", page))
+    override suspend fun getRecentlyUpdatedAnime(page: Int): List<Media> =
+        fetchPagedMedia(
+            AnilistQueries.recentlyUpdated("ANIME", page),
+        )
 
-    override suspend fun getTrendingManga(page: Int): List<Media> = fetchPagedMedia(AnilistQueries.trending("MANGA", page))
+    override suspend fun getTrendingManga(page: Int): List<Media> =
+        fetchPagedMedia(
+            AnilistQueries.trending("MANGA", page),
+        )
 
-    override suspend fun getPopularManga(page: Int): List<Media> = fetchPagedMedia(AnilistQueries.popular("MANGA", page))
+    override suspend fun getPopularManga(page: Int): List<Media> =
+        fetchPagedMedia(
+            AnilistQueries.popular("MANGA", page),
+        )
 
-    override suspend fun getRecentlyUpdatedManga(page: Int): List<Media> = fetchPagedMedia(AnilistQueries.recentlyUpdated("MANGA", page))
+    override suspend fun getRecentlyUpdatedManga(page: Int): List<Media> =
+        fetchPagedMedia(
+            AnilistQueries.recentlyUpdated("MANGA", page),
+        )
 
-    override suspend fun getTrendingNovels(page: Int): List<Media> = fetchPagedMedia(AnilistQueries.trendingNovels(page))
+    override suspend fun getTrendingNovels(page: Int): List<Media> =
+        fetchPagedMedia(
+            AnilistQueries.trendingNovels(page),
+        )
 
     // ── User Lists ────────────────────────────────────────────
 
@@ -254,7 +278,7 @@ class AnilistRepositoryImpl(
     }
 
     override suspend fun getRecommendations(): List<Media> {
-        val response = api.execute(AnilistQueries.recommendations()) ?: return emptyList()
+        val response = api.execute(AnilistQueries.RECOMMENDATIONS) ?: return emptyList()
         val recs =
             response["data"]
                 ?.jsonObject
@@ -296,6 +320,9 @@ class AnilistRepositoryImpl(
         var currentPage = 1
         val maxPages = 4 // safety cap
 
+        // Outer breaks are end-of-data sentinels; inner continues guard a chained
+        // JSON parse. Both read as guard clauses, not unstructured jumps.
+        @Suppress("LoopWithTooManyJumpStatements")
         while (currentPage <= maxPages) {
             val response =
                 api.execute(AnilistQueries.airingSchedule(weekStart, weekEnd, currentPage))
@@ -310,6 +337,7 @@ class AnilistRepositoryImpl(
 
             if (schedules.isEmpty()) break
 
+            @Suppress("LoopWithTooManyJumpStatements")
             for (entry in schedules) {
                 try {
                     val obj = entry.jsonObject

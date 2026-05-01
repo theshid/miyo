@@ -33,7 +33,6 @@ import ani.saikou.components.MarkdownText
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.domain.model.Media
 import ani.saikou.ui.theme.Background
-import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import org.koin.compose.koinInject
@@ -80,7 +79,9 @@ fun CatchMeUpSheet(
                 append("Give them a snappy \"Catch Me Up\" recap up to $progressType $progressNum. ")
                 append("Format strictly:\n")
                 append("- One short hook sentence (max 25 words) describing where the story stands RIGHT NOW.\n")
-                append("- Then exactly 3 bullet points covering the most important arcs or developments that got them here.\n")
+                append(
+                    "- Then exactly 3 bullet points covering the most important arcs or developments that got them here.\n",
+                )
                 append("- Each bullet: one sentence, max 30 words.\n\n")
                 append("Do NOT spoil anything beyond $progressType $progressNum. ")
                 append("No headings, no preamble, no closing remarks — just the hook line and the 3 bullets.")
@@ -197,7 +198,6 @@ fun CatchMeUpSheet(
             ) {
                 MarkdownText(
                     text = summary ?: "Couldn't generate a summary. Please try again.",
-                    color = OnSurface,
                 )
             }
         }

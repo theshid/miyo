@@ -51,6 +51,8 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun CharacterDetailScreen(
+    // Forwarded into the ViewModel via SavedStateHandle.
+    @Suppress("UnusedParameter")
     characterId: Int,
     onBack: () -> Unit,
     onNavigateToMedia: (Int) -> Unit,

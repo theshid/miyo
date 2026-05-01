@@ -546,18 +546,21 @@ private suspend fun shareStats(
     val bitmap =
         ShareCardGenerator.generateStatsCard(
             context = context,
-            userName = stats.userName,
-            avatarUrl = stats.avatar,
-            episodesWatched = stats.anime.episodesWatched,
-            minutesWatched = stats.anime.minutesWatched,
-            animeCount = stats.anime.count,
-            meanScore = stats.anime.meanScore,
-            topGenres =
-                stats.anime.genres
-                    .take(5)
-                    .map { it.genre },
-            chaptersRead = stats.manga.chaptersRead,
-            mangaCount = stats.manga.count,
+            input =
+                ShareCardGenerator.StatsCardInput(
+                    userName = stats.userName,
+                    avatarUrl = stats.avatar,
+                    episodesWatched = stats.anime.episodesWatched,
+                    minutesWatched = stats.anime.minutesWatched,
+                    animeCount = stats.anime.count,
+                    meanScore = stats.anime.meanScore,
+                    topGenres =
+                        stats.anime.genres
+                            .take(5)
+                            .map { it.genre },
+                    chaptersRead = stats.manga.chaptersRead,
+                    mangaCount = stats.manga.count,
+                ),
         )
     val uri = ShareCardGenerator.saveToCacheAndGetUri(context, bitmap, "miyo_stats.png")
     ShareCardGenerator.shareImage(context, uri, "My anime stats on Miyo")

@@ -40,7 +40,9 @@ class RedditNewsSource : NewsSource {
             try {
                 val encoded = URLEncoder.encode(title, "UTF-8")
                 val response =
-                    client.get("https://www.reddit.com/r/anime/search.json?q=$encoded&restrict_sr=on&sort=new&limit=15") {
+                    client.get(
+                        "https://www.reddit.com/r/anime/search.json?q=$encoded&restrict_sr=on&sort=new&limit=15",
+                    ) {
                         header("User-Agent", ua)
                     }
                 parseRedditResponse(response.bodyAsText())

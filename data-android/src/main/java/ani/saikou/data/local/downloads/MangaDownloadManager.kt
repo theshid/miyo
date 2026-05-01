@@ -4,7 +4,6 @@ import android.content.Context
 import ani.saikou.data.local.db.DownloadDao
 import ani.saikou.data.local.db.DownloadEntity
 import ani.saikou.data.local.db.DownloadedMangaEntity
-import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.domain.model.MangaPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +18,6 @@ import io.github.theshid.prettylog.Log as PLog
 class MangaDownloadManager(
     private val context: Context,
     private val dao: DownloadDao,
-    private val mangaDex: MangaDexParser,
 ) {
     private val concurrencySemaphore = Semaphore(3) // Max 3 concurrent page downloads
 
@@ -30,8 +28,12 @@ class MangaDownloadManager(
         get() = File(context.getExternalFilesDir(null), "downloads").also { it.mkdirs() }
 
     /**
-     * Queue a chapter for download.
+     * Queue a chapter for download. Internal adapter — production callers
+     * should go through DownloadRepository.queueChapter(DownloadRequest)
+     * which already bundles these fields. Kept as positional params here so
+     * the Room insert below stays a single statement.
      */
+    @Suppress("LongParameterList")
     suspend fun queueDownload(
         mangaId: Int,
         mangaTitle: String,
@@ -88,6 +90,9 @@ class MangaDownloadManager(
             var downloadedCount = 0
             var success = true
 
+            // continue = skip-already-on-disk; break = pause/cancel/error.
+            // Both are guard clauses, not unstructured jumps.
+            @Suppress("LoopWithTooManyJumpStatements")
             for (page in pages) {
                 // Skip already downloaded pages
                 val pageFile = File(chapterDir, "%03d.jpg".format(page.index + 1))

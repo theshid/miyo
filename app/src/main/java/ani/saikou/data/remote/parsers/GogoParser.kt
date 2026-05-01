@@ -13,9 +13,7 @@ import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
-class GogoParser(
-    private val dub: Boolean = false,
-) {
+class GogoParser {
     companion object {
         private const val HOST = "https://anitaku.to"
         private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -233,12 +231,24 @@ class GogoParser(
                 val unpackedM3u8 = Regex("""(https?://[^\s"'\\]+\.m3u8[^\s"'\\]*)""").find(unpacked)?.value
                 if (unpackedM3u8 != null) {
                     Log.d("GogoParser", "    extract path=unpacked-m3u8 | subs=${allSubs.size}")
-                    return StreamLink(server = name, url = unpackedM3u8, quality = "Auto", headers = headers, subtitles = allSubs)
+                    return StreamLink(
+                        server = name,
+                        url = unpackedM3u8,
+                        quality = "Auto",
+                        headers = headers,
+                        subtitles = allSubs,
+                    )
                 }
                 val unpackedMp4 = Regex("""(https?://[^\s"'\\]+\.mp4[^\s"'\\]*)""").find(unpacked)?.value
                 if (unpackedMp4 != null) {
                     Log.d("GogoParser", "    extract path=unpacked-mp4 | subs=${allSubs.size}")
-                    return StreamLink(server = name, url = unpackedMp4, quality = "Auto", headers = headers, subtitles = allSubs)
+                    return StreamLink(
+                        server = name,
+                        url = unpackedMp4,
+                        quality = "Auto",
+                        headers = headers,
+                        subtitles = allSubs,
+                    )
                 }
                 Log.d("GogoParser", "    extract path=unpacked-but-no-stream-url")
             } else {

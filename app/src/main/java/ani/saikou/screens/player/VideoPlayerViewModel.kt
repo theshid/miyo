@@ -270,6 +270,7 @@ class VideoPlayerViewModel(
     }
 
     @OptIn(DelicateCoroutinesApi::class)
+    @Suppress("GlobalCoroutineUsage") // viewModelScope is cancelled in onCleared; we need a process-scoped final save.
     override fun onCleared() {
         // Best-effort final save — fire-and-forget on a global IO scope so we
         // don't block the main thread or risk ANR. The viewModelScope is already

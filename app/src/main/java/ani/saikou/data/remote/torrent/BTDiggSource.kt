@@ -34,8 +34,6 @@ class BTDiggSource : TorrentSource {
                         val infoSpans = item.select("div.torrent_size, span.torrent_size")
                         val size = infoSpans.firstOrNull()?.text() ?: "?"
 
-                        val filesText = item.select("span.torrent_files, div.torrent_files").text()
-
                         TorrentResult(
                             title = title,
                             magnetLink = magnet,

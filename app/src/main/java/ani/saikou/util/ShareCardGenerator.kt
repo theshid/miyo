@@ -231,21 +231,39 @@ object ShareCardGenerator {
     }
 
     /**
+     * Inputs for [generateStatsCard]. Bundling the user-stats fields into a
+     * data class keeps the call site flat and the function signature short
+     * (the alternative was 10 named parameters).
+     */
+    data class StatsCardInput(
+        val userName: String?,
+        val avatarUrl: String?,
+        val episodesWatched: Int,
+        val minutesWatched: Int,
+        val animeCount: Int,
+        val meanScore: Float,
+        val topGenres: List<String>,
+        val chaptersRead: Int,
+        val mangaCount: Int,
+    )
+
+    /**
      * Generates a stats summary share card (1080x1350).
      */
     suspend fun generateStatsCard(
         context: Context,
-        userName: String?,
-        avatarUrl: String?,
-        episodesWatched: Int,
-        minutesWatched: Int,
-        animeCount: Int,
-        meanScore: Float,
-        topGenres: List<String>,
-        chaptersRead: Int,
-        mangaCount: Int,
+        input: StatsCardInput,
     ): Bitmap =
         withContext(Dispatchers.Default) {
+            val userName = input.userName
+            val avatarUrl = input.avatarUrl
+            val episodesWatched = input.episodesWatched
+            val minutesWatched = input.minutesWatched
+            val animeCount = input.animeCount
+            val meanScore = input.meanScore
+            val topGenres = input.topGenres
+            val chaptersRead = input.chaptersRead
+            val mangaCount = input.mangaCount
             val bitmap = Bitmap.createBitmap(CARD_W, CARD_H, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
 

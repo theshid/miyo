@@ -90,7 +90,11 @@ fun MangaScreen(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                GenreChip(text = "ALL MANGA", selected = true, onClick = { onNavigateToSearch(null, "POPULARITY_DESC") })
+                GenreChip(
+                    text = "ALL MANGA",
+                    selected = true,
+                    onClick = { onNavigateToSearch(null, "POPULARITY_DESC") },
+                )
                 GenreChip(text = "ACTION", onClick = { onNavigateToSearch("Action", null) })
                 GenreChip(text = "ROMANCE", onClick = { onNavigateToSearch("Romance", null) })
                 GenreChip(text = "FANTASY", onClick = { onNavigateToSearch("Fantasy", null) })

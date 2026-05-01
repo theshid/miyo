@@ -110,7 +110,7 @@ fun MediaDetailScreen(
     val mangaDexParser = koinInject<MangaDexParser>()
     val mangaPillParser = koinInject<MangaPillParser>()
     val anilistRepository = koinInject<AnilistRepository>()
-    val mangaSourceRepository = koinInject<MangaSourceRepository>()
+    // ChaptersTab injects MangaSourceRepository on its own — no top-level lookup needed.
 
     if (state.isLoading) {
         Box(Modifier.fillMaxSize().background(Background), contentAlignment = Alignment.Center) {
@@ -258,7 +258,10 @@ fun MediaDetailScreen(
                         .background(SurfaceContainer, MaterialTheme.shapes.large),
                 contentAlignment = Alignment.Center,
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     CircularProgressIndicator(color = Primary, strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
                     Text("Finding sources...", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
                 }
@@ -906,9 +909,16 @@ private fun ChaptersTab(
 
     if (count == 0 && loadingCount) {
         Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 CircularProgressIndicator(color = Primary, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
-                Text("Fetching chapters from source...", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+                Text(
+                    "Fetching chapters from source...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OnSurfaceVariant,
+                )
             }
         }
         return

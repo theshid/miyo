@@ -25,7 +25,7 @@ object AnilistQueries {
     ) =
         """{ MediaListCollection(userId: $userId, type: $type, status: $status, sort: UPDATED_TIME) { lists { entries { progress score(format:POINT_100) status media { id isAdult status chapters episodes nextAiringEpisode{episode airingAt} meanScore isFavourite bannerImage coverImage{large} title{english romaji userPreferred} } } } } }"""
 
-    fun recommendations() =
+    const val RECOMMENDATIONS =
         """{ Page(page:1,perPage:30) { recommendations(sort:RATING_DESC,onList:true) { mediaRecommendation { id isAdult mediaListEntry{progress score(format:POINT_100)status} chapters isFavourite episodes nextAiringEpisode{episode} meanScore title{english romaji userPreferred} type status(version:2) bannerImage coverImage{large} } } } }"""
 
     fun trending(

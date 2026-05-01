@@ -5,7 +5,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -26,9 +25,8 @@ import ani.saikou.ui.theme.Primary
 fun MarkdownText(
     text: String,
     modifier: Modifier = Modifier,
-    color: Color = Color.Unspecified,
 ) {
-    val annotated = remember(text) { parseMarkdown(text, color) }
+    val annotated = remember(text) { parseMarkdown(text) }
     Text(
         text = annotated,
         style = MaterialTheme.typography.bodyMedium,
@@ -36,10 +34,7 @@ fun MarkdownText(
     )
 }
 
-private fun parseMarkdown(
-    text: String,
-    defaultColor: Color,
-): AnnotatedString =
+private fun parseMarkdown(text: String): AnnotatedString =
     buildAnnotatedString {
         val lines = text.split("\n")
         lines.forEachIndexed { index, line ->
@@ -59,26 +54,23 @@ private fun parseMarkdown(
                 // Bullet points
                 trimmed.startsWith("- ") || trimmed.startsWith("• ") || trimmed.startsWith("* ") -> {
                     append("  •  ")
-                    appendInlineFormatted(trimmed.substring(2), defaultColor)
+                    appendInlineFormatted(trimmed.substring(2))
                 }
                 // Numbered lists
                 trimmed.matches(Regex("^\\d+\\.\\s.*")) -> {
                     val dotIndex = trimmed.indexOf(". ")
                     append("  ${trimmed.substring(0, dotIndex + 2)}")
-                    appendInlineFormatted(trimmed.substring(dotIndex + 2), defaultColor)
+                    appendInlineFormatted(trimmed.substring(dotIndex + 2))
                 }
                 else -> {
-                    appendInlineFormatted(trimmed, defaultColor)
+                    appendInlineFormatted(trimmed)
                 }
             }
             if (index < lines.lastIndex) append("\n")
         }
     }
 
-private fun AnnotatedString.Builder.appendInlineFormatted(
-    text: String,
-    defaultColor: Color,
-) {
+private fun AnnotatedString.Builder.appendInlineFormatted(text: String) {
     var i = 0
     while (i < text.length) {
         when {

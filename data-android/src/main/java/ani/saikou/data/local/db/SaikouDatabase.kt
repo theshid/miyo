@@ -58,7 +58,9 @@ abstract class SaikouDatabase : RoomDatabase() {
                         )
                         """.trimIndent(),
                     )
-                    db.execSQL("CREATE INDEX IF NOT EXISTS index_activity_events_timestampMs ON activity_events(timestampMs)")
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_activity_events_timestampMs ON activity_events(timestampMs)",
+                    )
                 }
             }
 

@@ -94,7 +94,10 @@ class EpisodeCheckWorker(
 
                 if (firstRun) {
                     editor.putBoolean(KEY_FIRST_RUN, true)
-                    Log.i(tag = TAG, message = "First run — seeded baseline for ${watching.size} anime, no notifications fired")
+                    Log.i(
+                        tag = TAG,
+                        message = "First run — seeded baseline for ${watching.size} anime, no notifications fired",
+                    )
                 }
 
                 editor.apply()

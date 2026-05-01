@@ -70,7 +70,6 @@ val dataAndroidModule =
             MangaDownloadManager(
                 context = androidContext(),
                 dao = get(),
-                mangaDex = get<MangaDexParser>(),
             )
         }
         single<DownloadRepository> {

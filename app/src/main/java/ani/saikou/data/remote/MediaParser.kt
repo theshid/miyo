@@ -2,7 +2,6 @@ package ani.saikou.data.remote
 
 import ani.saikou.domain.model.Character
 import ani.saikou.domain.model.Media
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -193,18 +192,6 @@ object MediaParser {
             if (day != null) append("-${"%02d".format(day)}")
         }
     }
-
-    fun parseMediaList(
-        data: JsonArray,
-        type: String,
-    ): List<Media> =
-        data.mapNotNull { entry ->
-            try {
-                parseMedia(entry.jsonObject)
-            } catch (e: Exception) {
-                null
-            }
-        }
 
     fun parseCharacter(json: JsonObject): Character {
         val node = json["node"]!!.jsonObject

@@ -10,6 +10,10 @@ trim_trailing_whitespace = true
 indent_size = 4
 indent_style = space
 max_line_length = 140
+# Match the continuation-indent the existing code uses (+4 from the parent
+# line, not the +8 IntelliJ default). Without this, ktlint flags every
+# wrapped-Modifier chain in the codebase.
+ij_kotlin_continuation_indent_size = 4
 
 # @Composable functions are PascalCase by Compose convention. Same for
 # @Preview helpers and the Compose-Navigation route builders.

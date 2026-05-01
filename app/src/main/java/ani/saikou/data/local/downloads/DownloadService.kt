@@ -58,7 +58,7 @@ class DownloadService : Service() {
         super.onCreate()
         createNotificationChannel()
         val dao = SaikouDatabase.getInstance(this).downloadDao()
-        downloadManager = MangaDownloadManager(this, dao, mangaDex)
+        downloadManager = MangaDownloadManager(this, dao)
         startForeground(NOTIFICATION_ID, buildNotification("Preparing download..."))
     }
 

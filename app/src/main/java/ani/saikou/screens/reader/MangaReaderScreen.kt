@@ -335,14 +335,15 @@ fun MangaReaderScreen(
             // signature but the resolved source id is forwarded.
             val onNextChapterWithSource: ((Int) -> Unit)? =
                 onNextChapter?.let { cb ->
-                    { next -> cb(next, readerState.resolvedSourceId) }
+                    { next ->
+                        cb(next, readerState.resolvedSourceId)
+                    }
                 }
             when (settings.mode) {
                 ReadingMode.WEBTOON -> {
                     WebtoonReader(
                         pages = readerState.pages,
                         totalPages = totalPages,
-                        background = settings.background,
                         startPage = readerState.startPage,
                         onPageChanged = { currentPage = it },
                         onNextChapter = onNextChapterWithSource,
@@ -591,7 +592,6 @@ fun MangaReaderScreen(
 private fun WebtoonReader(
     pages: List<ani.saikou.domain.model.MangaPage>,
     totalPages: Int,
-    background: Color,
     startPage: Int = 0,
     onPageChanged: (Int) -> Unit,
     onNextChapter: ((Int) -> Unit)? = null,

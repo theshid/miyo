@@ -48,8 +48,14 @@ import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
 
+/**
+ * Login screen kicks off OAuth via Custom Tabs. The success path goes
+ * through [ani.saikou.LoginCallbackActivity] which relaunches the app
+ * fresh from MainActivity → Splash → Home — so there's no in-process
+ * onSuccess callback to wire into the navigation graph.
+ */
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginScreen() {
     val context = LocalContext.current
 
     // Subtle diagonal gradient glow
@@ -175,6 +181,7 @@ private inline val Float.sp get() =
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
+@Suppress("UnusedPrivateMember") // Compose @Preview targets — surfaced by Android Studio's preview tooling.
 private fun LoginScreenPreview() {
-    LoginScreen(onLoginSuccess = {})
+    LoginScreen()
 }

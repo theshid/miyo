@@ -162,6 +162,9 @@ class MangaReaderViewModel(
         }
     }
 
+    // TODO: extract private helpers per branch (loadFromCache, loadFromHistory,
+    //       loadFromSearch) — the function reads as 3 stages stacked into one.
+    @Suppress("CyclomaticComplexMethod")
     private fun loadSources() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -188,7 +191,10 @@ class MangaReaderViewModel(
                         } catch (_: Exception) {
                             null
                         }
-                    Log.d(tag = "MangaReader", message = "Loaded ${localPages.size} pages from local cache for chapter $chapterNum")
+                    Log.d(
+                        tag = "MangaReader",
+                        message = "Loaded ${localPages.size} pages from local cache for chapter $chapterNum",
+                    )
                     activityDao.insert(
                         ActivityEventEntity(
                             timestampMs = System.currentTimeMillis(),
@@ -264,7 +270,10 @@ class MangaReaderViewModel(
                         }
                     }
                 }
-            Log.d(tag = "MangaReader", message = "Found ${mangaSources.size} sources on $activeParser (preferredParser=$preferredParser)")
+            Log.d(
+                tag = "MangaReader",
+                message = "Found ${mangaSources.size} sources on $activeParser (preferredParser=$preferredParser)",
+            )
 
             if (mangaSources.isEmpty()) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = "Manga not found on any source")

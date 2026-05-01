@@ -262,7 +262,11 @@ fun DownloadsScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("No downloads yet", style = MaterialTheme.typography.titleMedium, color = OnSurfaceVariant)
+                            Text(
+                                "No downloads yet",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = OnSurfaceVariant,
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 "Download chapters from the manga reader",

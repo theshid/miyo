@@ -79,7 +79,12 @@ class DownloadRepositoryImpl(
         manager.deleteAllForManga(mangaId)
     }
 
-    override fun observeAllDownloads(): Flow<List<Download>> = dao.getAllDownloads().map { rows -> rows.map { it.toDomain() } }
+    override fun observeAllDownloads(): Flow<List<Download>> =
+        dao.getAllDownloads().map { rows ->
+            rows.map {
+                it.toDomain()
+            }
+        }
 
     override fun observeAllDownloadedManga(): Flow<List<DownloadedManga>> =
         dao.getAllDownloadedManga().map { rows -> rows.map { it.toDomain() } }

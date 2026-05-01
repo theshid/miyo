@@ -248,7 +248,6 @@ private fun ChatBubbleRow(bubble: ChatBubble) {
                 } else {
                     MarkdownText(
                         text = bubble.text,
-                        color = textColor,
                     )
                 }
             }

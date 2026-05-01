@@ -313,6 +313,7 @@ fun VideoPlayerScreen(
                     }
                 if (subtitleSources.isNotEmpty()) {
                     Log.d("VideoPlayer", "  Merging ${subtitleSources.size} subtitle sources with video")
+                    @Suppress("SpreadOperator") // Media3's MergingMediaSource constructor is varargs-only.
                     val merged = MergingMediaSource(videoSource, *subtitleSources.toTypedArray())
                     exoPlayer.setMediaSource(merged)
                 } else {
@@ -529,7 +530,9 @@ fun VideoPlayerScreen(
             }
         }
 
-        // Buffering spinner — shown when seeking or rebuffering (controls may be hidden)
+        // Buffering spinner — shown when seeking or rebuffering (controls may be hidden).
+        // 4 ANDed predicates is the minimum to express "actually buffering, not loading or paused".
+        @Suppress("ComplexCondition")
         if (isBuffering && !introActive && !showControls && playerState.selectedLink != null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Primary, strokeWidth = 3.dp)
@@ -630,7 +633,11 @@ fun VideoPlayerScreen(
                         }
                         Column {
                             Text(
-                                text = "${playerState.title} - Ep ${String.format("%02d", episodeNum)}",
+                                text = "${playerState.title} - Ep ${String.format(
+                                    java.util.Locale.US,
+                                    "%02d",
+                                    episodeNum,
+                                )}",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = OnSurface,
                                 fontWeight = FontWeight.SemiBold,
@@ -668,7 +675,12 @@ fun VideoPlayerScreen(
                                     .size(40.dp)
                                     .background(SurfaceContainer.copy(alpha = 0.6f), CircleShape),
                         ) {
-                            Icon(Icons.Default.SkipPrevious, "Previous episode", tint = OnSurface, modifier = Modifier.size(22.dp))
+                            Icon(
+                                Icons.Default.SkipPrevious,
+                                "Previous episode",
+                                tint = OnSurface,
+                                modifier = Modifier.size(22.dp),
+                            )
                         }
                     }
 
@@ -732,7 +744,12 @@ fun VideoPlayerScreen(
                                     .size(40.dp)
                                     .background(SurfaceContainer.copy(alpha = 0.6f), CircleShape),
                         ) {
-                            Icon(Icons.Default.SkipNext, "Next episode", tint = OnSurface, modifier = Modifier.size(22.dp))
+                            Icon(
+                                Icons.Default.SkipNext,
+                                "Next episode",
+                                tint = OnSurface,
+                                modifier = Modifier.size(22.dp),
+                            )
                         }
                     }
                 }

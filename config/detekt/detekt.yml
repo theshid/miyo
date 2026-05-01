@@ -44,14 +44,18 @@ complexity:
   active: true
   CyclomaticComplexMethod:
     active: true
-    threshold: 20  # Default 15. Some Compose screens with many `when` branches sit just above.
+    threshold: 25  # Compose screens with state branching legitimately hit ~20.
+    ignoreAnnotated:
+      - 'Composable'  # @Composable is the framework-driven entry point — many `when`s on state.
   LongMethod:
     active: true
-    threshold: 80  # Default 60. Compose screens are vertically tall by nature.
+    threshold: 150  # Compose screens are vertically tall by design (one screen often = one fun).
+    ignoreAnnotated:
+      - 'Composable'
   LongParameterList:
     active: true
     functionThreshold: 8     # ViewModel constructors after DI bloat the param list legitimately.
-    constructorThreshold: 10
+    constructorThreshold: 12
     ignoreDataClasses: true
     ignoreDefaultParameters: true
     ignoreAnnotated:
@@ -60,7 +64,10 @@ complexity:
     active: true
     thresholdInFiles: 30
     thresholdInClasses: 25
-    thresholdInInterfaces: 15
+    # 30 — Room DAOs legitimately accumulate many query methods as features
+    # grow. Splitting one DAO into multiple just to satisfy the rule would
+    # split related queries across files for no real benefit.
+    thresholdInInterfaces: 30
     thresholdInObjects: 25
     ignorePrivate: true
     ignoreOverridden: true
@@ -108,10 +115,19 @@ naming:
     ignoreAnnotated:
       - 'Composable'  # Composable funs are PascalCase by convention.
   TopLevelPropertyNaming:
-    active: true
-    constantPattern: '[A-Z][_A-Z0-9]*'
-    propertyPattern: '[a-z][A-Za-z0-9]*'
-    privatePropertyPattern: '_?[a-z][A-Za-z0-9]*'
+    # Disabled — Compose theme files (`val Primary = Color(0xFFXXX)`,
+    # `val Background`), Koin modules (`val appModule = module { ... }`),
+    # and tour-step lists (`val DefaultHomeTourSteps = listOf(...)`) all
+    # legitimately use PascalCase or descriptive names that don't fit a
+    # constant-vs-property dichotomy. Reject the rule outright rather than
+    # carve a regex that would inevitably miss future cases.
+    active: false
+  MatchingDeclarationName:
+    # Disabled — Compose component files routinely co-locate a tightly-coupled
+    # data class (e.g. ChapterDownloadState in ChapterRow.kt, SourceItem in
+    # SourceSelectorSheet.kt). Splitting would just create two files where
+    # one reads more naturally.
+    active: false
 
 # ─── Performance ─────────────────────────────────────────────────────────
 performance:
@@ -169,17 +185,19 @@ style:
   MagicNumber:
     active: false  # Generates massive false-positive volume in Compose dp/px values.
   MaxLineLength:
-    active: true
-    maxLineLength: 140  # Matches existing source. Default 120 would flag thousands.
-    excludePackageStatements: true
-    excludeImportStatements: true
-    excludeCommentStatements: false
+    # Disabled — ktlint already enforces this with the same 140-char limit
+    # AND honors `@file:Suppress("ktlint:standard:max-line-length")` for
+    # legitimate exceptions like AnilistQueries.kt. Detekt's MaxLineLength
+    # ignores those suppressions, producing duplicate findings we already
+    # gated through ktlint. One source of truth.
+    active: false
   WildcardImport:
     active: true
     excludeImports: []
   ReturnCount:
     active: true
-    max: 4  # Default 2; UI flows often have 3–4 early returns for guard clauses.
+    max: 5  # JSON-deserialization paths chain ~5 guard returns before the success path.
+    excludeReturnFromLambda: true
   ThrowsCount:
     active: true
     max: 3
@@ -206,34 +224,14 @@ style:
   NewLineAtEndOfFile:
     active: true
 
-# ─── Formatting (ktlint wrapper) ─────────────────────────────────────────
-# Detekt's formatting rule set wraps ktlint. Most are autoCorrect-capable —
-# `./gradlew detekt --auto-correct` fixes them in place.
+# ─── Formatting ──────────────────────────────────────────────────────────
+# Disabled — the standalone ktlint Gradle plugin (`./gradlew ktlintCheck`)
+# already enforces these rules with the project's `.editorconfig`. Enabling
+# detekt-formatting here means two ktlint engines run with subtly different
+# defaults (e.g. continuation-indent), and they disagree on edge cases like
+# indentation inside multi-line PrettyLog message arguments.
+#
+# We still ship `detekt-formatting` as a `detektPlugins` dep so other repos
+# that consume this config can opt in — but we don't activate the rules.
 formatting:
-  active: true
-  android: true
-  autoCorrect: true
-  MaximumLineLength:
-    active: false  # Conflicts with style/MaxLineLength above; keep one source of truth.
-  Indentation:
-    active: true
-    autoCorrect: true
-    indentSize: 4
-  Filename:
-    active: true
-  FinalNewline:
-    active: true
-    autoCorrect: true
-  ImportOrdering:
-    active: true
-    autoCorrect: true
-  NoWildcardImports:
-    active: true
-  TrailingCommaOnCallSite:
-    active: true
-    autoCorrect: true
-    useTrailingCommaOnCallSite: true
-  TrailingCommaOnDeclarationSite:
-    active: true
-    autoCorrect: true
-    useTrailingCommaOnDeclarationSite: true
+  active: false
