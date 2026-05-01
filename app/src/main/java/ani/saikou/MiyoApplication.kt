@@ -22,6 +22,7 @@ import io.github.theshid.prettylog.DefaultLoggingService
 import io.github.theshid.prettylog.Log
 import io.github.theshid.prettylog.LogBreadcrumbs
 import io.github.theshid.prettylog.LogLevel
+import io.github.theshid.prettylog.dumpToFile
 import io.github.theshid.prettylog.LoggingService
 import io.github.theshid.prettylog.PrettyLog
 import io.github.theshid.prettylog.PrettyLoggingService

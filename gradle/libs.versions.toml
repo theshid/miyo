@@ -44,7 +44,7 @@ multiplatform-settings = "1.2.0"
 accompanist = "0.36.0"
 jsoup = "1.18.3"
 lottie = "6.6.2"
-prettylog = "0.1.0"
+prettylog = "0.2.0"
 sentry = "7.18.1"
 sentry-plugin = "6.5.0"
 
@@ -133,7 +133,7 @@ accompanist-pager = { module = "com.google.accompanist:accompanist-pager", versi
 accompanist-pager-indicators = { module = "com.google.accompanist:accompanist-pager-indicators", version.ref = "accompanist" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
-prettylog = { module = "com.github.theshid:Pretty-Log", version.ref = "prettylog" }
+prettylog = { module = "com.github.theshid.Pretty-Log:prettylog", version.ref = "prettylog" }
 
 # --- Test ---
 junit = { module = "junit:junit", version.ref = "junit" }

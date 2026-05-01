@@ -105,7 +105,7 @@ dependencies {
     implementation(libs.koin.androidx.compose)
 
     // PrettyLog — our extracted logging library (via JitPack)
-    implementation("com.github.theshid:Pretty-Log:0.1.0")
+    implementation(libs.prettylog)
 
     // Compose BOM — Dec 2024
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
