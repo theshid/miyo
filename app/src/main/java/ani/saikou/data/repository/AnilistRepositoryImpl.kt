@@ -16,6 +16,7 @@ import ani.saikou.domain.model.User
 import ani.saikou.domain.model.UserStats
 import ani.saikou.domain.repository.AnilistRepository
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -28,9 +29,6 @@ class AnilistRepositoryImpl(
 
     // ── Stats ─────────────────────────────────────────────────
 
-    // TODO: split into private parseAnimeStats / parseMangaStats helpers — body is
-    //       repetitive defensive null-handling that would collapse cleanly.
-    @Suppress("CyclomaticComplexMethod")
     override suspend fun getUserStats(): UserStats? {
         val response = api.execute(AnilistQueries.USER_STATS) ?: return null
         val viewer = response["data"]?.jsonObject?.get("Viewer") ?: return null
@@ -38,9 +36,6 @@ class AnilistRepositoryImpl(
 
         val v = viewer.jsonObject
         val stats = v["statistics"]?.jsonObject ?: return null
-
-        val animeStats = stats["anime"]?.jsonObject
-        val mangaStats = stats["manga"]?.jsonObject
 
         return UserStats(
             userName = v["name"]?.jsonPrimitive?.content ?: "User",
@@ -50,70 +45,75 @@ class AnilistRepositoryImpl(
                     ?.get("medium")
                     ?.jsonPrimitive
                     ?.content,
-            anime =
-                animeStats?.let { a ->
-                    AnimeStats(
-                        count = a["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                        episodesWatched = a["episodesWatched"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                        minutesWatched = a["minutesWatched"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                        meanScore = a["meanScore"]?.jsonPrimitive?.content?.toFloatOrNull() ?: 0f,
-                        genres =
-                            a["genres"]?.jsonArray?.mapNotNull { g ->
-                                val obj = g.jsonObject
-                                val genre = obj["genre"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                                GenreStat(
-                                    genre = genre,
-                                    count = obj["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                                    meanScore = obj["meanScore"]?.jsonPrimitive?.content?.toFloatOrNull() ?: 0f,
-                                    minutesWatched = obj["minutesWatched"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                                )
-                            } ?: emptyList(),
-                        statuses =
-                            a["statuses"]?.jsonArray?.mapNotNull { s ->
-                                val obj = s.jsonObject
-                                val status = obj["status"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                                StatusStat(status = status, count = obj["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0)
-                            } ?: emptyList(),
-                        scores =
-                            a["scores"]
-                                ?.jsonArray
-                                ?.mapNotNull { s ->
-                                    val obj = s.jsonObject
-                                    ScoreStat(
-                                        score = obj["score"]?.jsonPrimitive?.content?.toIntOrNull() ?: return@mapNotNull null,
-                                        count = obj["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                                    )
-                                }?.filter { it.count > 0 } ?: emptyList(),
-                    )
-                } ?: AnimeStats(),
-            manga =
-                mangaStats?.let { m ->
-                    MangaStats(
-                        count = m["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                        chaptersRead = m["chaptersRead"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                        volumesRead = m["volumesRead"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                        meanScore = m["meanScore"]?.jsonPrimitive?.content?.toFloatOrNull() ?: 0f,
-                        genres =
-                            m["genres"]?.jsonArray?.mapNotNull { g ->
-                                val obj = g.jsonObject
-                                val genre = obj["genre"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                                GenreStat(
-                                    genre = genre,
-                                    count = obj["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                                    meanScore = obj["meanScore"]?.jsonPrimitive?.content?.toFloatOrNull() ?: 0f,
-                                    chaptersRead = obj["chaptersRead"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
-                                )
-                            } ?: emptyList(),
-                        statuses =
-                            m["statuses"]?.jsonArray?.mapNotNull { s ->
-                                val obj = s.jsonObject
-                                val status = obj["status"]?.jsonPrimitive?.content ?: return@mapNotNull null
-                                StatusStat(status = status, count = obj["count"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0)
-                            } ?: emptyList(),
-                    )
-                } ?: MangaStats(),
+            anime = parseAnimeStats(stats["anime"]?.jsonObject),
+            manga = parseMangaStats(stats["manga"]?.jsonObject),
         )
     }
+
+    private fun parseAnimeStats(a: JsonObject?): AnimeStats {
+        if (a == null) return AnimeStats()
+        return AnimeStats(
+            count = a.intOrZero("count"),
+            episodesWatched = a.intOrZero("episodesWatched"),
+            minutesWatched = a.intOrZero("minutesWatched"),
+            meanScore = a.floatOrZero("meanScore"),
+            genres = a["genres"]?.jsonArray?.mapNotNull { it.jsonObject.toAnimeGenreStat() } ?: emptyList(),
+            statuses = a["statuses"]?.jsonArray?.mapNotNull { it.jsonObject.toStatusStat() } ?: emptyList(),
+            // Drop zero-count buckets — AniList returns the full 0..100 score
+            // grid, but the stat row only renders non-empty buckets.
+            scores =
+                a["scores"]
+                    ?.jsonArray
+                    ?.mapNotNull { it.jsonObject.toScoreStat() }
+                    ?.filter { it.count > 0 } ?: emptyList(),
+        )
+    }
+
+    private fun parseMangaStats(m: JsonObject?): MangaStats {
+        if (m == null) return MangaStats()
+        return MangaStats(
+            count = m.intOrZero("count"),
+            chaptersRead = m.intOrZero("chaptersRead"),
+            volumesRead = m.intOrZero("volumesRead"),
+            meanScore = m.floatOrZero("meanScore"),
+            genres = m["genres"]?.jsonArray?.mapNotNull { it.jsonObject.toMangaGenreStat() } ?: emptyList(),
+            statuses = m["statuses"]?.jsonArray?.mapNotNull { it.jsonObject.toStatusStat() } ?: emptyList(),
+        )
+    }
+
+    private fun JsonObject.toAnimeGenreStat(): GenreStat? {
+        val genre = this["genre"]?.jsonPrimitive?.content ?: return null
+        return GenreStat(
+            genre = genre,
+            count = intOrZero("count"),
+            meanScore = floatOrZero("meanScore"),
+            minutesWatched = intOrZero("minutesWatched"),
+        )
+    }
+
+    private fun JsonObject.toMangaGenreStat(): GenreStat? {
+        val genre = this["genre"]?.jsonPrimitive?.content ?: return null
+        return GenreStat(
+            genre = genre,
+            count = intOrZero("count"),
+            meanScore = floatOrZero("meanScore"),
+            chaptersRead = intOrZero("chaptersRead"),
+        )
+    }
+
+    private fun JsonObject.toStatusStat(): StatusStat? {
+        val status = this["status"]?.jsonPrimitive?.content ?: return null
+        return StatusStat(status = status, count = intOrZero("count"))
+    }
+
+    private fun JsonObject.toScoreStat(): ScoreStat? {
+        val score = this["score"]?.jsonPrimitive?.content?.toIntOrNull() ?: return null
+        return ScoreStat(score = score, count = intOrZero("count"))
+    }
+
+    private fun JsonObject.intOrZero(key: String): Int = this[key]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+
+    private fun JsonObject.floatOrZero(key: String): Float = this[key]?.jsonPrimitive?.content?.toFloatOrNull() ?: 0f
 
     // ── Auth ──────────────────────────────────────────────────
 
