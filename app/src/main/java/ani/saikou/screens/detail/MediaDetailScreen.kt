@@ -86,7 +86,7 @@ import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
 import ani.saikou.ui.theme.SurfaceContainer
 import ani.saikou.util.ShareCardGenerator
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject

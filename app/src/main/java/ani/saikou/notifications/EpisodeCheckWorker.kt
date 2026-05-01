@@ -2,13 +2,14 @@ package ani.saikou.notifications
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import ani.saikou.domain.repository.AnilistRepository
-import coil.ImageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
+import coil3.ImageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.toBitmap
 import io.github.theshid.prettylog.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -138,11 +139,7 @@ class EpisodeCheckWorker(
                     .size(128, 128)
                     .build()
             val result = loader.execute(request)
-            if (result is SuccessResult) {
-                (result.drawable as? BitmapDrawable)?.bitmap
-            } else {
-                null
-            }
+            (result as? SuccessResult)?.image?.toBitmap()
         } catch (_: Exception) {
             null
         }

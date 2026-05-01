@@ -458,7 +458,7 @@ fun VideoPlayerScreen(
     ) {
         // Poster background — shows while stream is loading
         if (playerState.selectedLink == null && playerState.coverUrl != null) {
-            coil.compose.AsyncImage(
+            coil3.compose.AsyncImage(
                 model = playerState.coverUrl,
                 contentDescription = null,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
@@ -560,7 +560,7 @@ fun VideoPlayerScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.padding(32.dp),
                 ) {
-                    coil.compose.AsyncImage(
+                    coil3.compose.AsyncImage(
                         model = ani.saikou.R.drawable.error_samurai,
                         contentDescription = "Error",
                         modifier =
@@ -1194,7 +1194,7 @@ private fun UpNextCard(
                     .size(width = 130.dp, height = 180.dp)
                     .clip(MaterialTheme.shapes.medium),
         ) {
-            coil.compose.AsyncImage(
+            coil3.compose.AsyncImage(
                 model = media.cover,
                 contentDescription = media.displayTitle,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,

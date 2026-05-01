@@ -35,7 +35,7 @@ room = "2.6.1"
 
 # Image loading — Coil 2 today. Migration to Coil 3 (KMP) lands in a
 # later slice once the data layer move is done.
-coil = "2.7.0"
+coil = "3.0.4"
 
 # Multiplatform Settings — KMP-friendly replacement for SharedPreferences.
 multiplatform-settings = "1.2.0"
@@ -115,7 +115,8 @@ multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", vers
 multiplatform-settings-coroutines = { module = "com.russhwolf:multiplatform-settings-coroutines", version.ref = "multiplatform-settings" }
 
 # --- Image loading (Coil 2 today; Coil 3 migration arrives later) ---
-coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 
 # --- Media3 (Android-only) ---
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }

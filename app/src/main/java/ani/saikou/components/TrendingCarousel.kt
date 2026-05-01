@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import ani.saikou.domain.model.Media
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 
 @Composable

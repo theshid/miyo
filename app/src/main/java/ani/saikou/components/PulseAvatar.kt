@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 
 @Composable
 fun PulseAvatar(

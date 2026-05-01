@@ -610,7 +610,7 @@ private fun WatchHistoryCard(
                     .size(width = 120.dp, height = 170.dp)
                     .clip(MaterialTheme.shapes.medium),
         ) {
-            coil.compose.AsyncImage(
+            coil3.compose.AsyncImage(
                 model = entry.coverUrl,
                 contentDescription = entry.mediaTitle,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
@@ -733,7 +733,7 @@ private fun AiringCard(
                     .size(width = 130.dp, height = 180.dp)
                     .clip(MaterialTheme.shapes.medium),
         ) {
-            coil.compose.AsyncImage(
+            coil3.compose.AsyncImage(
                 model = coverUrl,
                 contentDescription = title,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,

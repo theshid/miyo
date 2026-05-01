@@ -29,7 +29,7 @@ import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.SurfaceBright
 import ani.saikou.ui.theme.SurfaceContainer
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 
 data class SourceItem(
     val id: String,

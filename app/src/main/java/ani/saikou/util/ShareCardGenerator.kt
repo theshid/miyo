@@ -14,9 +14,11 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
-import coil.ImageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
+import coil3.ImageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -444,11 +446,7 @@ object ShareCardGenerator {
                         .allowHardware(false) // must be software bitmap to draw on Canvas
                         .build()
                 val result = loader.execute(request)
-                if (result is SuccessResult) {
-                    (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                } else {
-                    null
-                }
+                (result as? SuccessResult)?.image?.toBitmap()
             } catch (_: Exception) {
                 null
             }

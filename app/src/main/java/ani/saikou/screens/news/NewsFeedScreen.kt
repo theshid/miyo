@@ -53,7 +53,7 @@ import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
 import ani.saikou.ui.theme.SurfaceContainer
 import ani.saikou.ui.theme.Tertiary
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 
 @Composable
 fun NewsFeedScreen(

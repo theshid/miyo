@@ -4,10 +4,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
-import coil.ImageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
+import coil3.ImageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowHardware
+import coil3.toBitmap
 import io.github.theshid.prettylog.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,7 +79,7 @@ class EpisodeAiringReceiver : BroadcastReceiver() {
                     .size(128, 128)
                     .build()
             val result = ImageLoader(context).execute(request)
-            (result as? SuccessResult)?.drawable?.let { (it as? BitmapDrawable)?.bitmap }
+            (result as? SuccessResult)?.image?.toBitmap()
         } catch (_: Exception) {
             null
         }

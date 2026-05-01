@@ -16,7 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ani.saikou.ui.theme.OnSurface
 import ani.saikou.ui.theme.OnSurfaceVariant
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 
 /**
  * Compact poster card (120x170) used in carousels:

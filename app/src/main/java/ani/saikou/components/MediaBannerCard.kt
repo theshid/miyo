@@ -28,7 +28,7 @@ import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.Secondary
 import ani.saikou.ui.theme.SurfaceContainer
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 
 /**
  * Large media card with banner, poster overlay, title, and metadata.

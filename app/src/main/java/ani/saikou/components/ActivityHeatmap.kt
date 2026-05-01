@@ -295,7 +295,7 @@ private fun HeatmapCell(
 
     Box(modifier = cellMod) {
         if (cover != null) {
-            coil.compose.AsyncImage(
+            coil3.compose.AsyncImage(
                 model = cover,
                 contentDescription = "Episode airing",
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
@@ -425,7 +425,7 @@ private fun AiringMenuRow(
             }
         },
         leadingIcon = {
-            coil.compose.AsyncImage(
+            coil3.compose.AsyncImage(
                 model = airing.coverUrl,
                 contentDescription = airing.title,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
@@ -467,7 +467,7 @@ private fun ActivityMenuRow(
             }
         },
         leadingIcon = {
-            coil.compose.AsyncImage(
+            coil3.compose.AsyncImage(
                 model = activity.coverUrl,
                 contentDescription = activity.title,
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,

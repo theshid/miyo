@@ -82,7 +82,10 @@ import ani.saikou.ui.theme.Primary
 import ani.saikou.ui.theme.SurfaceBright
 import ani.saikou.ui.theme.SurfaceContainer
 import ani.saikou.ui.theme.SurfaceContainerHigh
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
+import coil3.request.crossfade
 
 enum class ReadingMode { WEBTOON, PAGER_LTR, PAGER_RTL }
 
@@ -256,7 +259,7 @@ fun MangaReaderScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(32.dp),
             ) {
-                coil.compose.AsyncImage(
+                coil3.compose.AsyncImage(
                     model = ani.saikou.R.drawable.error_samurai,
                     contentDescription = "Error",
                     modifier =
@@ -621,16 +624,20 @@ private fun WebtoonReader(
         itemsIndexed(pages) { index, page ->
             val model =
                 if (page.headers.isNotEmpty()) {
-                    coil.request.ImageRequest
+                    coil3.request.ImageRequest
                         .Builder(context)
                         .data(page.imageUrl)
-                        .apply { page.headers.forEach { (k, v) -> addHeader(k, v) } }
+                        .httpHeaders(
+                            NetworkHeaders.Builder().apply {
+                                page.headers.forEach { (k, v) -> add(k, v) }
+                            }.build(),
+                        )
                         .crossfade(true)
                         .build()
                 } else {
                     page.imageUrl
                 }
-            coil.compose.SubcomposeAsyncImage(
+            coil3.compose.SubcomposeAsyncImage(
                 model = model,
                 contentDescription = "Page ${index + 1}",
                 contentScale = ContentScale.FillWidth,
@@ -720,16 +727,20 @@ private fun PagerReader(
             if (mangaPage != null) {
                 val model =
                     if (mangaPage.headers.isNotEmpty()) {
-                        coil.request.ImageRequest
+                        coil3.request.ImageRequest
                             .Builder(context)
                             .data(mangaPage.imageUrl)
-                            .apply { mangaPage.headers.forEach { (k, v) -> addHeader(k, v) } }
+                            .httpHeaders(
+                                NetworkHeaders.Builder().apply {
+                                    mangaPage.headers.forEach { (k, v) -> add(k, v) }
+                                }.build(),
+                            )
                             .crossfade(true)
                             .build()
                     } else {
                         mangaPage.imageUrl
                     }
-                coil.compose.SubcomposeAsyncImage(
+                coil3.compose.SubcomposeAsyncImage(
                     model = model,
                     contentDescription = "Page ${page + 1}",
                     contentScale = ContentScale.Fit,
