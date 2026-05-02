@@ -12,37 +12,35 @@ import org.jsoup.Jsoup
 /**
  * Fallback manga source for titles not available on MangaDex (e.g. licensed manga).
  * Parses mangapill.com — no JS rendering, no Cloudflare, clean HTML.
+ *
+ * Endpoint paths, CSS selectors, and regex patterns all live in [MangaPillSite]
+ * so a site-side markup change is a one-place fix.
  */
 class MangaPillParser(
     private val logger: Logger,
 ) : MangaSource {
-    companion object {
-        private const val HOST = "https://mangapill.com"
-        private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-
     override suspend fun search(query: String): List<MangaSearchResult> =
         withContext(Dispatchers.IO) {
             try {
                 val doc =
                     Jsoup
-                        .connect("$HOST/search?q=$query")
-                        .userAgent(USER_AGENT)
+                        .connect(MangaPillSite.Paths.search(query))
+                        .userAgent(MangaPillSite.USER_AGENT)
                         .timeout(10000)
                         .get()
 
                 doc
-                    .select("a[href^=/manga/]")
+                    .select(MangaPillSite.Selectors.SEARCH_RESULT_LINK)
                     .mapNotNull { el ->
                         val href = el.attr("href")
-                        if (!href.matches(Regex("/manga/\\d+/.*"))) return@mapNotNull null
+                        if (!href.matches(MangaPillSite.Patterns.MANGA_HREF)) return@mapNotNull null
                         val title =
-                            el.select("div.font-black").text().ifEmpty {
+                            el.select(MangaPillSite.Selectors.SEARCH_TITLE).text().ifEmpty {
                                 el.attr("title").ifEmpty { null }
                             } ?: return@mapNotNull null
                         val cover =
-                            el.select("img").attr("data-src").ifEmpty {
-                                el.select("img").attr("src")
+                            el.select(MangaPillSite.Selectors.SEARCH_IMG).attr("data-src").ifEmpty {
+                                el.select(MangaPillSite.Selectors.SEARCH_IMG).attr("src")
                             }
 
                         MangaSearchResult(
@@ -61,25 +59,24 @@ class MangaPillParser(
         withContext(Dispatchers.IO) {
             val mangaPath = sourceId
             try {
-                val url = if (mangaPath.startsWith("http")) mangaPath else "$HOST$mangaPath"
                 val doc =
                     Jsoup
-                        .connect(url)
-                        .userAgent(USER_AGENT)
+                        .connect(MangaPillSite.Paths.absoluteUrl(mangaPath))
+                        .userAgent(MangaPillSite.USER_AGENT)
                         .timeout(10000)
                         .get()
 
                 doc
-                    .select("a[href*=/chapters/]")
+                    .select(MangaPillSite.Selectors.CHAPTER_LINKS)
                     .mapNotNull { el ->
                         val href = el.attr("href")
                         // Extract chapter number from URL: /chapters/4741-10001000/vinland-saga-chapter-1
-                        val numMatch = Regex("""chapter-(\d+(?:\.\d+)?)""").find(href) ?: return@mapNotNull null
+                        val numMatch = MangaPillSite.Patterns.CHAPTER_NUMBER.find(href) ?: return@mapNotNull null
                         val number = numMatch.groupValues[1].toFloatOrNull() ?: return@mapNotNull null
                         Chapter(
                             id = href,
                             number = number,
-                            name = "Ch. ${numMatch.groupValues[1]}",
+                            name = MangaPillSite.chapterName(numMatch.groupValues[1]),
                         )
                     }.sortedBy { it.number }
             } catch (e: Exception) {
@@ -92,21 +89,18 @@ class MangaPillParser(
         withContext(Dispatchers.IO) {
             val chapterPath = chapterId
             try {
-                val url = if (chapterPath.startsWith("http")) chapterPath else "$HOST$chapterPath"
                 val doc =
                     Jsoup
-                        .connect(url)
-                        .userAgent(USER_AGENT)
+                        .connect(MangaPillSite.Paths.absoluteUrl(chapterPath))
+                        .userAgent(MangaPillSite.USER_AGENT)
                         .timeout(15000)
                         .maxBodySize(0) // some chapters have many pages
                         .get()
 
-                // Select all images with CDN URLs (the manga page images)
-                // CDN requires Referer header to serve images
-                val referer = mapOf("Referer" to "$HOST/")
-                doc.select("img[data-src*=mangap], img[data-src*=cdn]").mapIndexed { index, img ->
+                // CDN requires Referer header to serve images.
+                doc.select(MangaPillSite.Selectors.PAGE_IMAGES).mapIndexed { index, img ->
                     val imageUrl = img.attr("data-src").ifEmpty { img.attr("src") }
-                    MangaPage(index = index, imageUrl = imageUrl, headers = referer)
+                    MangaPage(index = index, imageUrl = imageUrl, headers = MangaPillSite.REFERER_HEADERS)
                 }
             } catch (e: Exception) {
                 reportParserIssue("getPages", e, mapOf("chapterPath" to chapterPath))

@@ -15,30 +15,28 @@ import org.jsoup.nodes.Element
  * Anime stream-URL parser scraping anitaku.to (a GogoAnime mirror).
  * Three-step pipeline: search → episode list → embed URL → direct stream.
  *
+ * Endpoint paths, CSS selectors, regex patterns, and site-stamped tokens
+ * all live in [GogoSite] so a markup change is a one-place fix.
+ *
  * Lives in androidMain — Jsoup is JVM-only, [Uri] is Android-specific.
  * Mirrors the [ani.saikou.data.source.manga.MangaPillParser] pattern.
  */
 class GogoParser(
     private val logger: Logger,
 ) {
-    companion object {
-        private const val HOST = "https://anitaku.to"
-        private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-
     suspend fun search(query: String): List<AnimeSearchResult> =
         withContext(Dispatchers.IO) {
             try {
                 val doc =
                     Jsoup
-                        .connect("$HOST/search.html?keyword=$query")
-                        .userAgent(USER_AGENT)
+                        .connect(GogoSite.Paths.search(query))
+                        .userAgent(GogoSite.USER_AGENT)
                         .timeout(10000)
                         .get()
 
-                doc.select(".last_episodes > ul > li div.img > a").map { el: Element ->
+                doc.select(GogoSite.Selectors.SEARCH_RESULTS).map { el: Element ->
                     AnimeSearchResult(
-                        slug = el.attr("href").replace("/category/", ""),
+                        slug = el.attr("href").replace(GogoSite.Tokens.CATEGORY_PREFIX, ""),
                         name = el.attr("title"),
                         cover = el.select("img").attr("src"),
                     )
@@ -55,51 +53,57 @@ class GogoParser(
             try {
                 val doc =
                     Jsoup
-                        .connect("$HOST/category/$slug")
-                        .userAgent(USER_AGENT)
+                        .connect(GogoSite.Paths.anime(slug))
+                        .userAgent(GogoSite.USER_AGENT)
                         .timeout(10000)
                         .get()
 
                 // New anitaku.to structure
-                val episodeLinks = doc.select("ul#episode_related a[href], ul.ep-range a[href]")
+                val episodeLinks = doc.select(GogoSite.Selectors.EPISODE_LINKS_PRIMARY)
                 if (episodeLinks.isNotEmpty()) {
                     for (el in episodeLinks.reversed()) {
                         val href = el.attr("href").trim()
-                        if (!href.contains("-episode-")) continue
+                        if (!href.contains(GogoSite.Tokens.EPISODE_PATH_FRAGMENT)) continue
                         val num =
                             el.attr("data-num").ifEmpty {
-                                el.select(".name").text().replace("EP", "").trim().ifEmpty {
-                                    Regex("""-episode-(\d+)""").find(href)?.groupValues?.get(1) ?: ""
-                                }
+                                el
+                                    .select(GogoSite.Selectors.EPISODE_NAME)
+                                    .text()
+                                    .replace(GogoSite.Tokens.EPISODE_PREFIX, "")
+                                    .trim()
+                                    .ifEmpty {
+                                        GogoSite.Patterns.EPISODE_NUMBER
+                                            .find(href)
+                                            ?.groupValues
+                                            ?.get(1) ?: ""
+                                    }
                             }
                         if (num.isNotEmpty()) {
-                            val fullLink = if (href.startsWith("http")) href else "$HOST$href"
-                            episodes.add(Episode(number = num, link = fullLink))
+                            episodes.add(Episode(number = num, link = GogoSite.Paths.absoluteUrl(href)))
                         }
                     }
                 }
 
                 // Fallback: AJAX method
                 if (episodes.isEmpty()) {
-                    val lastEpisode = doc.select("ul#episode_page > li:last-child > a").attr("ep_end")
-                    val animeId = doc.select("input#movie_id").attr("value")
+                    val lastEpisode = doc.select(GogoSite.Selectors.EPISODE_PAGE_LAST).attr("ep_end")
+                    val animeId = doc.select(GogoSite.Selectors.MOVIE_ID_INPUT).attr("value")
                     if (lastEpisode.isNotEmpty() && animeId.isNotEmpty()) {
                         val ajax =
                             Jsoup
-                                .connect(
-                                    "https://ajax.gogocdn.net/ajax/load-list-episode?ep_start=0&ep_end=$lastEpisode&id=$animeId",
-                                ).userAgent(USER_AGENT)
+                                .connect(GogoSite.Paths.ajaxEpisodeList(animeId, lastEpisode))
+                                .userAgent(GogoSite.USER_AGENT)
                                 .timeout(10000)
                                 .get()
 
-                        for (el in ajax.select("ul > li > a").reversed()) {
+                        for (el in ajax.select(GogoSite.Selectors.AJAX_EPISODE_ITEMS).reversed()) {
                             val num =
                                 el
-                                    .select(".name")
+                                    .select(GogoSite.Selectors.EPISODE_NAME)
                                     .text()
-                                    .replace("EP", "")
+                                    .replace(GogoSite.Tokens.EPISODE_PREFIX, "")
                                     .trim()
-                            episodes.add(Episode(number = num, link = HOST + el.attr("href").trim()))
+                            episodes.add(Episode(number = num, link = GogoSite.HOST + el.attr("href").trim()))
                         }
                     }
                 }
@@ -116,34 +120,16 @@ class GogoParser(
                 val doc =
                     Jsoup
                         .connect(episodeLink)
-                        .userAgent(USER_AGENT)
+                        .userAgent(GogoSite.USER_AGENT)
                         .ignoreHttpErrors(true)
                         .timeout(10000)
                         .get()
 
                 // (serverName, embedUrl, subtitleTracks)
                 val servers = mutableListOf<Triple<String, String, List<SubtitleTrack>>>()
-
-                // New structure
-                for (el in doc.select("li.server a.server-video[data-video]")) {
-                    val videoUrl = el.attr("data-video")
-                    val serverName = el.text().replace("Choose this server", "").trim()
-                    if (videoUrl.isNotEmpty() && serverName.isNotEmpty()) {
-                        val subs = parseSubtitlesFromUrl(videoUrl)
-                        servers.add(Triple(serverName, httpsIfy(videoUrl), subs))
-                    }
-                }
-
-                // Fallback
+                collectServers(doc.select(GogoSite.Selectors.SERVER_LINKS_PRIMARY), servers)
                 if (servers.isEmpty()) {
-                    for (el in doc.select("div.anime_muti_link > ul > li:not(li.anime) a[data-video]")) {
-                        val videoUrl = el.attr("data-video")
-                        val serverName = el.text().replace("Choose this server", "").trim()
-                        if (videoUrl.isNotEmpty() && serverName.isNotEmpty()) {
-                            val subs = parseSubtitlesFromUrl(videoUrl)
-                            servers.add(Triple(serverName, httpsIfy(videoUrl), subs))
-                        }
-                    }
+                    collectServers(doc.select(GogoSite.Selectors.SERVER_LINKS_FALLBACK), servers)
                 }
 
                 for ((name, url, subs) in servers) {
@@ -155,6 +141,20 @@ class GogoParser(
             }
             links
         }
+
+    private fun collectServers(
+        elements: org.jsoup.select.Elements,
+        sink: MutableList<Triple<String, String, List<SubtitleTrack>>>,
+    ) {
+        for (el in elements) {
+            val videoUrl = el.attr("data-video")
+            val serverName = el.text().replace(GogoSite.Tokens.SERVER_BUTTON_TEXT, "").trim()
+            if (videoUrl.isNotEmpty() && serverName.isNotEmpty()) {
+                val subs = parseSubtitlesFromUrl(videoUrl)
+                sink.add(Triple(serverName, httpsIfy(videoUrl), subs))
+            }
+        }
+    }
 
     private fun reportParserIssue(
         method: String,
@@ -175,8 +175,8 @@ class GogoParser(
                     .connect(url)
                     .ignoreHttpErrors(true)
                     .ignoreContentType(true)
-                    .header("Referer", "$HOST/")
-                    .userAgent(USER_AGENT)
+                    .header("Referer", "${GogoSite.HOST}/")
+                    .userAgent(GogoSite.USER_AGENT)
                     .timeout(10000)
                     .get()
                     .html()
@@ -186,14 +186,14 @@ class GogoParser(
             val headers = mapOf("Referer" to cleanReferer)
 
             // 1) Direct regex on raw HTML
-            val m3u8 = Regex("""(https?://[^\s"'\\]+\.m3u8[^\s"'\\]*)""").find(page)?.value
-            if (m3u8 != null) {
-                return StreamLink(server = name, url = m3u8, quality = "Auto", headers = headers, subtitles = subtitles)
-            }
-
-            val mp4 = Regex("""(https?://[^\s"'\\]+\.mp4[^\s"'\\]*)""").find(page)?.value
-            if (mp4 != null) {
-                return StreamLink(server = name, url = mp4, quality = "Auto", headers = headers, subtitles = subtitles)
+            findStreamUrl(page)?.let { (streamUrl, _) ->
+                return StreamLink(
+                    server = name,
+                    url = streamUrl,
+                    quality = GogoSite.DEFAULT_QUALITY,
+                    headers = headers,
+                    subtitles = subtitles,
+                )
             }
 
             // 2) Unpack eval(function(p,a,c,k,e,d){...}) obfuscated JS
@@ -201,13 +201,14 @@ class GogoParser(
             // Prefer URL-derived subs; fall back to scanning the unpacked JS for VTT tracks.
             val allSubs = if (subtitles.isNotEmpty()) subtitles else parseSubtitlesFromUnpacked(unpacked)
 
-            val unpackedM3u8 = Regex("""(https?://[^\s"'\\]+\.m3u8[^\s"'\\]*)""").find(unpacked)?.value
-            if (unpackedM3u8 != null) {
-                return StreamLink(server = name, url = unpackedM3u8, quality = "Auto", headers = headers, subtitles = allSubs)
-            }
-            val unpackedMp4 = Regex("""(https?://[^\s"'\\]+\.mp4[^\s"'\\]*)""").find(unpacked)?.value
-            if (unpackedMp4 != null) {
-                return StreamLink(server = name, url = unpackedMp4, quality = "Auto", headers = headers, subtitles = allSubs)
+            findStreamUrl(unpacked)?.let { (streamUrl, _) ->
+                return StreamLink(
+                    server = name,
+                    url = streamUrl,
+                    quality = GogoSite.DEFAULT_QUALITY,
+                    headers = headers,
+                    subtitles = allSubs,
+                )
             }
             null
         } catch (e: Exception) {
@@ -216,16 +217,27 @@ class GogoParser(
         }
     }
 
+    /** Returns the first stream URL found in [body], paired with its container ("m3u8" or "mp4"),
+     *  preferring HLS over progressive MP4. */
+    private fun findStreamUrl(body: String): Pair<String, String>? {
+        GogoSite.Patterns.M3U8_URL
+            .find(body)
+            ?.value
+            ?.let { return it to "m3u8" }
+        GogoSite.Patterns.MP4_URL
+            .find(body)
+            ?.value
+            ?.let { return it to "mp4" }
+        return null
+    }
+
     /**
      * Unpacks Dean Edwards' p.a.c.k.e.d JavaScript — the obfuscation used by
      * most GogoAnime embed servers to hide stream URLs.
      */
     private fun unpackJsPacked(html: String): String? {
         // Match eval(function(p,a,c,k,e,d){...}('payload',base,count,'keys'.split('|')))
-        val packed =
-            Regex(
-                """eval\(function\(p,a,c,k,e,d\)\{.*?\}\('(.*?)',\s*(\d+),\s*(\d+),\s*'([^']*)'\.split\('\|'\)""",
-            ).find(html) ?: return null
+        val packed = GogoSite.Patterns.PACKED_JS.find(html) ?: return null
 
         val payload = packed.groupValues[1]
         val base = packed.groupValues[2].toIntOrNull() ?: return null
@@ -272,14 +284,10 @@ class GogoParser(
         return tracks
     }
 
-    /**
-     * Extracts subtitle tracks from unpacked JWPlayer config.
-     * Looks for VTT URLs in the JS source.
-     */
+    /** Extracts subtitle tracks from unpacked JWPlayer config — VTT URLs in the JS source. */
     private fun parseSubtitlesFromUnpacked(js: String): List<SubtitleTrack> =
         try {
-            val vttPattern = Regex("""(https?://[^\s"'\\]+\.vtt[^\s"'\\]*)""")
-            vttPattern
+            GogoSite.Patterns.VTT_URL
                 .findAll(js)
                 .map { match -> SubtitleTrack(url = match.value, label = "English") }
                 .distinctBy { it.url }
