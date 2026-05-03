@@ -43,8 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ani.saikou.navigation.Screen
 import ani.saikou.navigation.bottomBarScreens
-import ani.saikou.ui.theme.Background
-import ani.saikou.ui.theme.Primary
+import ani.saikou.sharedui.theme.Background
+import ani.saikou.sharedui.theme.Primary
 
 /**
  * Bottom navigation bar with a gradient "pill" indicator that slides between

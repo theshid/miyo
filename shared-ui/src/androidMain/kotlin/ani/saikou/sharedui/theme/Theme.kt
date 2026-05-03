@@ -1,4 +1,4 @@
-package ani.saikou.ui.theme
+package ani.saikou.sharedui.theme
 
 import android.app.Activity
 import androidx.compose.material3.MaterialTheme
@@ -64,7 +64,7 @@ fun SaikouTheme(content: @Composable () -> Unit) {
 
     MaterialTheme(
         colorScheme = SaikouDarkColorScheme,
-        typography = SaikouTypography,
+        typography = saikouTypography(),
         shapes = SaikouShapes,
         content = content,
     )

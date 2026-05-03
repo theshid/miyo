@@ -41,11 +41,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.domain.model.Media
-import ani.saikou.ui.theme.Background
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.SurfaceContainer
+import ani.saikou.sharedui.theme.Background
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.Primary
+import ani.saikou.sharedui.theme.SurfaceContainer
 import coil3.compose.AsyncImage
 import org.koin.androidx.compose.koinViewModel
 

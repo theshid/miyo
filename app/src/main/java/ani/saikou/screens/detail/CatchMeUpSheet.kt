@@ -32,9 +32,9 @@ import androidx.compose.ui.unit.dp
 import ani.saikou.components.MarkdownText
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.domain.model.Media
-import ani.saikou.ui.theme.Background
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
+import ani.saikou.sharedui.theme.Background
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.Primary
 import org.koin.compose.koinInject
 
 @Composable

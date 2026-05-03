@@ -14,8 +14,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.OnSurfaceVariant
 import coil3.compose.AsyncImage
 
 /**

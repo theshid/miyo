@@ -11,7 +11,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import ani.saikou.ui.theme.Primary
+import ani.saikou.sharedui.theme.Primary
 
 /**
  * Renders a subset of Markdown inline formatting:

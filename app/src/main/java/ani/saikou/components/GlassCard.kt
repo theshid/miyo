@@ -12,8 +12,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import ani.saikou.ui.theme.GhostBorder
-import ani.saikou.ui.theme.SurfaceContainer
+import ani.saikou.sharedui.theme.GhostBorder
+import ani.saikou.sharedui.theme.SurfaceContainer
 
 /**
  * Glassmorphism card following Neon Nocturne design spec:

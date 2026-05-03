@@ -12,9 +12,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ani.saikou.ui.theme.HiroMisake
-import ani.saikou.ui.theme.PillShape
-import ani.saikou.ui.theme.Primary
+import ani.saikou.sharedui.theme.HiroMisake
+import ani.saikou.sharedui.theme.PillShape
+import ani.saikou.sharedui.theme.Primary
 
 @Composable
 fun PillButton(

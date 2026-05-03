@@ -10,9 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import ani.saikou.ui.theme.GhostBorder
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.SurfaceVariant
+import ani.saikou.sharedui.theme.GhostBorder
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.SurfaceVariant
 
 @Composable
 fun GenreChip(
@@ -24,14 +24,14 @@ fun GenreChip(
     val shape = MaterialTheme.shapes.extraSmall
     val bgColor =
         if (selected) {
-            ani.saikou.ui.theme.Primary
+            ani.saikou.sharedui.theme.Primary
                 .copy(alpha = 0.15f)
         } else {
             SurfaceVariant.copy(alpha = 0.5f)
         }
     val borderColor =
         if (selected) {
-            ani.saikou.ui.theme.Primary
+            ani.saikou.sharedui.theme.Primary
                 .copy(alpha = 0.5f)
         } else {
             GhostBorder
@@ -40,7 +40,7 @@ fun GenreChip(
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall,
-        color = if (selected) ani.saikou.ui.theme.Primary else OnSurface,
+        color = if (selected) ani.saikou.sharedui.theme.Primary else OnSurface,
         modifier =
             modifier
                 .clip(shape)

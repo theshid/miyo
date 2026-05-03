@@ -33,12 +33,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.Secondary
-import ani.saikou.ui.theme.SurfaceContainer
-import ani.saikou.ui.theme.SurfaceContainerHigh
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.Primary
+import ani.saikou.sharedui.theme.Secondary
+import ani.saikou.sharedui.theme.SurfaceContainer
+import ani.saikou.sharedui.theme.SurfaceContainerHigh
 
 /**
  * UI-level download state for a chapter row. Keep this outside of any single

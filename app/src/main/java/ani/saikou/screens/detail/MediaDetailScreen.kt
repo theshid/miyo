@@ -78,13 +78,13 @@ import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.domain.repository.MangaSourceRepository
-import ani.saikou.ui.theme.Background
-import ani.saikou.ui.theme.Favorite
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.Secondary
-import ani.saikou.ui.theme.SurfaceContainer
+import ani.saikou.sharedui.theme.Background
+import ani.saikou.sharedui.theme.Favorite
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.Primary
+import ani.saikou.sharedui.theme.Secondary
+import ani.saikou.sharedui.theme.SurfaceContainer
 import ani.saikou.util.ShareCardGenerator
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
@@ -409,12 +409,12 @@ fun MediaDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     size = HalftoneSize.MD,
                     variant = HalftoneVariant.PURPLE,
-                    geistFamily = ani.saikou.ui.theme.Inter,
+                    geistFamily = ani.saikou.sharedui.theme.Inter,
                 )
                 androidx.compose.material3.DropdownMenu(
                     expanded = statusMenuOpen,
                     onDismissRequest = { statusMenuOpen = false },
-                    modifier = Modifier.background(ani.saikou.ui.theme.SurfaceContainerHigh),
+                    modifier = Modifier.background(ani.saikou.sharedui.theme.SurfaceContainerHigh),
                 ) {
                     listOf(
                         "CURRENT" to (if (media.type == "MANGA") "Reading" else "Watching"),
@@ -438,12 +438,12 @@ fun MediaDetailScreen(
                             },
                         )
                     }
-                    androidx.compose.material3.HorizontalDivider(color = ani.saikou.ui.theme.OutlineVariant)
+                    androidx.compose.material3.HorizontalDivider(color = ani.saikou.sharedui.theme.OutlineVariant)
                     androidx.compose.material3.DropdownMenuItem(
                         text = {
                             Text(
                                 text = "Remove from list",
-                                color = ani.saikou.ui.theme.Error,
+                                color = ani.saikou.sharedui.theme.Error,
                                 fontWeight = FontWeight.Medium,
                             )
                         },

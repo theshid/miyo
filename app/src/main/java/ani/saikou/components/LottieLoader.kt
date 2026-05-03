@@ -10,19 +10,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ani.saikou.R
-import ani.saikou.ui.theme.Primary
+import ani.saikou.sharedui.theme.Primary
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
+import miyo.shared_ui.generated.resources.Res
+import miyo.shared_ui.generated.resources.bangers
+import org.jetbrains.compose.resources.Font
 
-private val Bangers = FontFamily(Font(R.font.bangers))
+// CMP's Font(Res.font.*) is @Composable, so the family is a composable getter.
+private val Bangers: FontFamily
+    @Composable
+    get() = FontFamily(Font(Res.font.bangers))
 
 /**
  * Lottie-based loading indicator with anime-style text.

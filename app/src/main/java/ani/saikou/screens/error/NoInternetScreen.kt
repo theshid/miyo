@@ -20,9 +20,9 @@ import androidx.compose.ui.unit.dp
 import ani.saikou.components.HalftoneButton
 import ani.saikou.components.HalftoneSize
 import ani.saikou.components.HalftoneVariant
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.SurfaceContainerHigh
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.SurfaceContainerHigh
 
 @Composable
 fun NoInternetScreen(onRetry: () -> Unit) {
@@ -73,7 +73,7 @@ fun NoInternetScreen(onRetry: () -> Unit) {
                 onClick = onRetry,
                 size = HalftoneSize.LG,
                 variant = HalftoneVariant.PURPLE,
-                geistFamily = ani.saikou.ui.theme.Inter,
+                geistFamily = ani.saikou.sharedui.theme.Inter,
             )
         }
     }

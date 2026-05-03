@@ -1,4 +1,4 @@
-package ani.saikou.ui.theme
+package ani.saikou.sharedui.theme
 
 import androidx.compose.ui.graphics.Color
 

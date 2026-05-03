@@ -13,8 +13,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.Secondary
+import ani.saikou.sharedui.theme.Primary
+import ani.saikou.sharedui.theme.Secondary
 import coil3.compose.AsyncImage
 
 @Composable
@@ -41,7 +41,7 @@ fun PulseAvatar(
                     .size(size)
                     .clip(CircleShape)
                     .background(
-                        ani.saikou.ui.theme.SurfaceContainerHigh,
+                        ani.saikou.sharedui.theme.SurfaceContainerHigh,
                         CircleShape,
                     ),
         )

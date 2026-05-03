@@ -39,10 +39,10 @@ import ani.saikou.components.ChapterDownloadState
 import ani.saikou.components.ChapterRow
 import ani.saikou.components.ChapterRowShimmer
 import ani.saikou.components.GenreChip
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.SurfaceBright
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.Primary
+import ani.saikou.sharedui.theme.SurfaceBright
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -49,12 +49,12 @@ import ani.saikou.components.HalftoneButton
 import ani.saikou.components.HalftoneSize
 import ani.saikou.components.HalftoneVariant
 import ani.saikou.domain.model.Media
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.Secondary
-import ani.saikou.ui.theme.SurfaceBright
-import ani.saikou.ui.theme.SurfaceContainer
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.Primary
+import ani.saikou.sharedui.theme.Secondary
+import ani.saikou.sharedui.theme.SurfaceBright
+import ani.saikou.sharedui.theme.SurfaceContainer
 import coil3.compose.AsyncImage
 import org.koin.androidx.compose.koinViewModel
 
@@ -410,7 +410,7 @@ private fun EditBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 size = HalftoneSize.LG,
                 variant = HalftoneVariant.PURPLE,
-                geistFamily = ani.saikou.ui.theme.Inter,
+                geistFamily = ani.saikou.sharedui.theme.Inter,
             )
 
             Spacer(modifier = Modifier.height(16.dp))

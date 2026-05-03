@@ -1,39 +1,67 @@
-package ani.saikou.ui.theme
+package ani.saikou.sharedui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import ani.saikou.R
+import miyo.shared_ui.generated.resources.Res
+import miyo.shared_ui.generated.resources.epilogue_bold
+import miyo.shared_ui.generated.resources.epilogue_extrabold
+import miyo.shared_ui.generated.resources.epilogue_semibold
+import miyo.shared_ui.generated.resources.hiro_misake
+import miyo.shared_ui.generated.resources.instrument_serif
+import miyo.shared_ui.generated.resources.inter_bold
+import miyo.shared_ui.generated.resources.inter_medium
+import miyo.shared_ui.generated.resources.inter_regular
+import miyo.shared_ui.generated.resources.inter_semibold
+import miyo.shared_ui.generated.resources.musashi
+import org.jetbrains.compose.resources.Font
 
 // ── Font Families ─────────────────────────────────────────────
-val Epilogue =
-    FontFamily(
-        Font(R.font.epilogue_semibold, FontWeight.SemiBold),
-        Font(R.font.epilogue_bold, FontWeight.Bold),
-        Font(R.font.epilogue_extrabold, FontWeight.ExtraBold),
-    )
+// CMP's `Font(Res.font.*, ...)` is @Composable, so each family is exposed
+// via a @Composable property getter. Consumers already call from a
+// composable context (TextStyle / Typography construction), so the call
+// sites don't change shape — only the package import does.
 
-val HiroMisake = FontFamily(Font(R.font.hiro_misake))
+val Epilogue: FontFamily
+    @Composable
+    get() =
+        FontFamily(
+            Font(Res.font.epilogue_semibold, FontWeight.SemiBold),
+            Font(Res.font.epilogue_bold, FontWeight.Bold),
+            Font(Res.font.epilogue_extrabold, FontWeight.ExtraBold),
+        )
 
-val Musashi = FontFamily(Font(R.font.musashi))
+val HiroMisake: FontFamily
+    @Composable
+    get() = FontFamily(Font(Res.font.hiro_misake))
 
-val InstrumentSerif = FontFamily(Font(R.font.instrument_serif))
+val Musashi: FontFamily
+    @Composable
+    get() = FontFamily(Font(Res.font.musashi))
 
-val JetBrainsMono = FontFamily(Font(R.font.jetbrains_mono))
+val InstrumentSerif: FontFamily
+    @Composable
+    get() = FontFamily(Font(Res.font.instrument_serif))
 
-val Inter =
-    FontFamily(
-        Font(R.font.inter_regular, FontWeight.Normal),
-        Font(R.font.inter_medium, FontWeight.Medium),
-        Font(R.font.inter_semibold, FontWeight.SemiBold),
-        Font(R.font.inter_bold, FontWeight.Bold),
-    )
+val Inter: FontFamily
+    @Composable
+    get() =
+        FontFamily(
+            Font(Res.font.inter_regular, FontWeight.Normal),
+            Font(Res.font.inter_medium, FontWeight.Medium),
+            Font(Res.font.inter_semibold, FontWeight.SemiBold),
+            Font(Res.font.inter_bold, FontWeight.Bold),
+        )
 
 // ── Typography Scale ──────────────────────────────────────────
-val SaikouTypography =
+// Was a top-level `val SaikouTypography`; now @Composable so it can call
+// the composable font-family getters. Wired into MaterialTheme(typography = …)
+// from inside SaikouTheme — that's already a composable context.
+@Composable
+fun saikouTypography(): Typography =
     Typography(
         // Display Large — Hero character names, app title
         displayLarge =
@@ -44,7 +72,6 @@ val SaikouTypography =
                 lineHeight = 64.sp,
                 letterSpacing = (-0.02).sp,
             ),
-        // Display Medium
         displayMedium =
             TextStyle(
                 fontFamily = Epilogue,
@@ -53,7 +80,6 @@ val SaikouTypography =
                 lineHeight = 52.sp,
                 letterSpacing = (-0.02).sp,
             ),
-        // Display Small
         displaySmall =
             TextStyle(
                 fontFamily = Epilogue,
@@ -79,7 +105,6 @@ val SaikouTypography =
                 fontSize = 28.sp,
                 lineHeight = 36.sp,
             ),
-        // Headline Small
         headlineSmall =
             TextStyle(
                 fontFamily = Epilogue,
@@ -96,7 +121,6 @@ val SaikouTypography =
                 lineHeight = 28.sp,
                 letterSpacing = 0.01.sp,
             ),
-        // Title Medium
         titleMedium =
             TextStyle(
                 fontFamily = Inter,
@@ -105,7 +129,6 @@ val SaikouTypography =
                 lineHeight = 24.sp,
                 letterSpacing = 0.01.sp,
             ),
-        // Title Small
         titleSmall =
             TextStyle(
                 fontFamily = Inter,
@@ -123,7 +146,6 @@ val SaikouTypography =
                 lineHeight = 24.sp,
                 letterSpacing = 0.02.sp,
             ),
-        // Body Medium — Metadata, secondary info
         bodyMedium =
             TextStyle(
                 fontFamily = Inter,
@@ -132,7 +154,6 @@ val SaikouTypography =
                 lineHeight = 20.sp,
                 letterSpacing = 0.01.sp,
             ),
-        // Body Small
         bodySmall =
             TextStyle(
                 fontFamily = Inter,
@@ -149,7 +170,6 @@ val SaikouTypography =
                 lineHeight = 20.sp,
                 letterSpacing = 0.02.sp,
             ),
-        // Label Medium
         labelMedium =
             TextStyle(
                 fontFamily = Inter,

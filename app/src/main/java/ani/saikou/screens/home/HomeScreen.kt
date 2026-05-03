@@ -60,10 +60,10 @@ import ani.saikou.components.TourTarget
 import ani.saikou.components.rememberTourState
 import ani.saikou.components.tourTarget
 import ani.saikou.data.local.OnboardingPrefs
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.Secondary
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.Primary
+import ani.saikou.sharedui.theme.Secondary
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -164,7 +164,7 @@ fun HomeScreen(
                     Text("Cancel", color = OnSurfaceVariant)
                 }
             },
-            containerColor = ani.saikou.ui.theme.SurfaceContainerHigh,
+            containerColor = ani.saikou.sharedui.theme.SurfaceContainerHigh,
         )
     }
 
@@ -623,7 +623,7 @@ private fun WatchHistoryCard(
                             .align(Alignment.BottomStart)
                             .fillMaxWidth(entry.progressFraction)
                             .height(3.dp)
-                            .background(ani.saikou.ui.theme.Primary),
+                            .background(ani.saikou.sharedui.theme.Primary),
                 )
             }
         }

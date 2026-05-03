@@ -58,15 +58,15 @@ import ani.saikou.components.HalftoneButton
 import ani.saikou.components.HalftoneSize
 import ani.saikou.components.HalftoneVariant
 import ani.saikou.domain.model.TorrentResult
-import ani.saikou.ui.theme.GhostBorder
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.Secondary
-import ani.saikou.ui.theme.SurfaceBright
-import ani.saikou.ui.theme.SurfaceContainer
-import ani.saikou.ui.theme.SurfaceVariant
-import ani.saikou.ui.theme.Tertiary
+import ani.saikou.sharedui.theme.GhostBorder
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.Primary
+import ani.saikou.sharedui.theme.Secondary
+import ani.saikou.sharedui.theme.SurfaceBright
+import ani.saikou.sharedui.theme.SurfaceContainer
+import ani.saikou.sharedui.theme.SurfaceVariant
+import ani.saikou.sharedui.theme.Tertiary
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -518,7 +518,7 @@ private fun TorrentDetailSheet(
                 modifier = Modifier.fillMaxWidth(),
                 size = HalftoneSize.LG,
                 variant = HalftoneVariant.PURPLE,
-                geistFamily = ani.saikou.ui.theme.Inter,
+                geistFamily = ani.saikou.sharedui.theme.Inter,
             )
 
             // Copy link — outlined style

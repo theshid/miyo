@@ -9,8 +9,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.Primary
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.Primary
 
 @Composable
 fun SectionHeader(

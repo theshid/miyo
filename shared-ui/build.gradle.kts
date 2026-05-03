@@ -41,6 +41,10 @@ kotlin {
             implementation(libs.media3.exoplayer)
             implementation(libs.media3.ui)
             implementation(libs.media3.common)
+
+            // SaikouTheme calls WindowCompat to control system bar contrast.
+            // Pulled by SaikouTheme only — Android-only, so androidMain.
+            implementation(libs.core.ktx)
         }
     }
 

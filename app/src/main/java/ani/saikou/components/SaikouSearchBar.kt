@@ -17,9 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import ani.saikou.ui.theme.GhostBorder
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.SurfaceVariant
+import ani.saikou.sharedui.theme.GhostBorder
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.SurfaceVariant
 
 @Composable
 fun SaikouSearchBar(

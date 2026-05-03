@@ -52,12 +52,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
 import ani.saikou.components.MediaBannerCard
 import ani.saikou.domain.model.Media
-import ani.saikou.ui.theme.GhostBorder
-import ani.saikou.ui.theme.OnSurface
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
-import ani.saikou.ui.theme.SurfaceContainer
-import ani.saikou.ui.theme.SurfaceVariant
+import ani.saikou.sharedui.theme.GhostBorder
+import ani.saikou.sharedui.theme.OnSurface
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.Primary
+import ani.saikou.sharedui.theme.SurfaceContainer
+import ani.saikou.sharedui.theme.SurfaceVariant
 import coil3.compose.AsyncImage
 import org.koin.androidx.compose.koinViewModel
 

@@ -26,8 +26,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
-import ani.saikou.ui.theme.SurfaceContainer
-import ani.saikou.ui.theme.SurfaceContainerHigh
+import ani.saikou.sharedui.theme.SurfaceContainer
+import ani.saikou.sharedui.theme.SurfaceContainerHigh
 
 @Composable
 fun shimmerBrush(): Brush {

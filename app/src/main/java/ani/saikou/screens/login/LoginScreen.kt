@@ -53,11 +53,11 @@ import ani.saikou.components.HalftoneButton
 import ani.saikou.components.HalftoneSize
 import ani.saikou.components.HalftoneVariant
 import ani.saikou.data.remote.AnilistApi
-import ani.saikou.ui.theme.HiroMisake
-import ani.saikou.ui.theme.InstrumentSerif
-import ani.saikou.ui.theme.Musashi
-import ani.saikou.ui.theme.OnSurfaceVariant
-import ani.saikou.ui.theme.Primary
+import ani.saikou.sharedui.theme.HiroMisake
+import ani.saikou.sharedui.theme.InstrumentSerif
+import ani.saikou.sharedui.theme.Musashi
+import ani.saikou.sharedui.theme.OnSurfaceVariant
+import ani.saikou.sharedui.theme.Primary
 
 /**
  * Login screen kicks off OAuth via Custom Tabs. The success path goes
@@ -198,7 +198,7 @@ fun LoginScreen() {
                 modifier = Modifier.fillMaxWidth(),
                 size = HalftoneSize.LG,
                 variant = HalftoneVariant.PURPLE,
-                geistFamily = ani.saikou.ui.theme.Inter,
+                geistFamily = ani.saikou.sharedui.theme.Inter,
             )
 
             Spacer(modifier = Modifier.height(24.dp))
