@@ -20,4 +20,18 @@ interface HistoryRepository {
     fun observeEpisodesWatchedCount(): Flow<Int>
 
     fun observeChaptersReadCount(): Flow<Int>
+
+    /**
+     * One-shot watch-history lookup for a specific anime — used by the
+     * detail screen to skip the source search when it already has a
+     * persisted source slug.
+     */
+    suspend fun getWatchHistoryFor(mediaId: Int): WatchHistoryItem?
+
+    /**
+     * One-shot reading-history lookup for a specific manga — used by the
+     * detail screen to skip the source search when it already has a
+     * persisted chapter id.
+     */
+    suspend fun getReadingHistoryFor(mangaId: Int): ReadingHistoryItem?
 }

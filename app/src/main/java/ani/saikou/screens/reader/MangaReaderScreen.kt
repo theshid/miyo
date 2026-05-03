@@ -526,7 +526,7 @@ fun MangaReaderScreen(
 
     // ── Source selector ───────────────────────────────────────
     if (readerState.showSourceSelector) {
-        ani.saikou.components.SourceSelectorSheet(
+        ani.saikou.sharedui.components.SourceSelectorSheet(
             title = "Select Manga Source",
             sources = readerState.availableSources,
             onSelect = { source -> viewModel.selectSourceById(source.id) },

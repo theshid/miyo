@@ -3,8 +3,6 @@ package ani.saikou.screens.reader
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.components.ChapterDownloadState
-import ani.saikou.components.SourceItem
 import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ActivityEventEntity
 import ani.saikou.data.local.db.ReadingHistoryDao
@@ -23,6 +21,8 @@ import ani.saikou.domain.repository.DownloadRepository
 import ani.saikou.domain.repository.MangaSourceRepository
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
+import ani.saikou.presentation.screens.detail.ChapterDownloadState
+import ani.saikou.sharedui.components.SourceItem
 import io.github.theshid.prettylog.Log
 import io.sentry.Sentry
 import io.sentry.SentryLevel

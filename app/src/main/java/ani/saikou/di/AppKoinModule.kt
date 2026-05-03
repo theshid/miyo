@@ -5,6 +5,7 @@ import ani.saikou.data.android.di.IS_DEBUG_QUALIFIER
 import ani.saikou.data.local.ConnectivityObserver
 import ani.saikou.data.local.OnboardingPrefs
 import ani.saikou.data.local.TokenStorage
+import ani.saikou.data.local.downloads.DownloadService
 import ani.saikou.data.remote.AiChatServiceImpl
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.FeedbackServiceImpl
@@ -27,6 +28,7 @@ import ani.saikou.domain.repository.FeedbackRepository
 import ani.saikou.domain.repository.NewsRepository
 import ani.saikou.domain.repository.TorrentRepository
 import ani.saikou.domain.source.AiChatService
+import ani.saikou.domain.source.DownloadDispatcher
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.source.NewsSource
 import ani.saikou.domain.source.TorrentSource
@@ -34,13 +36,16 @@ import ani.saikou.domain.usecase.activity.ObserveActivityCalendarUseCase
 import ani.saikou.domain.usecase.ai.BuildAiUserContextSnippetUseCase
 import ani.saikou.domain.usecase.ai.CatchMeUpUseCase
 import ani.saikou.domain.usecase.ai.SendAiChatMessageUseCase
+import ani.saikou.domain.usecase.anilist.DeleteAnilistListEntryUseCase
 import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
 import ani.saikou.domain.usecase.anilist.GetAiringRangeUseCase
 import ani.saikou.domain.usecase.anilist.GetAnimeDiscoveryUseCase
 import ani.saikou.domain.usecase.anilist.GetCharacterUseCase
 import ani.saikou.domain.usecase.anilist.GetHomeAnilistSnapshotUseCase
 import ani.saikou.domain.usecase.anilist.GetMangaDiscoveryUseCase
+import ani.saikou.domain.usecase.anilist.GetMediaDetailUseCase
 import ani.saikou.domain.usecase.anilist.GetSeasonalAnimeUseCase
+import ani.saikou.domain.usecase.anilist.GetSignedInUserUseCase
 import ani.saikou.domain.usecase.anilist.GetUserAnimeListUseCase
 import ani.saikou.domain.usecase.anilist.GetUserFavoritesUseCase
 import ani.saikou.domain.usecase.anilist.GetUserMangaListUseCase
@@ -50,26 +55,33 @@ import ani.saikou.domain.usecase.anilist.LoadMorePopularMangaUseCase
 import ani.saikou.domain.usecase.anilist.RefreshHomeAnilistSnapshotUseCase
 import ani.saikou.domain.usecase.anilist.ResolveChapterCountUseCase
 import ani.saikou.domain.usecase.anilist.SearchMediaUseCase
+import ani.saikou.domain.usecase.anilist.ToggleFavoriteMediaUseCase
+import ani.saikou.domain.usecase.anime.ResolveAnimeSourcesUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.DeleteAllDownloadsForMangaUseCase
 import ani.saikou.domain.usecase.downloads.EvictReadChaptersUseCase
+import ani.saikou.domain.usecase.downloads.ObserveChapterDownloadsForMangaUseCase
 import ani.saikou.domain.usecase.downloads.ObserveDownloadsUseCase
 import ani.saikou.domain.usecase.downloads.PauseChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
 import ani.saikou.domain.usecase.feedback.SubmitFeedbackUseCase
+import ani.saikou.domain.usecase.history.GetReadingHistoryForMediaUseCase
+import ani.saikou.domain.usecase.history.GetWatchHistoryForMediaUseCase
 import ani.saikou.domain.usecase.history.ObserveChaptersReadCountUseCase
 import ani.saikou.domain.usecase.history.ObserveContinueWatchingUseCase
 import ani.saikou.domain.usecase.history.ObserveEpisodesWatchedCountUseCase
 import ani.saikou.domain.usecase.history.ObserveReadingHistoryUseCase
 import ani.saikou.domain.usecase.history.ObserveRecentWatchHistoryUseCase
+import ani.saikou.domain.usecase.manga.ResolveMangaSourcesUseCase
 import ani.saikou.domain.usecase.news.GetAiringScheduleUseCase
 import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
 import ani.saikou.domain.usecase.torrents.SearchTorrentsUseCase
 import ani.saikou.presentation.screens.ai.AiChatViewModel
 import ani.saikou.presentation.screens.anime.AnimeViewModel
 import ani.saikou.presentation.screens.character.CharacterDetailViewModel
+import ani.saikou.presentation.screens.detail.MediaDetailViewModel
 import ani.saikou.presentation.screens.downloads.DownloadsViewModel
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
 import ani.saikou.presentation.screens.home.HomeViewModel
@@ -81,7 +93,6 @@ import ani.saikou.presentation.screens.search.SearchViewModel
 import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.presentation.screens.torrent.TorrentSearchViewModel
-import ani.saikou.screens.detail.MediaDetailViewModel
 import ani.saikou.screens.player.VideoPlayerViewModel
 import ani.saikou.screens.reader.MangaReaderViewModel
 import org.koin.android.ext.koin.androidContext
@@ -119,6 +130,13 @@ val appModule =
         // ─── Device / process services still living in :app ───────────────
         single { ConnectivityObserver(androidContext()) }
         single { OnboardingPrefs(androidContext()) }
+        // DownloadService is a foreground Service that pulls MainActivity +
+        // R from :app, so it can't move down to :data-android. The fun
+        // interface keeps that Android-y wiring out of :shared-ui screens.
+        single<DownloadDispatcher> {
+            val ctx = androidContext()
+            DownloadDispatcher { DownloadService.start(ctx) }
+        }
 
         // ─── Remote services ───────────────────────────────────────────────
         single<AiChatService> { AiChatServiceImpl(apiKey = BuildConfig.OPENAI_API_KEY) }
@@ -171,6 +189,7 @@ val appModule =
         factoryOf(::CancelChapterDownloadUseCase)
         factoryOf(::CatchMeUpUseCase)
         factoryOf(::DeleteAllDownloadsForMangaUseCase)
+        factoryOf(::DeleteAnilistListEntryUseCase)
         factoryOf(::EditListEntryUseCase)
         factoryOf(::EvictReadChaptersUseCase)
         factoryOf(::GetAiringRangeUseCase)
@@ -181,14 +200,19 @@ val appModule =
         factoryOf(::GetHomeAnilistSnapshotUseCase)
         factoryOf(::GetLatestNewsUseCase)
         factoryOf(::GetMangaDiscoveryUseCase)
+        factoryOf(::GetMediaDetailUseCase)
+        factoryOf(::GetReadingHistoryForMediaUseCase)
         factoryOf(::GetSeasonalAnimeUseCase)
+        factoryOf(::GetSignedInUserUseCase)
         factoryOf(::GetUserAnimeListUseCase)
         factoryOf(::GetUserFavoritesUseCase)
         factoryOf(::GetUserMangaListUseCase)
         factoryOf(::GetUserStatsUseCase)
+        factoryOf(::GetWatchHistoryForMediaUseCase)
         factoryOf(::LoadMorePopularAnimeUseCase)
         factoryOf(::LoadMorePopularMangaUseCase)
         factoryOf(::ObserveActivityCalendarUseCase)
+        factoryOf(::ObserveChapterDownloadsForMangaUseCase)
         factoryOf(::ObserveChaptersReadCountUseCase)
         factoryOf(::ObserveContinueWatchingUseCase)
         factoryOf(::ObserveDownloadsUseCase)
@@ -199,11 +223,14 @@ val appModule =
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)
         factoryOf(::RefreshHomeAnilistSnapshotUseCase)
+        factoryOf(::ResolveAnimeSourcesUseCase)
         factoryOf(::ResolveChapterCountUseCase)
+        factoryOf(::ResolveMangaSourcesUseCase)
         factoryOf(::SearchMediaUseCase)
         factoryOf(::SearchTorrentsUseCase)
         factoryOf(::SendAiChatMessageUseCase)
         factoryOf(::SubmitFeedbackUseCase)
+        factoryOf(::ToggleFavoriteMediaUseCase)
 
         // ─── ViewModels ────────────────────────────────────────────────────
         // Every Compose-backed ViewModel resolves through Koin now.

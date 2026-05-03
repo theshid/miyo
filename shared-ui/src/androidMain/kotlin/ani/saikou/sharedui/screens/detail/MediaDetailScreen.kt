@@ -1,4 +1,4 @@
-package ani.saikou.screens.detail
+package ani.saikou.sharedui.screens.detail
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -57,27 +57,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import ani.saikou.components.ChapterDownloadState
-import ani.saikou.components.ChapterRow
-import ani.saikou.components.SourceItem
-import ani.saikou.components.SourceSelectorSheet
-import ani.saikou.data.local.db.ReadingHistoryDao
-import ani.saikou.data.local.db.WatchHistoryDao
-import ani.saikou.data.source.anime.GogoParser
-import ani.saikou.data.source.manga.MangaDexParser
-import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.model.AnimeSearchResult
 import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.model.Media
-import ani.saikou.domain.repository.AnilistRepository
-import ani.saikou.domain.repository.MangaSourceRepository
+import ani.saikou.domain.source.DownloadDispatcher
+import ani.saikou.domain.usecase.anilist.GetSignedInUserUseCase
+import ani.saikou.domain.usecase.anilist.ResolveChapterCountUseCase
+import ani.saikou.domain.usecase.anime.ResolveAnimeSourcesUseCase
+import ani.saikou.domain.usecase.history.GetReadingHistoryForMediaUseCase
+import ani.saikou.domain.usecase.history.GetWatchHistoryForMediaUseCase
+import ani.saikou.domain.usecase.manga.ResolveMangaSourcesUseCase
+import ani.saikou.presentation.screens.detail.ChapterDownloadState
+import ani.saikou.presentation.screens.detail.MediaDetailViewModel
+import ani.saikou.sharedui.components.ChapterRow
 import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.components.GlassCard
 import ani.saikou.sharedui.components.HalftoneButton
 import ani.saikou.sharedui.components.HalftoneSize
 import ani.saikou.sharedui.components.HalftoneVariant
 import ani.saikou.sharedui.components.MediaPosterCard
+import ani.saikou.sharedui.components.SourceItem
+import ani.saikou.sharedui.components.SourceSelectorSheet
 import ani.saikou.sharedui.theme.Background
 import ani.saikou.sharedui.theme.Favorite
 import ani.saikou.sharedui.theme.OnSurface
@@ -91,7 +91,7 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun MediaDetailScreen(
     mediaId: Int,
@@ -104,16 +104,16 @@ fun MediaDetailScreen(
     viewModel: MediaDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
-    // Composable-level dependencies — pulled once and reused by the inline
-    // navigation/search blocks below. Each is a singleton in the Koin graph
-    // so repeated lookups are cheap.
-    val watchHistoryDao = koinInject<WatchHistoryDao>()
-    val readingHistoryDao = koinInject<ReadingHistoryDao>()
-    val mangaDexParser = koinInject<MangaDexParser>()
-    val mangaPillParser = koinInject<MangaPillParser>()
-    val gogoParser = koinInject<GogoParser>()
-    val anilistRepository = koinInject<AnilistRepository>()
-    // ChaptersTab injects MangaSourceRepository on its own — no top-level lookup needed.
+    // Composable-level use cases — pulled once and reused by the inline
+    // navigation/search blocks below. Each resolves to a fresh use case
+    // per render but the underlying repos are singletons.
+    val getWatchHistoryFor = koinInject<GetWatchHistoryForMediaUseCase>()
+    val getReadingHistoryFor = koinInject<GetReadingHistoryForMediaUseCase>()
+    val resolveAnimeSources = koinInject<ResolveAnimeSourcesUseCase>()
+    val resolveMangaSources = koinInject<ResolveMangaSourcesUseCase>()
+    val getSignedInUser = koinInject<GetSignedInUserUseCase>()
+    val downloadDispatcher = koinInject<DownloadDispatcher>()
+    // ChaptersTab pulls ResolveChapterCountUseCase on its own — no top-level lookup needed.
 
     if (state.isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -138,7 +138,7 @@ fun MediaDetailScreen(
     fun onEpisodeSelected(episodeNum: Int) {
         // Check watch history first — if source is saved, go directly
         scope.launch {
-            val history = watchHistoryDao.getForMedia(mediaId)
+            val history = getWatchHistoryFor(mediaId)
             if (history != null && history.sourceSlug.isNotEmpty()) {
                 onNavigateToPlayer(episodeNum, history.sourceSlug)
                 return@launch
@@ -148,7 +148,7 @@ fun MediaDetailScreen(
             sourceSearching = true
             pendingEpisode = episodeNum
             val title = media.nameRomaji ?: media.name ?: media.displayTitle
-            val sources = gogoParser.search(title)
+            val sources = resolveAnimeSources(title)
             sourceSearching = false
 
             when {
@@ -192,7 +192,7 @@ fun MediaDetailScreen(
 
     fun onChapterSelected(chapterNum: Int) {
         scope.launch {
-            val history = readingHistoryDao.getForManga(mediaId)
+            val history = getReadingHistoryFor(mediaId)
             if (history != null && history.sourceId.isNotEmpty()) {
                 onNavigateToReader(chapterNum, history.sourceId)
                 return@launch
@@ -202,11 +202,9 @@ fun MediaDetailScreen(
             pendingChapter = chapterNum
             val title = media.nameRomaji ?: media.name ?: media.displayTitle
 
-            // Try MangaDex first, then MangaPill as fallback
-            var sources = mangaDexParser.search(title)
-            if (sources.isEmpty()) {
-                sources = mangaPillParser.search(title)
-            }
+            // Repo concats MangaDex + MangaPill results so the picker shows
+            // both source options when a title is hosted on more than one.
+            val sources = resolveMangaSources(title)
             mangaSourceSearching = false
 
             when {
@@ -463,7 +461,7 @@ fun MediaDetailScreen(
             }
             IconButton(onClick = {
                 scope.launch {
-                    val user = anilistRepository.getUserData()
+                    val user = getSignedInUser()
                     val bitmap =
                         ShareCardGenerator.generateWatchingCard(
                             context = context,
@@ -585,8 +583,7 @@ fun MediaDetailScreen(
                     downloadStates = viewModel.chapterDownloads.collectAsState().value,
                     onDownloadClick = { chapterNum ->
                         viewModel.queueChapterDownload(chapterNum) {
-                            ani.saikou.data.local.downloads.DownloadService
-                                .start(context)
+                            downloadDispatcher.dispatch()
                         }
                     },
                     onCancelDownloadClick = viewModel::cancelChapterDownload,
@@ -871,7 +868,7 @@ private fun ChaptersTab(
     var sourceChapterCount by remember { mutableStateOf<Int?>(null) }
     var loadingCount by remember { mutableStateOf(false) }
 
-    val mangaSourceRepo = koinInject<MangaSourceRepository>()
+    val resolveChapterCount = koinInject<ResolveChapterCountUseCase>()
 
     // Always probe the sources, even when AniList has a chapter count, since
     // AniList sometimes reports a low/stale number for licensed or on-hiatus
@@ -881,7 +878,7 @@ private fun ChaptersTab(
             loadingCount = true
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 val resolved =
-                    mangaSourceRepo.resolveChapterCount(
+                    resolveChapterCount(
                         title = mediaTitle,
                         anilistTotal = totalChapters,
                     )

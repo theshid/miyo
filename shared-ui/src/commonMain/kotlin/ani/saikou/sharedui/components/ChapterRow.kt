@@ -1,4 +1,4 @@
-package ani.saikou.components
+package ani.saikou.sharedui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import ani.saikou.presentation.screens.detail.ChapterDownloadState
 import ani.saikou.sharedui.components.GlassCard
 import ani.saikou.sharedui.components.ShimmerBox
 import ani.saikou.sharedui.theme.OnSurface
@@ -41,20 +42,6 @@ import ani.saikou.sharedui.theme.Primary
 import ani.saikou.sharedui.theme.Secondary
 import ani.saikou.sharedui.theme.SurfaceContainer
 import ani.saikou.sharedui.theme.SurfaceContainerHigh
-
-/**
- * UI-level download state for a chapter row. Keep this outside of any single
- * ViewModel so both the media detail screen and the reader's chapter sheet can
- * consume the same type.
- */
-data class ChapterDownloadState(
-    val status: String, // QUEUED | DOWNLOADING | PAUSED | COMPLETED | ERROR
-    val downloadedPages: Int,
-    val totalPages: Int,
-) {
-    val progress: Float
-        get() = if (totalPages > 0) downloadedPages.toFloat() / totalPages else 0f
-}
 
 /**
  * One row in a list of chapters. Shows a number badge (read-tinted when the

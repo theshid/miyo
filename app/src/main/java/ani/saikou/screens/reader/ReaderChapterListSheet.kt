@@ -35,9 +35,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import ani.saikou.components.ChapterDownloadState
-import ani.saikou.components.ChapterRow
-import ani.saikou.components.ChapterRowShimmer
+import ani.saikou.presentation.screens.detail.ChapterDownloadState
+import ani.saikou.sharedui.components.ChapterRow
+import ani.saikou.sharedui.components.ChapterRowShimmer
 import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant

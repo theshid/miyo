@@ -4,6 +4,7 @@ import ani.saikou.data.local.db.SaikouDatabase
 import ani.saikou.data.local.downloads.ChapterSizeEstimator
 import ani.saikou.data.local.downloads.MangaDownloadManager
 import ani.saikou.data.repository.ActivityRepositoryImpl
+import ani.saikou.data.repository.AnimeSourceRepositoryImpl
 import ani.saikou.data.repository.DownloadRepositoryImpl
 import ani.saikou.data.repository.HistoryRepositoryImpl
 import ani.saikou.data.repository.MangaSourceRepositoryImpl
@@ -11,6 +12,7 @@ import ani.saikou.data.source.anime.GogoParser
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.repository.ActivityRepository
+import ani.saikou.domain.repository.AnimeSourceRepository
 import ani.saikou.domain.repository.DownloadRepository
 import ani.saikou.domain.repository.HistoryRepository
 import ani.saikou.domain.repository.MangaSourceRepository
@@ -99,4 +101,9 @@ val dataAndroidModule =
         // ─── History + activity repositories (Room-backed) ─────────────────
         single<HistoryRepository> { HistoryRepositoryImpl(readingDao = get(), watchDao = get()) }
         single<ActivityRepository> { ActivityRepositoryImpl(dao = get()) }
+
+        // ─── Anime source aggregation ──────────────────────────────────────
+        // Single-provider for now (GogoAnime via GogoParser); future stream
+        // sources slot in here behind the same domain interface.
+        single<AnimeSourceRepository> { AnimeSourceRepositoryImpl(gogo = get()) }
     }

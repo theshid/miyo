@@ -3,7 +3,6 @@ package ani.saikou.screens.player
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.components.SourceItem
 import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ActivityEventEntity
 import ani.saikou.data.local.db.WatchHistoryDao
@@ -17,6 +16,7 @@ import ani.saikou.domain.model.AnimeSearchResult
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.StreamLink
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.sharedui.components.SourceItem
 import io.github.theshid.prettylog.Log
 import io.sentry.Sentry
 import io.sentry.SentryLevel

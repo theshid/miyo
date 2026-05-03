@@ -1,36 +1,45 @@
-package ani.saikou.screens.detail
+package ani.saikou.presentation.screens.detail
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.components.ChapterDownloadState
 import ani.saikou.domain.event.ListEvent
 import ani.saikou.domain.event.ListEventBus
 import ani.saikou.domain.model.DownloadRequest
 import ani.saikou.domain.model.Media
-import ani.saikou.domain.repository.AnilistRepository
-import ani.saikou.domain.repository.DownloadRepository
+import ani.saikou.domain.usecase.anilist.DeleteAnilistListEntryUseCase
+import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
+import ani.saikou.domain.usecase.anilist.GetMediaDetailUseCase
+import ani.saikou.domain.usecase.anilist.ToggleFavoriteMediaUseCase
+import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
+import ani.saikou.domain.usecase.downloads.ObserveChapterDownloadsForMangaUseCase
+import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class MediaDetailViewModel(
     savedStateHandle: SavedStateHandle,
-    private val repository: AnilistRepository,
-    private val downloadRepo: DownloadRepository,
+    private val getMediaDetail: GetMediaDetailUseCase,
+    private val toggleFavoriteMedia: ToggleFavoriteMediaUseCase,
+    private val editListEntry: EditListEntryUseCase,
+    private val deleteListEntry: DeleteAnilistListEntryUseCase,
+    private val queueChapter: QueueChapterDownloadUseCase,
+    private val cancelChapter: CancelChapterDownloadUseCase,
+    observeChapterDownloads: ObserveChapterDownloadsForMangaUseCase,
 ) : ViewModel() {
     private val mediaId: Int = savedStateHandle["id"] ?: 0
 
     private val _uiState = MutableStateFlow(MediaDetailUiState())
     val uiState: StateFlow<MediaDetailUiState> = _uiState
 
-    /** Map of chapter number → download status. */
+    /** Map of chapter number → download status for this manga's chapters. */
     val chapterDownloads: StateFlow<Map<Int, ChapterDownloadState>> =
-        downloadRepo
-            .observeDownloadsForManga(mediaId)
+        observeChapterDownloads(mediaId)
             .map { downloads ->
                 downloads.mapValues { (_, d) ->
                     ChapterDownloadState(
@@ -53,7 +62,7 @@ class MediaDetailViewModel(
         viewModelScope.launch {
             // totalPages and sourceId are placeholders — DownloadService re-resolves
             // the source and updates the row with the real page count when it runs.
-            downloadRepo.queueChapter(
+            queueChapter(
                 DownloadRequest(
                     mangaId = media.id,
                     mangaTitle = media.displayTitle,
@@ -72,19 +81,15 @@ class MediaDetailViewModel(
     fun cancelChapterDownload(chapterNumber: Int) {
         val media = _uiState.value.media ?: return
         viewModelScope.launch {
-            downloadRepo.cancelChapter("${media.id}_$chapterNumber")
+            cancelChapter("${media.id}_$chapterNumber")
         }
     }
 
     fun loadMedia() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            val media = repository.getMedia(mediaId)
-            _uiState.value =
-                MediaDetailUiState(
-                    media = media,
-                    isLoading = false,
-                )
+            _uiState.update { it.copy(isLoading = true) }
+            val media = getMediaDetail(mediaId)
+            _uiState.update { MediaDetailUiState(media = media, isLoading = false) }
         }
     }
 
@@ -92,11 +97,8 @@ class MediaDetailViewModel(
         val media = _uiState.value.media ?: return
         viewModelScope.launch {
             val isAnime = media.type == "ANIME"
-            repository.toggleFavorite(media.id, isAnime)
-            _uiState.value =
-                _uiState.value.copy(
-                    media = media.copy(isFav = !media.isFav),
-                )
+            toggleFavoriteMedia(media.id, isAnime)
+            _uiState.update { it.copy(media = media.copy(isFav = !media.isFav)) }
             ListEventBus.emit(ListEvent.FavoriteToggled(media.id))
         }
     }
@@ -104,11 +106,8 @@ class MediaDetailViewModel(
     fun updateProgress(progress: Int) {
         val media = _uiState.value.media ?: return
         viewModelScope.launch {
-            repository.editListEntry(mediaId = media.id, progress = progress)
-            _uiState.value =
-                _uiState.value.copy(
-                    media = media.copy(userProgress = progress),
-                )
+            editListEntry(mediaId = media.id, progress = progress)
+            _uiState.update { it.copy(media = media.copy(userProgress = progress)) }
             ListEventBus.emit(ListEvent.ProgressUpdated(media.id, progress))
         }
     }
@@ -116,11 +115,8 @@ class MediaDetailViewModel(
     fun updateStatus(status: String) {
         val media = _uiState.value.media ?: return
         viewModelScope.launch {
-            repository.editListEntry(mediaId = media.id, status = status)
-            _uiState.value =
-                _uiState.value.copy(
-                    media = media.copy(userStatus = status),
-                )
+            editListEntry(mediaId = media.id, status = status)
+            _uiState.update { it.copy(media = media.copy(userStatus = status)) }
             ListEventBus.emit(ListEvent.ListEntryChanged(media.id, status))
         }
     }
@@ -129,9 +125,9 @@ class MediaDetailViewModel(
         val media = _uiState.value.media ?: return
         val listId = media.userListEntryId ?: return
         viewModelScope.launch {
-            repository.deleteListEntry(listId)
-            _uiState.value =
-                _uiState.value.copy(
+            deleteListEntry(listId)
+            _uiState.update {
+                it.copy(
                     media =
                         media.copy(
                             userStatus = null,
@@ -140,6 +136,7 @@ class MediaDetailViewModel(
                             userScore = 0,
                         ),
                 )
+            }
             ListEventBus.emit(ListEvent.ListEntryChanged(media.id, null))
         }
     }
@@ -149,3 +146,18 @@ data class MediaDetailUiState(
     val media: Media? = null,
     val isLoading: Boolean = true,
 )
+
+/**
+ * UI projection of a [ani.saikou.domain.model.Download] — flattened to
+ * the fields the chapter-row Composable consumes. Status is the enum
+ * name so the renderer can switch on it without depending on the domain
+ * enum import.
+ */
+data class ChapterDownloadState(
+    val status: String,
+    val downloadedPages: Int,
+    val totalPages: Int,
+) {
+    val progress: Float
+        get() = if (totalPages > 0) downloadedPages.toFloat() / totalPages else 0f
+}

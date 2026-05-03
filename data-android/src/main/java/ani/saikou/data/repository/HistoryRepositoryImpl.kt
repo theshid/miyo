@@ -32,6 +32,10 @@ class HistoryRepositoryImpl(
 
     override fun observeChaptersReadCount(): Flow<Int> = readingDao.getChaptersReadCount()
 
+    override suspend fun getWatchHistoryFor(mediaId: Int): WatchHistoryItem? = watchDao.getForMedia(mediaId)?.let(::toDomain)
+
+    override suspend fun getReadingHistoryFor(mangaId: Int): ReadingHistoryItem? = readingDao.getForManga(mangaId)?.let(::toDomain)
+
     private fun toDomain(entity: ReadingHistoryEntity) =
         ReadingHistoryItem(
             mangaId = entity.mangaId,

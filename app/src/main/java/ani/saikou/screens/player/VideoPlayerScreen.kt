@@ -1033,7 +1033,7 @@ fun VideoPlayerScreen(
 
     // Source selector bottom sheet
     if (playerState.showSourceSelector) {
-        ani.saikou.components.SourceSelectorSheet(
+        ani.saikou.sharedui.components.SourceSelectorSheet(
             title = "Select Source",
             sources = playerState.availableSources,
             onSelect = { source ->

@@ -1,4 +1,4 @@
-package ani.saikou.screens.detail
+package ani.saikou.sharedui.screens.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
