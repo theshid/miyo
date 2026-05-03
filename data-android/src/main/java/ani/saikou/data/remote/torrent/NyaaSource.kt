@@ -2,6 +2,7 @@ package ani.saikou.data.remote.torrent
 
 import ani.saikou.domain.model.TorrentQuality
 import ani.saikou.domain.model.TorrentResult
+import ani.saikou.domain.source.TorrentSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup

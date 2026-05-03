@@ -11,16 +11,22 @@ import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.remote.news.ANNNewsSource
 import ani.saikou.data.remote.news.JikanNewsSource
 import ani.saikou.data.remote.news.RedditNewsSource
+import ani.saikou.data.remote.torrent.AniDexSource
+import ani.saikou.data.remote.torrent.BTDiggSource
+import ani.saikou.data.remote.torrent.NyaaSource
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.data.repository.AuthRepositoryImpl
 import ani.saikou.data.repository.FeedbackRepositoryImpl
 import ani.saikou.data.repository.NewsRepositoryImpl
+import ani.saikou.data.repository.TorrentRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.domain.repository.AuthRepository
 import ani.saikou.domain.repository.FeedbackRepository
 import ani.saikou.domain.repository.NewsRepository
+import ani.saikou.domain.repository.TorrentRepository
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.source.NewsSource
+import ani.saikou.domain.source.TorrentSource
 import ani.saikou.domain.usecase.anilist.GetAiringRangeUseCase
 import ani.saikou.domain.usecase.anilist.GetCharacterUseCase
 import ani.saikou.domain.usecase.anilist.GetSeasonalAnimeUseCase
@@ -36,6 +42,7 @@ import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
 import ani.saikou.domain.usecase.feedback.SubmitFeedbackUseCase
 import ani.saikou.domain.usecase.news.GetAiringScheduleUseCase
 import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
+import ani.saikou.domain.usecase.torrents.SearchTorrentsUseCase
 import ani.saikou.presentation.screens.character.CharacterDetailViewModel
 import ani.saikou.presentation.screens.downloads.DownloadsViewModel
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
@@ -43,6 +50,7 @@ import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.presentation.screens.news.NewsFeedViewModel
 import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.presentation.screens.stats.StatsViewModel
+import ani.saikou.presentation.screens.torrent.TorrentSearchViewModel
 import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
 import ani.saikou.screens.detail.MediaDetailViewModel
@@ -101,6 +109,20 @@ val appModule =
         // outbound transport directly.
         single<FeedbackRepository> { FeedbackRepositoryImpl(get()) }
 
+        // ─── Torrent sources + repository ────────────────────────────────
+        // Three trackers fan out into a single result list. No dedup —
+        // rows from different trackers are intentionally distinct (different
+        // magnets, seeder counts), and the screen's source-filter chip
+        // relies on per-source attribution.
+        single { NyaaSource() }
+        single { BTDiggSource() }
+        single { AniDexSource() }
+        single<TorrentRepository> {
+            TorrentRepositoryImpl(
+                sources = listOf<TorrentSource>(get<NyaaSource>(), get<BTDiggSource>(), get<AniDexSource>()),
+            )
+        }
+
         // ─── News sources + repository ────────────────────────────────────
         // Three sources fan-out into a deduped, sorted feed via the repo.
         // Jikan is also exposed by name because it's the only source that
@@ -134,6 +156,7 @@ val appModule =
         factoryOf(::PauseChapterDownloadUseCase)
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)
+        factoryOf(::SearchTorrentsUseCase)
         factoryOf(::SubmitFeedbackUseCase)
 
         // ─── ViewModels ────────────────────────────────────────────────────
@@ -154,6 +177,7 @@ val appModule =
         viewModelOf(::SearchViewModel)
         viewModelOf(::SeasonalCalendarViewModel)
         viewModelOf(::StatsViewModel)
+        viewModelOf(::TorrentSearchViewModel)
         viewModelOf(::UserListsViewModel)
         viewModelOf(::VideoPlayerViewModel)
     }

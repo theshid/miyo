@@ -1,4 +1,4 @@
-package ani.saikou.screens.torrent
+package ani.saikou.sharedui.screens.torrent
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -52,8 +52,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.domain.model.TorrentResult
+import ani.saikou.presentation.screens.torrent.SortOption
+import ani.saikou.presentation.screens.torrent.TorrentSearchViewModel
 import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.components.HalftoneButton
 import ani.saikou.sharedui.components.HalftoneSize
@@ -67,12 +68,13 @@ import ani.saikou.sharedui.theme.SurfaceBright
 import ani.saikou.sharedui.theme.SurfaceContainer
 import ani.saikou.sharedui.theme.SurfaceVariant
 import ani.saikou.sharedui.theme.Tertiary
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TorrentSearchScreen(
     onBack: () -> Unit,
-    viewModel: TorrentSearchViewModel = viewModel(),
+    viewModel: TorrentSearchViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current

@@ -1,33 +1,28 @@
-package ani.saikou.screens.torrent
+package ani.saikou.presentation.screens.torrent
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.data.remote.torrent.AniDexSource
-import ani.saikou.data.remote.torrent.BTDiggSource
-import ani.saikou.data.remote.torrent.NyaaSource
-import ani.saikou.data.remote.torrent.TorrentSource
 import ani.saikou.domain.model.TorrentResult
+import ani.saikou.domain.usecase.torrents.SearchTorrentsUseCase
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class TorrentSearchViewModel(
     savedStateHandle: SavedStateHandle,
+    private val searchTorrents: SearchTorrentsUseCase,
 ) : ViewModel() {
-    private val sources: List<TorrentSource> = listOf(NyaaSource(), BTDiggSource(), AniDexSource())
-
     private val _uiState = MutableStateFlow(TorrentUiState())
     val uiState: StateFlow<TorrentUiState> = _uiState
 
     private var searchJob: Job? = null
     private var allResults: List<TorrentResult> = emptyList()
 
-    // Pre-fill from nav arg
+    /** Pre-fill from nav arg — read once, exposed so the screen can seed its TextField. */
     val initialQuery: String = savedStateHandle["query"] ?: ""
 
     init {
@@ -37,31 +32,31 @@ class TorrentSearchViewModel(
     }
 
     fun updateQuery(query: String) {
-        _uiState.value = _uiState.value.copy(query = query)
+        _uiState.update { it.copy(query = query) }
         debounceSearch()
     }
 
     fun setSourceFilter(source: String?) {
-        _uiState.value = _uiState.value.copy(sourceFilter = source)
+        _uiState.update { it.copy(sourceFilter = source) }
         applyFilters()
     }
 
     fun setQualityFilter(quality: String?) {
-        _uiState.value = _uiState.value.copy(qualityFilter = quality)
+        _uiState.update { it.copy(qualityFilter = quality) }
         applyFilters()
     }
 
     fun setSortBy(sort: SortOption) {
-        _uiState.value = _uiState.value.copy(sortBy = sort)
+        _uiState.update { it.copy(sortBy = sort) }
         applyFilters()
     }
 
     fun selectResult(result: TorrentResult) {
-        _uiState.value = _uiState.value.copy(selectedResult = result)
+        _uiState.update { it.copy(selectedResult = result) }
     }
 
     fun clearSelection() {
-        _uiState.value = _uiState.value.copy(selectedResult = null)
+        _uiState.update { it.copy(selectedResult = null) }
     }
 
     fun retry() {
@@ -72,7 +67,7 @@ class TorrentSearchViewModel(
         searchJob?.cancel()
         searchJob =
             viewModelScope.launch {
-                delay(500)
+                delay(DEBOUNCE_MS)
                 search()
             }
     }
@@ -81,28 +76,14 @@ class TorrentSearchViewModel(
         val query = _uiState.value.query
         if (query.isBlank()) {
             allResults = emptyList()
-            _uiState.value = _uiState.value.copy(results = emptyList(), isLoading = false)
+            _uiState.update { it.copy(results = emptyList(), isLoading = false) }
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
-            val results =
-                sources
-                    .map { source ->
-                        async {
-                            try {
-                                source.search(query)
-                            } catch (e: Exception) {
-                                emptyList()
-                            }
-                        }
-                    }.awaitAll()
-                    .flatten()
-
-            allResults = results
-            _uiState.value = _uiState.value.copy(isLoading = false)
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            allResults = searchTorrents(query)
+            _uiState.update { it.copy(isLoading = false) }
             applyFilters()
         }
     }
@@ -111,17 +92,12 @@ class TorrentSearchViewModel(
         val state = _uiState.value
         var filtered = allResults
 
-        // Source filter
         if (state.sourceFilter != null) {
             filtered = filtered.filter { it.source == state.sourceFilter }
         }
-
-        // Quality filter
         if (state.qualityFilter != null) {
             filtered = filtered.filter { it.quality?.resolution == state.qualityFilter }
         }
-
-        // Sort
         filtered =
             when (state.sortBy) {
                 SortOption.SEEDERS -> filtered.sortedByDescending { it.seeders }
@@ -129,17 +105,24 @@ class TorrentSearchViewModel(
                 SortOption.DATE -> filtered.sortedByDescending { it.date }
             }
 
-        _uiState.value = state.copy(results = filtered)
+        _uiState.update { it.copy(results = filtered) }
     }
 
     private fun parseSizeToBytes(size: String): Long {
         val num = Regex("""[\d.]+""").find(size)?.value?.toDoubleOrNull() ?: return 0
         return when {
-            size.contains("GiB", true) || size.contains("GB", true) -> (num * 1_073_741_824).toLong()
-            size.contains("MiB", true) || size.contains("MB", true) -> (num * 1_048_576).toLong()
-            size.contains("KiB", true) || size.contains("KB", true) -> (num * 1024).toLong()
+            size.contains("GiB", true) || size.contains("GB", true) -> (num * BYTES_PER_GIB).toLong()
+            size.contains("MiB", true) || size.contains("MB", true) -> (num * BYTES_PER_MIB).toLong()
+            size.contains("KiB", true) || size.contains("KB", true) -> (num * BYTES_PER_KIB).toLong()
             else -> num.toLong()
         }
+    }
+
+    companion object {
+        private const val DEBOUNCE_MS = 500L
+        private const val BYTES_PER_KIB = 1024.0
+        private const val BYTES_PER_MIB = 1_048_576.0
+        private const val BYTES_PER_GIB = 1_073_741_824.0
     }
 }
 

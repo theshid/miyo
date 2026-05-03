@@ -1,4 +1,4 @@
-package ani.saikou.data.remote.torrent
+package ani.saikou.domain.source
 
 import ani.saikou.domain.model.TorrentResult
 
