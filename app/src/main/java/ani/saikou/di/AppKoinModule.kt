@@ -21,7 +21,9 @@ import ani.saikou.domain.repository.FeedbackRepository
 import ani.saikou.domain.repository.NewsRepository
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.source.NewsSource
+import ani.saikou.domain.usecase.anilist.GetAiringRangeUseCase
 import ani.saikou.domain.usecase.anilist.GetCharacterUseCase
+import ani.saikou.domain.usecase.anilist.GetSeasonalAnimeUseCase
 import ani.saikou.domain.usecase.anilist.GetUserStatsUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
@@ -33,6 +35,7 @@ import ani.saikou.presentation.screens.character.CharacterDetailViewModel
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
 import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.presentation.screens.news.NewsFeedViewModel
+import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
@@ -44,7 +47,6 @@ import ani.saikou.screens.manga.MangaViewModel
 import ani.saikou.screens.player.VideoPlayerViewModel
 import ani.saikou.screens.reader.MangaReaderViewModel
 import ani.saikou.screens.search.SearchViewModel
-import ani.saikou.screens.seasonal.SeasonalCalendarViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.factoryOf
@@ -113,10 +115,12 @@ val appModule =
         // factoryOf — fresh instance per resolution. Use cases are stateless
         // wrappers and don't benefit from singleton-ness; per-call alloc keeps
         // the door open for parameterized state if a future use case needs it.
+        factoryOf(::GetAiringRangeUseCase)
         factoryOf(::GetAiringScheduleUseCase)
         factoryOf(::GetAnilistAuthUrlUseCase)
         factoryOf(::GetCharacterUseCase)
         factoryOf(::GetLatestNewsUseCase)
+        factoryOf(::GetSeasonalAnimeUseCase)
         factoryOf(::GetUserStatsUseCase)
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)

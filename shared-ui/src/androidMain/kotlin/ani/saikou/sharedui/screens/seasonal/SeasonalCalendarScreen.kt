@@ -1,4 +1,4 @@
-package ani.saikou.screens.seasonal
+package ani.saikou.sharedui.screens.seasonal
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,9 +44,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.domain.model.AiringEntry
 import ani.saikou.domain.model.Media
+import ani.saikou.presentation.screens.seasonal.CalendarTab
+import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.components.SectionHeader
 import ani.saikou.sharedui.theme.Background
