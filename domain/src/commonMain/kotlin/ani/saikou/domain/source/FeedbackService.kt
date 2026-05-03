@@ -1,41 +1,20 @@
 package ani.saikou.domain.source
 
+import ani.saikou.domain.model.FeedbackCategory
+
 /**
  * Outbound feedback channel — POSTs user-submitted reports to whatever
- * sink the platform implementation uses. The Android impl posts to a
- * Discord webhook with embedded device/version metadata; iOS would do
- * the equivalent via its own HTTP client.
+ * sink the platform impl uses. Stateless. Wrapped by [ani.saikou.domain.
+ * repository.FeedbackRepository] so VMs depend on the repository surface
+ * rather than this lower-level integration directly.
  *
- * Stateless. The VM holds the form state; this interface only carries
- * the submit verb plus the contract types ([Category] and [Result]).
+ * Returns Kotlin's [Result] — domain-side, no service-specific sealed
+ * types leak into callers. Failure carries a human-readable reason
+ * suitable for surfacing in the UI.
  */
 interface FeedbackService {
     suspend fun submit(
-        category: Category,
+        category: FeedbackCategory,
         message: String,
-    ): Result
-
-    /**
-     * Triage bucket the user picked in the screen. The numeric `color` is
-     * a 24-bit RGB value the Android impl forwards to Discord's embed
-     * color field — kept on the domain side so iOS impls don't have to
-     * re-pick palette decisions.
-     */
-    enum class Category(
-        val title: String,
-        val emoji: String,
-        val color: Int,
-    ) {
-        BUG("Bug report", "🐞", 0xE74C3C),
-        FEATURE("Feature request", "✨", 0xF1C40F),
-        GENERAL("General feedback", "💬", 0x3498DB),
-    }
-
-    sealed class Result {
-        data object Success : Result()
-
-        data class Failure(
-            val reason: String,
-        ) : Result()
-    }
+    ): Result<Unit>
 }

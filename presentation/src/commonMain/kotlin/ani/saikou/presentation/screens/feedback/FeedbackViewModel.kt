@@ -2,50 +2,58 @@ package ani.saikou.presentation.screens.feedback
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.domain.source.FeedbackService
+import ani.saikou.domain.model.FeedbackCategory
+import ani.saikou.domain.usecase.feedback.SubmitFeedbackUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class FeedbackViewModel(
-    private val service: FeedbackService,
+    private val submitFeedback: SubmitFeedbackUseCase,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(FeedbackUiState())
     val uiState: StateFlow<FeedbackUiState> = _uiState
 
-    fun selectCategory(category: FeedbackService.Category) {
-        _uiState.value = _uiState.value.copy(category = category)
+    fun selectCategory(category: FeedbackCategory) {
+        _uiState.update { it.copy(category = category) }
     }
 
     fun updateMessage(message: String) {
-        _uiState.value = _uiState.value.copy(message = message, errorMessage = null)
+        _uiState.update { it.copy(message = message, errorMessage = null) }
     }
 
     fun submit() {
         val state = _uiState.value
         val trimmed = state.message.trim()
         if (trimmed.length < MIN_MESSAGE_LENGTH) {
-            _uiState.value = state.copy(errorMessage = "Please write at least $MIN_MESSAGE_LENGTH characters.")
+            _uiState.update { it.copy(errorMessage = "Please write at least $MIN_MESSAGE_LENGTH characters.") }
             return
         }
         if (state.isSubmitting) return
 
-        _uiState.value = state.copy(isSubmitting = true, errorMessage = null)
+        _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
         viewModelScope.launch {
-            when (val result = service.submit(state.category, trimmed)) {
-                is FeedbackService.Result.Success -> {
-                    _uiState.value = state.copy(isSubmitting = false, didSubmit = true, message = "")
+            // submitFeedback suspends — read-modify-write through .update so we
+            // don't clobber any field the user touched while the request was
+            // in flight (specifically `message`, which Success resets to "").
+            submitFeedback(state.category, trimmed)
+                .onSuccess {
+                    _uiState.update { it.copy(isSubmitting = false, didSubmit = true, message = "") }
+                }.onFailure { e ->
+                    _uiState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = e.message ?: "Couldn't send feedback.",
+                        )
+                    }
                 }
-                is FeedbackService.Result.Failure -> {
-                    _uiState.value = state.copy(isSubmitting = false, errorMessage = result.reason)
-                }
-            }
         }
     }
 
     /** Acknowledge the success state so the screen can clear its banner. */
     fun consumeSubmitted() {
-        _uiState.value = _uiState.value.copy(didSubmit = false)
+        _uiState.update { it.copy(didSubmit = false) }
     }
 
     companion object {
@@ -54,7 +62,7 @@ class FeedbackViewModel(
 }
 
 data class FeedbackUiState(
-    val category: FeedbackService.Category = FeedbackService.Category.GENERAL,
+    val category: FeedbackCategory = FeedbackCategory.GENERAL,
     val message: String = "",
     val isSubmitting: Boolean = false,
     val didSubmit: Boolean = false,

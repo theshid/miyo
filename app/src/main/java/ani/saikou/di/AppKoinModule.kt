@@ -9,10 +9,13 @@ import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.FeedbackServiceImpl
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
+import ani.saikou.data.repository.FeedbackRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.repository.FeedbackRepository
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
+import ani.saikou.domain.usecase.feedback.SubmitFeedbackUseCase
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
 import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
@@ -67,6 +70,9 @@ val appModule =
                 appVersionCode = BuildConfig.VERSION_CODE,
             )
         }
+        // Repository wraps the service so VMs (via use cases) never see the
+        // outbound transport directly.
+        single<FeedbackRepository> { FeedbackRepositoryImpl(get()) }
 
         // ─── Use cases ─────────────────────────────────────────────────────
         // factoryOf — fresh instance per resolution. Use cases are stateless
@@ -74,6 +80,7 @@ val appModule =
         // the door open for parameterized state if a future use case needs it.
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)
+        factoryOf(::SubmitFeedbackUseCase)
 
         // ─── ViewModels ────────────────────────────────────────────────────
         // Every Compose-backed ViewModel resolves through Koin now.

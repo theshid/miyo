@@ -1,6 +1,7 @@
 package ani.saikou.data.remote
 
 import android.os.Build
+import ani.saikou.domain.model.FeedbackCategory
 import ani.saikou.domain.source.FeedbackService
 import io.github.theshid.prettylog.Log
 import io.ktor.client.HttpClient
@@ -45,12 +46,12 @@ class FeedbackServiceImpl(
      * automatically so each report carries enough info to triage. No PII.
      */
     override suspend fun submit(
-        category: FeedbackService.Category,
+        category: FeedbackCategory,
         message: String,
-    ): FeedbackService.Result =
+    ): Result<Unit> =
         withContext(Dispatchers.IO) {
             if (webhookUrl.isBlank()) {
-                return@withContext FeedbackService.Result.Failure("Feedback isn't configured for this build.")
+                return@withContext Result.failure(IllegalStateException("Feedback isn't configured for this build."))
             }
 
             val payload =
@@ -97,14 +98,14 @@ class FeedbackServiceImpl(
                 // Discord returns 204 No Content on success, or 4xx with an error body.
                 val status = response.status.value
                 if (status in 200..299) {
-                    FeedbackService.Result.Success
+                    Result.success(Unit)
                 } else {
                     Log.w(tag = "Feedback", message = "Discord webhook returned HTTP $status: ${response.bodyAsText()}")
-                    FeedbackService.Result.Failure("Couldn't send (HTTP $status). Try again later.")
+                    Result.failure(IllegalStateException("Couldn't send (HTTP $status). Try again later."))
                 }
             } catch (e: Exception) {
                 Log.e(tag = "Feedback", message = "Webhook POST failed", throwable = e)
-                FeedbackService.Result.Failure("Couldn't reach the server. Check your connection.")
+                Result.failure(IllegalStateException("Couldn't reach the server. Check your connection."))
             }
         }
 }

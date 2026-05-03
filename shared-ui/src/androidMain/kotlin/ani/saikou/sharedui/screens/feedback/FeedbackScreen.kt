@@ -33,7 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import ani.saikou.domain.source.FeedbackService
+import ani.saikou.domain.model.FeedbackCategory
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
 import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.theme.GhostBorder
@@ -109,7 +109,7 @@ fun FeedbackScreen(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Category", style = MaterialTheme.typography.labelLarge, color = OnSurface)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FeedbackService.Category.values().forEach { cat ->
+                    FeedbackCategory.entries.forEach { cat ->
                         GenreChip(
                             text = "${cat.emoji} ${cat.title}",
                             selected = state.category == cat,
