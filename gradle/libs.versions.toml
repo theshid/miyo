@@ -9,6 +9,10 @@ ksp = "2.0.21-1.0.27"
 
 # Compose / AndroidX (kept aligned with current :app values)
 compose-bom = "2024.12.01"
+# JetBrains Compose Multiplatform — drives commonMain Compose + the
+# generated `Res` accessor for composeResources/. 1.7.3 is the latest
+# stable line built against Kotlin 2.0.21.
+compose-multiplatform = "1.7.3"
 activity = "1.9.3"
 lifecycle = "2.8.7"
 navigation = "2.8.5"
@@ -70,6 +74,13 @@ compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview"
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
 compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+
+# --- Compose Multiplatform (commonMain Compose + resource codegen) ---
+compose-multiplatform-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
+compose-multiplatform-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
+compose-multiplatform-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-multiplatform" }
+compose-multiplatform-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+compose-multiplatform-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
 
 # --- AndroidX ---
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
@@ -156,6 +167,9 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 # Compose Compiler Gradle plugin — required for any module with @Composable
 # functions on Kotlin 2.0+. Replaces the legacy compose-compiler-extension setup.
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# JetBrains Compose Multiplatform plugin — required for the `Res` resource
+# accessor codegen when a module places files under src/commonMain/composeResources/.
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 sentry-android = { id = "io.sentry.android.gradle", version.ref = "sentry-plugin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }

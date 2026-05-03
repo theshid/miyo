@@ -28,9 +28,9 @@ import ani.saikou.screens.player.VideoPlayerScreen
 import ani.saikou.screens.reader.MangaReaderScreen
 import ani.saikou.screens.search.SearchScreen
 import ani.saikou.screens.seasonal.SeasonalCalendarScreen
-import ani.saikou.screens.splash.SplashScreen
 import ani.saikou.screens.stats.StatsScreen
 import ani.saikou.screens.torrent.TorrentSearchScreen
+import ani.saikou.sharedui.screens.splash.SplashScreen
 import org.koin.compose.koinInject
 
 @Composable

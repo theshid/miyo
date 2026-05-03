@@ -103,6 +103,8 @@ import ani.saikou.ui.theme.SurfaceContainer
 import io.github.theshid.prettylog.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import miyo.shared_ui.generated.resources.Res
+import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -111,7 +113,7 @@ import org.koin.androidx.compose.koinViewModel
  */
 private var introShownThisSession = false
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
 fun VideoPlayerScreen(
     mediaId: Int,
@@ -176,11 +178,20 @@ fun VideoPlayerScreen(
     }
 
     // ── Intro ExoPlayer ──────────────────────────────────────
+    // Splash MP4 lives in :shared-ui/commonMain/composeResources/files/.
+    // Res.getUri is suspend (lazy resource-index load) so we resolve it in
+    // a LaunchedEffect and only build the player once the URI is known.
+    var introUri by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(shouldPlayIntro) {
+        if (shouldPlayIntro && introUri == null) {
+            introUri = Res.getUri("files/splash_animation.mp4")
+        }
+    }
     val introPlayer =
-        remember {
-            if (shouldPlayIntro) {
+        remember(introUri) {
+            val uri = introUri
+            if (shouldPlayIntro && uri != null) {
                 ExoPlayer.Builder(context).build().apply {
-                    val uri = Uri.parse("android.resource://${context.packageName}/${R.raw.splash_animation}")
                     setMediaItem(MediaItem.fromUri(uri))
                     prepare()
                     playWhenReady = true
