@@ -54,10 +54,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.GenreChip
-import ani.saikou.components.HalftoneButton
-import ani.saikou.components.HalftoneSize
-import ani.saikou.components.HalftoneVariant
 import ani.saikou.domain.model.TorrentResult
+import ani.saikou.sharedui.components.HalftoneButton
+import ani.saikou.sharedui.components.HalftoneSize
+import ani.saikou.sharedui.components.HalftoneVariant
 import ani.saikou.sharedui.theme.GhostBorder
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant

@@ -1,4 +1,4 @@
-package ani.saikou.components
+package ani.saikou.sharedui.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState

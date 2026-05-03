@@ -45,6 +45,16 @@ kotlin {
             // SaikouTheme calls WindowCompat to control system bar contrast.
             // Pulled by SaikouTheme only — Android-only, so androidMain.
             implementation(libs.core.ktx)
+
+            // LoginScreen kicks off OAuth via Custom Tabs — Android-only.
+            implementation(libs.browser)
+
+            // Material icons — Chat / Code / Send used by LoginScreen's social
+            // bar. material-icons-extended is Android-only; CMP equivalent
+            // ships with org.jetbrains.compose.material when iOS lands.
+            // BOM pins the version in lockstep with :app's Compose libs.
+            implementation(project.dependencies.platform(libs.compose.bom))
+            implementation(libs.compose.material.icons.extended)
         }
     }
 

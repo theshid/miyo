@@ -1,4 +1,4 @@
-package ani.saikou.screens.login
+package ani.saikou.sharedui.screens.login
 
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
@@ -38,7 +38,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -48,16 +47,24 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ani.saikou.R
-import ani.saikou.components.HalftoneButton
-import ani.saikou.components.HalftoneSize
-import ani.saikou.components.HalftoneVariant
-import ani.saikou.data.remote.AnilistApi
+import ani.saikou.sharedui.components.HalftoneButton
+import ani.saikou.sharedui.components.HalftoneSize
+import ani.saikou.sharedui.components.HalftoneVariant
 import ani.saikou.sharedui.theme.HiroMisake
 import ani.saikou.sharedui.theme.InstrumentSerif
+import ani.saikou.sharedui.theme.Inter
 import ani.saikou.sharedui.theme.Musashi
 import ani.saikou.sharedui.theme.OnSurfaceVariant
 import ani.saikou.sharedui.theme.Primary
+import miyo.shared_ui.generated.resources.Res
+import miyo.shared_ui.generated.resources.login_background
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
+
+// Mirrored from :app/data/remote/AnilistApi.CLIENT_ID. Inlined here while
+// AnilistApi still lives in :app — once the API client moves to :data and
+// gets a domain-side AuthConfig, this collapses into a single source.
+private const val ANILIST_CLIENT_ID = 39345
 
 /**
  * Login screen kicks off OAuth via Custom Tabs. The success path goes
@@ -65,6 +72,7 @@ import ani.saikou.sharedui.theme.Primary
  * fresh from MainActivity → Splash → Home — so there's no in-process
  * onSuccess callback to wire into the navigation graph.
  */
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun LoginScreen() {
     val context = LocalContext.current
@@ -141,7 +149,7 @@ fun LoginScreen() {
     Box(modifier = Modifier.fillMaxSize()) {
         // Background image — fills the whole screen behind the content
         Image(
-            painter = painterResource(R.drawable.login_background),
+            painter = painterResource(Res.drawable.login_background),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
@@ -192,13 +200,13 @@ fun LoginScreen() {
             HalftoneButton(
                 text = "LOGIN WITH ANILIST",
                 onClick = {
-                    val url = "https://anilist.co/api/v2/oauth/authorize?client_id=${AnilistApi.CLIENT_ID}&response_type=token"
+                    val url = "https://anilist.co/api/v2/oauth/authorize?client_id=$ANILIST_CLIENT_ID&response_type=token"
                     CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
                 },
                 modifier = Modifier.fillMaxWidth(),
                 size = HalftoneSize.LG,
                 variant = HalftoneVariant.PURPLE,
-                geistFamily = ani.saikou.sharedui.theme.Inter,
+                geistFamily = Inter,
             )
 
             Spacer(modifier = Modifier.height(24.dp))

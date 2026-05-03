@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -38,8 +37,13 @@ import ani.saikou.data.local.ConnectivityObserver
 import ani.saikou.navigation.SaikouNavHost
 import ani.saikou.navigation.Screen
 import ani.saikou.navigation.bottomBarScreens
+import miyo.shared_ui.generated.resources.Res
+import miyo.shared_ui.generated.resources.login_background
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 fun SaikouApp() {
     val navController = rememberNavController()
@@ -75,7 +79,7 @@ fun SaikouApp() {
         // stop painting solid black; the same asset peeks through every
         // route. Fixed (not scrolled) — content layers compose on top.
         Image(
-            painter = painterResource(ani.saikou.R.drawable.login_background),
+            painter = painterResource(Res.drawable.login_background),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,

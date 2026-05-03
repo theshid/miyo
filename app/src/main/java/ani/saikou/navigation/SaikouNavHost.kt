@@ -21,7 +21,6 @@ import ani.saikou.screens.error.NoInternetScreen
 import ani.saikou.screens.feedback.FeedbackScreen
 import ani.saikou.screens.home.HomeScreen
 import ani.saikou.screens.lists.UserListsScreen
-import ani.saikou.screens.login.LoginScreen
 import ani.saikou.screens.manga.MangaScreen
 import ani.saikou.screens.news.NewsFeedScreen
 import ani.saikou.screens.player.VideoPlayerScreen
@@ -30,6 +29,7 @@ import ani.saikou.screens.search.SearchScreen
 import ani.saikou.screens.seasonal.SeasonalCalendarScreen
 import ani.saikou.screens.stats.StatsScreen
 import ani.saikou.screens.torrent.TorrentSearchScreen
+import ani.saikou.sharedui.screens.login.LoginScreen
 import ani.saikou.sharedui.screens.splash.SplashScreen
 import org.koin.compose.koinInject
 

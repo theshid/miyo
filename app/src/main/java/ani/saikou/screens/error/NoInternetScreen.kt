@@ -17,9 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import ani.saikou.components.HalftoneButton
-import ani.saikou.components.HalftoneSize
-import ani.saikou.components.HalftoneVariant
+import ani.saikou.sharedui.components.HalftoneButton
+import ani.saikou.sharedui.components.HalftoneSize
+import ani.saikou.sharedui.components.HalftoneVariant
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
 import ani.saikou.sharedui.theme.SurfaceContainerHigh
