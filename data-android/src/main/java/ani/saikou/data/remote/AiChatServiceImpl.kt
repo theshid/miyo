@@ -1,5 +1,7 @@
 package ani.saikou.data.remote
 
+import ani.saikou.domain.model.ChatMessage
+import ani.saikou.domain.source.AiChatService
 import io.github.theshid.prettylog.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
@@ -16,53 +18,30 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import java.util.concurrent.TimeUnit
 
-class OpenAiService(
+/**
+ * OpenAI-backed [AiChatService]. Owns its own [HttpClient] (rather than the
+ * shared one from DI) because chat completions can take 30s+ — the global
+ * timeouts are tuned for short-poll API calls and would cut a slow stream
+ * mid-response.
+ */
+class AiChatServiceImpl(
     private val apiKey: String,
-) {
-    companion object {
-        private const val TAG = "OpenAiService"
-        private const val ENDPOINT = "https://api.openai.com/v1/chat/completions"
-        private const val MODEL = "gpt-4o"
-
-        val SYSTEM_PROMPT =
-            """
-            You are Miyo AI, a friendly and knowledgeable anime & manga assistant built into the Miyo app.
-
-            You can help users with:
-            - Finding anime or manga based on natural language descriptions (mood, themes, similarity to other titles)
-            - Summarizing where they left off in a series ("Catch me up")
-            - Answering questions about characters, plot, studios, and creators
-            - Giving personalized recommendations based on their watch/read history
-
-            Guidelines:
-            - Be concise but enthusiastic — match the energy of an anime fan talking to a friend
-            - When recommending titles, always include the full title and a one-line pitch
-            - If asked to catch someone up, summarize without major spoilers unless they explicitly ask
-            - Format lists with bullet points for readability
-            - If you don't know something, say so rather than guessing
-            - Keep responses under 300 words unless the user asks for more detail
-            """.trimIndent()
-    }
-
+) : AiChatService {
     private val json = Json { ignoreUnknownKeys = true }
 
     private val client =
         HttpClient(OkHttp) {
             engine {
                 config {
-                    connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-                    readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                    connectTimeout(30, TimeUnit.SECONDS)
+                    readTimeout(60, TimeUnit.SECONDS)
                 }
             }
         }
 
-    data class ChatMessage(
-        val role: String, // "system", "user", or "assistant"
-        val content: String,
-    )
-
-    suspend fun chat(messages: List<ChatMessage>): String {
+    override suspend fun chat(messages: List<ChatMessage>): String {
         val body =
             buildJsonObject {
                 put("model", MODEL)
@@ -115,5 +94,11 @@ class OpenAiService(
             Log.e(TAG, "Failed to call OpenAI", e)
             "Sorry, I couldn't connect right now. Check your internet and try again."
         }
+    }
+
+    companion object {
+        private const val TAG = "AiChatService"
+        private const val ENDPOINT = "https://api.openai.com/v1/chat/completions"
+        private const val MODEL = "gpt-4o"
     }
 }

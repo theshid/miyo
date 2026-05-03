@@ -1,4 +1,4 @@
-package ani.saikou.screens.ai
+package ani.saikou.sharedui.screens.ai
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -49,8 +49,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import ani.saikou.components.MarkdownText
+import ani.saikou.presentation.screens.ai.AiChatViewModel
+import ani.saikou.presentation.screens.ai.ChatBubble
+import ani.saikou.sharedui.components.MarkdownText
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
 import ani.saikou.sharedui.theme.Primary

@@ -12,12 +12,13 @@ import ani.saikou.data.local.db.DownloadDao
 import ani.saikou.data.local.db.ReadingHistoryDao
 import ani.saikou.data.local.db.WatchHistoryDao
 import ani.saikou.data.remote.AnilistApi
-import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
+import ani.saikou.domain.repository.AiChatRepository
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.domain.repository.DownloadRepository
 import ani.saikou.domain.repository.MangaSourceRepository
+import ani.saikou.domain.source.AiChatService
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
@@ -89,7 +90,8 @@ class KoinGraphTest : KoinTest {
         inject<AnilistRepository>().value.javaClass
         inject<ConnectivityObserver>().value.javaClass
         inject<OnboardingPrefs>().value.javaClass
-        inject<OpenAiService>().value.javaClass
+        inject<AiChatService>().value.javaClass
+        inject<AiChatRepository>().value.javaClass
         inject<FeedbackService>().value.javaClass
 
         // use cases

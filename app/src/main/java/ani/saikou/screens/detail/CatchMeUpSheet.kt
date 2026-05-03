@@ -29,9 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import ani.saikou.components.MarkdownText
-import ani.saikou.data.remote.OpenAiService
 import ani.saikou.domain.model.Media
+import ani.saikou.domain.usecase.ai.CatchMeUpUseCase
+import ani.saikou.sharedui.components.MarkdownText
 import ani.saikou.sharedui.theme.Background
 import ani.saikou.sharedui.theme.OnSurfaceVariant
 import ani.saikou.sharedui.theme.Primary
@@ -44,61 +44,10 @@ fun CatchMeUpSheet(
 ) {
     var summary by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    val openAi = koinInject<OpenAiService>()
+    val catchMeUp = koinInject<CatchMeUpUseCase>()
 
     LaunchedEffect(media.id) {
-        val progressType = if (media.type == "MANGA") "chapters" else "episodes"
-        val progressNum = media.userProgress ?: 0
-        val total = media.totalEpisodes ?: media.totalChapters
-
-        val prompt =
-            buildString {
-                append("The user is ${if (media.type == "MANGA") "reading" else "watching"} ")
-                append("\"${media.displayTitle}\"")
-                if (media.nameRomaji != null && media.nameRomaji != media.displayTitle) {
-                    append(" (${media.nameRomaji})")
-                }
-                append(". They are on $progressType $progressNum")
-                if (total != null) append(" out of $total")
-                append(".\n\n")
-
-                val description = media.description
-                if (!description.isNullOrBlank()) {
-                    val cleanDesc =
-                        description
-                            .replace("<br>", "\n")
-                            .replace(Regex("<[^>]*>"), "")
-                    append("Series synopsis: $cleanDesc\n\n")
-                }
-
-                val genres = media.genres
-                if (!genres.isNullOrEmpty()) {
-                    append("Genres: ${genres.joinToString(", ")}\n\n")
-                }
-
-                append("Give them a snappy \"Catch Me Up\" recap up to $progressType $progressNum. ")
-                append("Format strictly:\n")
-                append("- One short hook sentence (max 25 words) describing where the story stands RIGHT NOW.\n")
-                append(
-                    "- Then exactly 3 bullet points covering the most important arcs or developments that got them here.\n",
-                )
-                append("- Each bullet: one sentence, max 30 words.\n\n")
-                append("Do NOT spoil anything beyond $progressType $progressNum. ")
-                append("No headings, no preamble, no closing remarks — just the hook line and the 3 bullets.")
-            }
-
-        val messages =
-            listOf(
-                OpenAiService.ChatMessage(
-                    role = "system",
-                    content =
-                        "You are Miyo AI, an anime & manga assistant. You provide accurate, spoiler-aware recaps. " +
-                            "Only summarize up to the point the user has reached. Never reveal future plot points.",
-                ),
-                OpenAiService.ChatMessage(role = "user", content = prompt),
-            )
-
-        summary = openAi.chat(messages)
+        summary = catchMeUp(media)
         isLoading = false
     }
 

@@ -1,4 +1,4 @@
-package ani.saikou.components
+package ani.saikou.sharedui.components
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text

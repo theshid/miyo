@@ -5,28 +5,34 @@ import ani.saikou.data.android.di.IS_DEBUG_QUALIFIER
 import ani.saikou.data.local.ConnectivityObserver
 import ani.saikou.data.local.OnboardingPrefs
 import ani.saikou.data.local.TokenStorage
+import ani.saikou.data.remote.AiChatServiceImpl
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.FeedbackServiceImpl
-import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.remote.news.ANNNewsSource
 import ani.saikou.data.remote.news.JikanNewsSource
 import ani.saikou.data.remote.news.RedditNewsSource
 import ani.saikou.data.remote.torrent.AniDexSource
 import ani.saikou.data.remote.torrent.BTDiggSource
 import ani.saikou.data.remote.torrent.NyaaSource
+import ani.saikou.data.repository.AiChatRepositoryImpl
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.data.repository.AuthRepositoryImpl
 import ani.saikou.data.repository.FeedbackRepositoryImpl
 import ani.saikou.data.repository.NewsRepositoryImpl
 import ani.saikou.data.repository.TorrentRepositoryImpl
+import ani.saikou.domain.repository.AiChatRepository
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.domain.repository.AuthRepository
 import ani.saikou.domain.repository.FeedbackRepository
 import ani.saikou.domain.repository.NewsRepository
 import ani.saikou.domain.repository.TorrentRepository
+import ani.saikou.domain.source.AiChatService
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.source.NewsSource
 import ani.saikou.domain.source.TorrentSource
+import ani.saikou.domain.usecase.ai.BuildAiUserContextSnippetUseCase
+import ani.saikou.domain.usecase.ai.CatchMeUpUseCase
+import ani.saikou.domain.usecase.ai.SendAiChatMessageUseCase
 import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
 import ani.saikou.domain.usecase.anilist.GetAiringRangeUseCase
 import ani.saikou.domain.usecase.anilist.GetCharacterUseCase
@@ -49,6 +55,7 @@ import ani.saikou.domain.usecase.feedback.SubmitFeedbackUseCase
 import ani.saikou.domain.usecase.news.GetAiringScheduleUseCase
 import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
 import ani.saikou.domain.usecase.torrents.SearchTorrentsUseCase
+import ani.saikou.presentation.screens.ai.AiChatViewModel
 import ani.saikou.presentation.screens.character.CharacterDetailViewModel
 import ani.saikou.presentation.screens.downloads.DownloadsViewModel
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
@@ -59,7 +66,6 @@ import ani.saikou.presentation.screens.search.SearchViewModel
 import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.presentation.screens.torrent.TorrentSearchViewModel
-import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
 import ani.saikou.screens.detail.MediaDetailViewModel
 import ani.saikou.screens.home.HomeViewModel
@@ -103,7 +109,8 @@ val appModule =
         single { OnboardingPrefs(androidContext()) }
 
         // ─── Remote services ───────────────────────────────────────────────
-        single { OpenAiService(BuildConfig.OPENAI_API_KEY) }
+        single<AiChatService> { AiChatServiceImpl(apiKey = BuildConfig.OPENAI_API_KEY) }
+        single<AiChatRepository> { AiChatRepositoryImpl(service = get(), anilistRepository = get()) }
         single<FeedbackService> {
             FeedbackServiceImpl(
                 webhookUrl = BuildConfig.DISCORD_FEEDBACK_WEBHOOK,
@@ -148,7 +155,9 @@ val appModule =
         // factoryOf — fresh instance per resolution. Use cases are stateless
         // wrappers and don't benefit from singleton-ness; per-call alloc keeps
         // the door open for parameterized state if a future use case needs it.
+        factoryOf(::BuildAiUserContextSnippetUseCase)
         factoryOf(::CancelChapterDownloadUseCase)
+        factoryOf(::CatchMeUpUseCase)
         factoryOf(::DeleteAllDownloadsForMangaUseCase)
         factoryOf(::EditListEntryUseCase)
         factoryOf(::EvictReadChaptersUseCase)
@@ -169,6 +178,7 @@ val appModule =
         factoryOf(::ResolveChapterCountUseCase)
         factoryOf(::SearchMediaUseCase)
         factoryOf(::SearchTorrentsUseCase)
+        factoryOf(::SendAiChatMessageUseCase)
         factoryOf(::SubmitFeedbackUseCase)
 
         // ─── ViewModels ────────────────────────────────────────────────────
