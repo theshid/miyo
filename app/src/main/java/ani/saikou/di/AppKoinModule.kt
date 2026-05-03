@@ -9,14 +9,18 @@ import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.FeedbackServiceImpl
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
+import ani.saikou.data.repository.AuthRepositoryImpl
 import ani.saikou.data.repository.FeedbackRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.repository.AuthRepository
 import ani.saikou.domain.repository.FeedbackRepository
 import ani.saikou.domain.source.FeedbackService
+import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
 import ani.saikou.domain.usecase.feedback.SubmitFeedbackUseCase
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
+import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
 import ani.saikou.screens.character.CharacterDetailViewModel
@@ -56,6 +60,11 @@ val appModule =
             AnilistApi(tokenProvider = { get<TokenStorage>().getToken() })
         }
         single<AnilistRepository> { AnilistRepositoryImpl(get(), get()) }
+        // Auth flow — VM (via use case) reaches AuthRepository to build the
+        // OAuth URL. CLIENT_ID stays in :app's AnilistApi for now; once the
+        // API client moves to :data with a domain-side AuthConfig, the
+        // injected literal collapses into a single source.
+        single<AuthRepository> { AuthRepositoryImpl(anilistClientId = AnilistApi.CLIENT_ID) }
 
         // ─── Device / process services still living in :app ───────────────
         single { ConnectivityObserver(androidContext()) }
@@ -78,6 +87,7 @@ val appModule =
         // factoryOf — fresh instance per resolution. Use cases are stateless
         // wrappers and don't benefit from singleton-ness; per-call alloc keeps
         // the door open for parameterized state if a future use case needs it.
+        factoryOf(::GetAnilistAuthUrlUseCase)
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)
         factoryOf(::SubmitFeedbackUseCase)
@@ -92,6 +102,7 @@ val appModule =
         viewModelOf(::DownloadsViewModel)
         viewModelOf(::FeedbackViewModel)
         viewModelOf(::HomeViewModel)
+        viewModelOf(::LoginViewModel)
         viewModelOf(::MangaReaderViewModel)
         viewModelOf(::MangaViewModel)
         viewModelOf(::MediaDetailViewModel)

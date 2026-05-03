@@ -29,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.sharedui.components.HalftoneButton
 import ani.saikou.sharedui.components.HalftoneSize
 import ani.saikou.sharedui.components.HalftoneVariant
@@ -60,11 +62,7 @@ import miyo.shared_ui.generated.resources.Res
 import miyo.shared_ui.generated.resources.login_background
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
-
-// Mirrored from :app/data/remote/AnilistApi.CLIENT_ID. Inlined here while
-// AnilistApi still lives in :app — once the API client moves to :data and
-// gets a domain-side AuthConfig, this collapses into a single source.
-private const val ANILIST_CLIENT_ID = 39345
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * Login screen kicks off OAuth via Custom Tabs. The success path goes
@@ -74,8 +72,9 @@ private const val ANILIST_CLIENT_ID = 39345
  */
 @OptIn(ExperimentalResourceApi::class)
 @Composable
-fun LoginScreen() {
+fun LoginScreen(viewModel: LoginViewModel = koinViewModel()) {
     val context = LocalContext.current
+    val state by viewModel.uiState.collectAsState()
 
     // ── Animated shimmer for the "manga" word ──────────────────
     // Loops 0..1 over 6s linear; the gradient brush slides across
@@ -200,8 +199,7 @@ fun LoginScreen() {
             HalftoneButton(
                 text = "LOGIN WITH ANILIST",
                 onClick = {
-                    val url = "https://anilist.co/api/v2/oauth/authorize?client_id=$ANILIST_CLIENT_ID&response_type=token"
-                    CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
+                    CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(state.authUrl))
                 },
                 modifier = Modifier.fillMaxWidth(),
                 size = HalftoneSize.LG,
