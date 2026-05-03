@@ -1,7 +1,10 @@
 package ani.saikou.data.di
 
 import ani.saikou.data.remote.AniSkipApi
+import ani.saikou.data.repository.AnimeSkipRepositoryImpl
 import ani.saikou.data.source.manga.MangaDexParser
+import ani.saikou.domain.repository.AnimeSkipRepository
+import ani.saikou.domain.source.AniSkipService
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
@@ -25,5 +28,8 @@ import org.koin.dsl.module
 val dataModule =
     module {
         singleOf(::MangaDexParser)
-        singleOf(::AniSkipApi)
+        // AniSkipApi implements AniSkipService — bind both so existing
+        // direct consumers keep working while VMs go through the interface.
+        single<AniSkipService> { AniSkipApi(client = get(), logger = get()) }
+        single<AnimeSkipRepository> { AnimeSkipRepositoryImpl(service = get()) }
     }

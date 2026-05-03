@@ -75,6 +75,15 @@ kotlin {
             // as :app to stay in lockstep.
             implementation(libs.coil.compose)
             implementation(libs.coil.network.okhttp)
+
+            // PrettyLog — used by VideoPlayerScreen for ExoPlayer-side
+            // diagnostic logs (subtitle resolution, playback errors).
+            // Screens-resident concern, not a VM/use-case one.
+            implementation(libs.prettylog)
+
+            // Lottie-Compose — VideoLoader / CatLoader animations.
+            // Android-only (Lottie's Compose binding is JVM/Android).
+            implementation(libs.lottie.compose)
         }
     }
 

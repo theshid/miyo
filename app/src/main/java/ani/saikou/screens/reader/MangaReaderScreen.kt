@@ -82,10 +82,11 @@ import ani.saikou.sharedui.theme.Primary
 import ani.saikou.sharedui.theme.SurfaceBright
 import ani.saikou.sharedui.theme.SurfaceContainer
 import ani.saikou.sharedui.theme.SurfaceContainerHigh
-import coil3.compose.AsyncImage
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.crossfade
+import miyo.shared_ui.generated.resources.Res
+import miyo.shared_ui.generated.resources.error_samurai
 
 enum class ReadingMode { WEBTOON, PAGER_LTR, PAGER_RTL }
 
@@ -240,7 +241,8 @@ fun MangaReaderScreen(
     // Loading
     if (readerState.isLoading && readerState.error == null) {
         Box(Modifier.fillMaxSize().background(Color.White), contentAlignment = Alignment.Center) {
-            ani.saikou.components.CatLoader(message = "Loading chapter...")
+            ani.saikou.sharedui.components
+                .CatLoader(message = "Loading chapter...")
         }
         return
     }
@@ -259,8 +261,10 @@ fun MangaReaderScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(32.dp),
             ) {
-                coil3.compose.AsyncImage(
-                    model = ani.saikou.R.drawable.error_samurai,
+                androidx.compose.foundation.Image(
+                    painter =
+                        org.jetbrains.compose.resources
+                            .painterResource(Res.drawable.error_samurai),
                     contentDescription = "Error",
                     modifier =
                         Modifier
@@ -651,7 +655,7 @@ private fun WebtoonReader(
                                 .height(500.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        ani.saikou.components.CatLoader(
+                        ani.saikou.sharedui.components.CatLoader(
                             message = "Page ${index + 1}",
                             size = 80.dp,
                         )
@@ -752,7 +756,7 @@ private fun PagerReader(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            ani.saikou.components.CatLoader(
+                            ani.saikou.sharedui.components.CatLoader(
                                 message = "Page ${page + 1}",
                                 size = 80.dp,
                             )

@@ -34,4 +34,10 @@ interface HistoryRepository {
      * persisted chapter id.
      */
     suspend fun getReadingHistoryFor(mangaId: Int): ReadingHistoryItem?
+
+    /**
+     * Insert-or-replace the watch-history row for one anime. The player
+     * writes here on every progress tick (debounced).
+     */
+    suspend fun upsertWatchHistory(item: WatchHistoryItem)
 }

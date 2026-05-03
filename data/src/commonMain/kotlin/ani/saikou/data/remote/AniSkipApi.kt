@@ -1,5 +1,7 @@
 package ani.saikou.data.remote
 
+import ani.saikou.domain.model.SkipTimes
+import ani.saikou.domain.source.AniSkipService
 import ani.saikou.platform.log.Logger
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -23,7 +25,7 @@ import kotlinx.serialization.json.jsonPrimitive
 class AniSkipApi(
     private val client: HttpClient,
     private val logger: Logger,
-) {
+) : AniSkipService {
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
@@ -31,7 +33,7 @@ class AniSkipApi(
      * Returns a [SkipTimes] with nullable start/end pairs (seconds).
      * On any failure, returns [SkipTimes.EMPTY] — never throws.
      */
-    suspend fun getSkipTimes(
+    override suspend fun getSkipTimes(
         malId: Int,
         episodeNumber: Int,
     ): SkipTimes {
@@ -114,16 +116,5 @@ internal object AniSkipSite {
     object SkipTypes {
         const val OP = "op"
         const val ED = "ed"
-    }
-}
-
-data class SkipTimes(
-    val opStartSec: Float? = null,
-    val opEndSec: Float? = null,
-    val edStartSec: Float? = null,
-    val edEndSec: Float? = null,
-) {
-    companion object {
-        val EMPTY = SkipTimes()
     }
 }

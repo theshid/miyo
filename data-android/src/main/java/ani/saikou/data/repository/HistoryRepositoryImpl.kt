@@ -36,6 +36,24 @@ class HistoryRepositoryImpl(
 
     override suspend fun getReadingHistoryFor(mangaId: Int): ReadingHistoryItem? = readingDao.getForManga(mangaId)?.let(::toDomain)
 
+    override suspend fun upsertWatchHistory(item: WatchHistoryItem) {
+        watchDao.upsert(toEntity(item))
+    }
+
+    private fun toEntity(item: WatchHistoryItem) =
+        WatchHistoryEntity(
+            mediaId = item.mediaId,
+            mediaTitle = item.mediaTitle,
+            coverUrl = item.coverUrl,
+            episodeNumber = item.episodeNumber,
+            sourceSlug = item.sourceSlug,
+            sourceName = item.sourceName,
+            lastPositionMs = item.lastPositionMs,
+            durationMs = item.durationMs,
+            completedEpisodes = item.completedEpisodes,
+            lastWatchedAt = item.lastWatchedAt,
+        )
+
     private fun toDomain(entity: ReadingHistoryEntity) =
         ReadingHistoryItem(
             mangaId = entity.mangaId,

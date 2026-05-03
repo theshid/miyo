@@ -24,6 +24,11 @@ kotlin {
             // Domain — VMs depend on repository / source interfaces, not impls.
             implementation(project(":domain"))
 
+            // :platform exposes the Logger contract. VMs reach for it when
+            // they need to emit telemetry directly (e.g. player error events
+            // that aren't worth a use case wrapper).
+            implementation(project(":platform"))
+
             // KMP-aware Lifecycle — gives commonMain access to ViewModel +
             // viewModelScope without pulling Android into common code.
             implementation(libs.lifecycle.viewmodel.kmp)

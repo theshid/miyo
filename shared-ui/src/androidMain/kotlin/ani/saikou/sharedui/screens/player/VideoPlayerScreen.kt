@@ -1,4 +1,4 @@
-package ani.saikou.screens.player
+package ani.saikou.sharedui.screens.player
 
 import android.app.Activity
 import android.net.Uri
@@ -95,7 +95,10 @@ import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.exoplayer.text.TextRenderer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import ani.saikou.R
+import ani.saikou.presentation.screens.player.VideoPlayerViewModel
+import ani.saikou.sharedui.components.SourceItem
+import ani.saikou.sharedui.components.SourceSelectorSheet
+import ani.saikou.sharedui.components.VideoLoader
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
 import ani.saikou.sharedui.theme.Primary
@@ -104,6 +107,7 @@ import io.github.theshid.prettylog.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import miyo.shared_ui.generated.resources.Res
+import miyo.shared_ui.generated.resources.error_samurai
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.koin.androidx.compose.koinViewModel
 
@@ -553,7 +557,7 @@ fun VideoPlayerScreen(
         // Loading animation while resolving stream (only show when intro is done)
         if (playerState.isLoading && !introActive && playerState.error == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                ani.saikou.components.VideoLoader()
+                VideoLoader()
             }
         }
 
@@ -571,8 +575,10 @@ fun VideoPlayerScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.padding(32.dp),
                 ) {
-                    coil3.compose.AsyncImage(
-                        model = ani.saikou.R.drawable.error_samurai,
+                    androidx.compose.foundation.Image(
+                        painter =
+                            org.jetbrains.compose.resources
+                                .painterResource(Res.drawable.error_samurai),
                         contentDescription = "Error",
                         modifier =
                             Modifier
@@ -1031,11 +1037,15 @@ fun VideoPlayerScreen(
         }
     }
 
-    // Source selector bottom sheet
+    // Source selector bottom sheet — VM exposes domain AnimeSearchResult,
+    // sheet takes the SourceItem UI projection. Map at the boundary.
     if (playerState.showSourceSelector) {
-        ani.saikou.sharedui.components.SourceSelectorSheet(
+        SourceSelectorSheet(
             title = "Select Source",
-            sources = playerState.availableSources,
+            sources =
+                playerState.availableSources.map {
+                    SourceItem(id = it.slug, title = it.name, coverUrl = it.cover)
+                },
             onSelect = { source ->
                 viewModel.selectSourceById(source.id)
             },

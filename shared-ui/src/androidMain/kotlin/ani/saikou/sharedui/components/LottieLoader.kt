@@ -1,4 +1,4 @@
-package ani.saikou.components
+package ani.saikou.sharedui.components
 
 import androidx.annotation.RawRes
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +14,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ani.saikou.R
+import ani.saikou.sharedui.R
 import ani.saikou.sharedui.theme.Primary
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
