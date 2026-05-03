@@ -89,65 +89,65 @@ fun HalftoneButton(
     )
 
     Box(
-        modifier = modifier
-            .alpha(if (enabled) 1f else 0.4f)
-            .offset(x = pressOffset, y = pressOffset)
-            // Hard-offset shadow (no blur). this.size is the DrawScope's
-            // canvas size — explicit `this` to disambiguate from the outer
-            // `size: HalftoneSize` parameter.
-            .drawBehind {
-                drawRoundRect(
-                    color = INK,
-                    topLeft = Offset(shadowOffset.toPx(), shadowOffset.toPx()),
-                    size = this.size,
-                    cornerRadius = CornerRadius(4.dp.toPx()),
-                )
-            }
-            .clip(RoundedCornerShape(4.dp))
-            .background(variant.bg)
-            .border(2.5.dp, INK, RoundedCornerShape(4.dp))
-            .clickable(
-                interactionSource = interaction,
-                indication = null,
-                enabled = enabled,
-                onClick = onClick,
-            )
-            .drawWithContent {
-                drawContent()
-                // Halftone dot overlay
-                val grid = size.dotGrid.toPx()
-                val r = 1.2.dp.toPx()
-                val sx = dotShift.toPx()
-                var y = sx
-                while (y < this.size.height) {
-                    var x = sx
-                    while (x < this.size.width) {
-                        drawCircle(variant.dot, r, Offset(x, y), blendMode = BlendMode.Overlay)
-                        x += grid
+        modifier =
+            modifier
+                .alpha(if (enabled) 1f else 0.4f)
+                .offset(x = pressOffset, y = pressOffset)
+                // Hard-offset shadow (no blur). this.size is the DrawScope's
+                // canvas size — explicit `this` to disambiguate from the outer
+                // `size: HalftoneSize` parameter.
+                .drawBehind {
+                    drawRoundRect(
+                        color = INK,
+                        topLeft = Offset(shadowOffset.toPx(), shadowOffset.toPx()),
+                        size = this.size,
+                        cornerRadius = CornerRadius(4.dp.toPx()),
+                    )
+                }.clip(RoundedCornerShape(4.dp))
+                .background(variant.bg)
+                .border(2.5.dp, INK, RoundedCornerShape(4.dp))
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    enabled = enabled,
+                    onClick = onClick,
+                ).drawWithContent {
+                    drawContent()
+                    // Halftone dot overlay
+                    val grid = size.dotGrid.toPx()
+                    val r = 1.2.dp.toPx()
+                    val sx = dotShift.toPx()
+                    var y = sx
+                    while (y < this.size.height) {
+                        var x = sx
+                        while (x < this.size.width) {
+                            drawCircle(variant.dot, r, Offset(x, y), blendMode = BlendMode.Overlay)
+                            x += grid
+                        }
+                        y += grid
                     }
-                    y += grid
-                }
-                // Top sheen + bottom shade
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = 0.22f),
-                        0.45f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = 0.18f),
-                    ),
-                )
-            }
-            .padding(horizontal = size.padH, vertical = size.padV),
+                    // Top sheen + bottom shade
+                    drawRect(
+                        brush =
+                            Brush.verticalGradient(
+                                0f to Color.White.copy(alpha = 0.22f),
+                                0.45f to Color.Transparent,
+                                1f to Color.Black.copy(alpha = 0.18f),
+                            ),
+                    )
+                }.padding(horizontal = size.padH, vertical = size.padV),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text.uppercase(),
-            style = TextStyle(
-                fontFamily = geistFamily,
-                fontWeight = FontWeight.Black,
-                fontSize = size.font,
-                letterSpacing = size.letterSp,
-                color = variant.fg,
-            ),
+            style =
+                TextStyle(
+                    fontFamily = geistFamily,
+                    fontWeight = FontWeight.Black,
+                    fontSize = size.font,
+                    letterSpacing = size.letterSp,
+                    color = variant.fg,
+                ),
         )
     }
 }

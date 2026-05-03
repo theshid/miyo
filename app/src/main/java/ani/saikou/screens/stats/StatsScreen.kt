@@ -77,7 +77,7 @@ fun StatsScreen(
     Column(
         modifier =
             Modifier
-                .fillMaxSize()
+                .fillMaxSize(),
     ) {
         // ── Top bar ──────────────────────────────────────────
         Row(

@@ -66,7 +66,7 @@ fun FeedbackScreen(
     Column(
         modifier =
             Modifier
-                .fillMaxSize()
+                .fillMaxSize(),
     ) {
         // ── Top bar ──────────────────────────────────────────
         Row(

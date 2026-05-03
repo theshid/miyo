@@ -80,7 +80,7 @@ fun TorrentSearchScreen(
     Column(
         modifier =
             Modifier
-                .fillMaxSize()
+                .fillMaxSize(),
     ) {
         // ── Top Bar ──────────────────────────────────────────
         Row(

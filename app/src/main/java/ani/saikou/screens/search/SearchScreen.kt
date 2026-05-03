@@ -83,7 +83,7 @@ fun SearchScreen(
     Column(
         modifier =
             Modifier
-                .fillMaxSize()
+                .fillMaxSize(),
     ) {
         // ── Top Bar: Back + Search Input ─────────────────────
         Row(

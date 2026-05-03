@@ -628,11 +628,12 @@ private fun WebtoonReader(
                         .Builder(context)
                         .data(page.imageUrl)
                         .httpHeaders(
-                            NetworkHeaders.Builder().apply {
-                                page.headers.forEach { (k, v) -> add(k, v) }
-                            }.build(),
-                        )
-                        .crossfade(true)
+                            NetworkHeaders
+                                .Builder()
+                                .apply {
+                                    page.headers.forEach { (k, v) -> add(k, v) }
+                                }.build(),
+                        ).crossfade(true)
                         .build()
                 } else {
                     page.imageUrl
@@ -731,11 +732,12 @@ private fun PagerReader(
                             .Builder(context)
                             .data(mangaPage.imageUrl)
                             .httpHeaders(
-                                NetworkHeaders.Builder().apply {
-                                    mangaPage.headers.forEach { (k, v) -> add(k, v) }
-                                }.build(),
-                            )
-                            .crossfade(true)
+                                NetworkHeaders
+                                    .Builder()
+                                    .apply {
+                                        mangaPage.headers.forEach { (k, v) -> add(k, v) }
+                                    }.build(),
+                            ).crossfade(true)
                             .build()
                     } else {
                         mangaPage.imageUrl

@@ -72,7 +72,7 @@ fun UserListsScreen(
     Column(
         modifier =
             Modifier
-                .fillMaxSize()
+                .fillMaxSize(),
     ) {
         // ── Top Bar ──────────────────────────────────────────
         Row(

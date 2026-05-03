@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Icon
@@ -30,6 +28,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -88,62 +88,62 @@ fun SaikouApp() {
                     .background(Color.Black.copy(alpha = 0.5f)),
         )
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        bottomBar = {
-            if (showBottomBar) {
-                SaikouBottomBar(
-                    currentRoute = currentRoute,
-                    onNavigate = { screen ->
-                        navController.navigate(screen.route) {
-                            popUpTo(Screen.Home.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+        Scaffold(
+            containerColor = Color.Transparent,
+            bottomBar = {
+                if (showBottomBar) {
+                    SaikouBottomBar(
+                        currentRoute = currentRoute,
+                        onNavigate = { screen ->
+                            navController.navigate(screen.route) {
+                                popUpTo(Screen.Home.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                    )
+                }
+            },
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding)) {
+                SaikouNavHost(
+                    navController = navController,
+                    startDestination = startDestination,
                 )
-            }
-        },
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            SaikouNavHost(
-                navController = navController,
-                startDestination = startDestination,
-            )
 
-            // Non-blocking offline banner — sits at the top of the current screen,
-            // doesn't navigate away or interrupt the user.
-            AnimatedVisibility(
-                visible = !isConnected,
-                enter = expandVertically(expandFrom = Alignment.Top),
-                exit = shrinkVertically(shrinkTowards = Alignment.Top),
-                modifier = Modifier.align(Alignment.TopCenter),
-            ) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFB71C1C))
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement =
-                        androidx.compose.foundation.layout.Arrangement
-                            .spacedBy(8.dp),
+                // Non-blocking offline banner — sits at the top of the current screen,
+                // doesn't navigate away or interrupt the user.
+                AnimatedVisibility(
+                    visible = !isConnected,
+                    enter = expandVertically(expandFrom = Alignment.Top),
+                    exit = shrinkVertically(shrinkTowards = Alignment.Top),
+                    modifier = Modifier.align(Alignment.TopCenter),
                 ) {
-                    Icon(
-                        Icons.Default.WifiOff,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Text(
-                        text = "No internet connection",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                    )
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFB71C1C))
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement =
+                            androidx.compose.foundation.layout.Arrangement
+                                .spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.WifiOff,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            text = "No internet connection",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                        )
+                    }
                 }
             }
         }
-    }
     }
 }
