@@ -17,7 +17,6 @@ import ani.saikou.screens.anime.AnimeScreen
 import ani.saikou.screens.character.CharacterDetailScreen
 import ani.saikou.screens.detail.MediaDetailScreen
 import ani.saikou.screens.downloads.DownloadsScreen
-import ani.saikou.screens.error.NoInternetScreen
 import ani.saikou.screens.feedback.FeedbackScreen
 import ani.saikou.screens.home.HomeScreen
 import ani.saikou.screens.lists.UserListsScreen
@@ -327,13 +326,6 @@ fun SaikouNavHost(
         composable(Screen.Feedback.route) {
             FeedbackScreen(
                 onBack = { navController.popBackStack() },
-            )
-        }
-
-        // ── No Internet ──────────────────────────────────────
-        composable(Screen.NoInternet.route) {
-            NoInternetScreen(
-                onRetry = { navController.popBackStack() },
             )
         }
     }

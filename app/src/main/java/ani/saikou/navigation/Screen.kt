@@ -98,9 +98,6 @@ sealed class Screen(
 
     // ── Feedback ─────────────────────────────────────────────
     data object Feedback : Screen("feedback")
-
-    // ── Error ─────────────────────────────────────────────────
-    data object NoInternet : Screen("no_internet")
 }
 
 val bottomBarScreens = listOf(Screen.Anime, Screen.Home, Screen.Manga)
