@@ -1,4 +1,4 @@
-package ani.saikou.screens.downloads
+package ani.saikou.sharedui.screens.downloads
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -46,9 +46,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.domain.model.Download
 import ani.saikou.domain.model.DownloadStatus
+import ani.saikou.domain.model.MangaWithDownloads
+import ani.saikou.presentation.screens.downloads.DownloadsViewModel
 import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.components.HalftoneButton
 import ani.saikou.sharedui.components.HalftoneSize

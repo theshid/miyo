@@ -26,12 +26,18 @@ import ani.saikou.domain.usecase.anilist.GetCharacterUseCase
 import ani.saikou.domain.usecase.anilist.GetSeasonalAnimeUseCase
 import ani.saikou.domain.usecase.anilist.GetUserStatsUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
+import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
+import ani.saikou.domain.usecase.downloads.DeleteAllDownloadsForMangaUseCase
+import ani.saikou.domain.usecase.downloads.EvictReadChaptersUseCase
+import ani.saikou.domain.usecase.downloads.ObserveDownloadsUseCase
+import ani.saikou.domain.usecase.downloads.PauseChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
 import ani.saikou.domain.usecase.feedback.SubmitFeedbackUseCase
 import ani.saikou.domain.usecase.news.GetAiringScheduleUseCase
 import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
 import ani.saikou.presentation.screens.character.CharacterDetailViewModel
+import ani.saikou.presentation.screens.downloads.DownloadsViewModel
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
 import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.presentation.screens.news.NewsFeedViewModel
@@ -40,7 +46,6 @@ import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
 import ani.saikou.screens.detail.MediaDetailViewModel
-import ani.saikou.screens.downloads.DownloadsViewModel
 import ani.saikou.screens.home.HomeViewModel
 import ani.saikou.screens.lists.UserListsViewModel
 import ani.saikou.screens.manga.MangaViewModel
@@ -115,6 +120,9 @@ val appModule =
         // factoryOf — fresh instance per resolution. Use cases are stateless
         // wrappers and don't benefit from singleton-ness; per-call alloc keeps
         // the door open for parameterized state if a future use case needs it.
+        factoryOf(::CancelChapterDownloadUseCase)
+        factoryOf(::DeleteAllDownloadsForMangaUseCase)
+        factoryOf(::EvictReadChaptersUseCase)
         factoryOf(::GetAiringRangeUseCase)
         factoryOf(::GetAiringScheduleUseCase)
         factoryOf(::GetAnilistAuthUrlUseCase)
@@ -122,6 +130,8 @@ val appModule =
         factoryOf(::GetLatestNewsUseCase)
         factoryOf(::GetSeasonalAnimeUseCase)
         factoryOf(::GetUserStatsUseCase)
+        factoryOf(::ObserveDownloadsUseCase)
+        factoryOf(::PauseChapterDownloadUseCase)
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)
         factoryOf(::SubmitFeedbackUseCase)
