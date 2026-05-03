@@ -1,12 +1,22 @@
 package ani.saikou.domain.repository
 
 import ani.saikou.domain.model.AiringEntry
+import ani.saikou.domain.model.AnilistFailure
 import ani.saikou.domain.model.CharacterDetail
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.User
 import ani.saikou.domain.model.UserStats
+import kotlinx.coroutines.flow.StateFlow
 
 interface AnilistRepository {
+    /**
+     * Side-channel report of the last network/server failure observed by
+     * the underlying transport (cleared on the next successful read).
+     * Discovery screens use this together with "all sections empty" to
+     * tell a real outage from a legitimately empty result.
+     */
+    val lastFailure: StateFlow<AnilistFailure?>
+
     suspend fun getUserStats(): UserStats?
 
     suspend fun getUserData(): User?

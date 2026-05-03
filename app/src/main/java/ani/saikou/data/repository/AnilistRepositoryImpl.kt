@@ -5,6 +5,7 @@ import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.AnilistQueries
 import ani.saikou.data.remote.MediaParser
 import ani.saikou.domain.model.AiringEntry
+import ani.saikou.domain.model.AnilistFailure
 import ani.saikou.domain.model.AnimeStats
 import ani.saikou.domain.model.CharacterDetail
 import ani.saikou.domain.model.GenreStat
@@ -15,6 +16,7 @@ import ani.saikou.domain.model.StatusStat
 import ani.saikou.domain.model.User
 import ani.saikou.domain.model.UserStats
 import ani.saikou.domain.repository.AnilistRepository
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -25,6 +27,8 @@ class AnilistRepositoryImpl(
     private val api: AnilistApi,
     private val tokenStorage: TokenStorage,
 ) : AnilistRepository {
+    override val lastFailure: StateFlow<AnilistFailure?> = api.lastFailure
+
     private var cachedUser: User? = null
 
     // ── Stats ─────────────────────────────────────────────────

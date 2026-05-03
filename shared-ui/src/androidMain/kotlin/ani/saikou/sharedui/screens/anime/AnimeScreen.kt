@@ -1,4 +1,4 @@
-package ani.saikou.screens.anime
+package ani.saikou.sharedui.screens.anime
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,13 +17,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import ani.saikou.components.MediaPosterCard
-import ani.saikou.components.SaikouSearchBar
-import ani.saikou.components.TrendingCarousel
+import ani.saikou.presentation.screens.anime.AnimeViewModel
+import ani.saikou.sharedui.components.DiscoveryShimmer
 import ani.saikou.sharedui.components.GenreChip
+import ani.saikou.sharedui.components.LoadErrorBanner
 import ani.saikou.sharedui.components.MediaBannerCard
+import ani.saikou.sharedui.components.MediaPosterCard
+import ani.saikou.sharedui.components.SaikouSearchBar
 import ani.saikou.sharedui.components.SectionHeader
+import ani.saikou.sharedui.components.TrendingCarousel
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -35,8 +37,7 @@ fun AnimeScreen(
     val state by viewModel.uiState.collectAsState()
 
     if (state.isLoading) {
-        ani.saikou.sharedui.components
-            .DiscoveryShimmer()
+        DiscoveryShimmer()
         return
     }
 
@@ -58,7 +59,7 @@ fun AnimeScreen(
         // ── Load failure banner ──────────────────────────────
         state.error?.let { msg ->
             item {
-                ani.saikou.components.LoadErrorBanner(
+                LoadErrorBanner(
                     message = msg,
                     onRetry = { viewModel.retry() },
                     modifier = Modifier.padding(horizontal = 16.dp),

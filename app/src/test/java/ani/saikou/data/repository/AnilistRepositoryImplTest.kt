@@ -2,8 +2,11 @@ package ani.saikou.data.repository
 
 import ani.saikou.data.local.TokenStorage
 import ani.saikou.data.remote.AnilistApi
+import ani.saikou.domain.model.AnilistFailure
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -27,7 +30,10 @@ import org.junit.Test
  * to respect (null guards, defaults, drop-on-missing-key behavior).
  */
 class AnilistRepositoryImplTest {
-    private val api: AnilistApi = mockk()
+    private val api: AnilistApi =
+        mockk {
+            every { lastFailure } returns MutableStateFlow<AnilistFailure?>(null)
+        }
     private val tokenStorage: TokenStorage = mockk(relaxed = true)
     private val repo = AnilistRepositoryImpl(api, tokenStorage)
 

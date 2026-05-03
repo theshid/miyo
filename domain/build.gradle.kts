@@ -23,6 +23,12 @@ kotlin {
             // of :domain's public surface so consumers see Flow without
             // adding their own dep.
             api(libs.kotlinx.coroutines.core)
+
+            // :platform is the Logger contract (abstract; concrete Sentry
+            // routing lives in :platform-android). Use cases pull it in
+            // for "this shouldn't happen" diagnostics — e.g. discovery
+            // screens that came back empty with no transport failure.
+            implementation(project(":platform"))
         }
 
         // androidUnitTest hosts JVM-side use case unit tests. MockK lives

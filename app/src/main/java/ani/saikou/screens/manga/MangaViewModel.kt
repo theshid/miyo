@@ -3,7 +3,7 @@ package ani.saikou.screens.manga
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.data.remote.AnilistApi
-import ani.saikou.data.remote.AnilistFailure
+import ani.saikou.domain.model.AnilistFailure
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.repository.AnilistRepository
 import kotlinx.coroutines.async

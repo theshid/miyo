@@ -21,4 +21,17 @@ interface Logger {
         throwable: Throwable,
         extras: Map<String, String> = emptyMap(),
     )
+
+    /**
+     * Capture a non-fatal warning — same shape as [reportError] but without
+     * a throwable. Used for "this shouldn't happen" diagnostics where there's
+     * no exception to attach (e.g. a backend that should always return data
+     * silently returned an empty result).
+     */
+    fun reportWarning(
+        area: String,
+        method: String,
+        message: String,
+        extras: Map<String, String> = emptyMap(),
+    )
 }

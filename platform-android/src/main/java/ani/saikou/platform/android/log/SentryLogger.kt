@@ -32,4 +32,23 @@ class SentryLogger : Logger {
             // Best-effort — never fail the caller because logging failed.
         }
     }
+
+    override fun reportWarning(
+        area: String,
+        method: String,
+        message: String,
+        extras: Map<String, String>,
+    ) {
+        try {
+            Sentry.withScope { scope ->
+                scope.level = SentryLevel.WARNING
+                scope.setTag("area", area)
+                scope.setTag("method", method)
+                extras.forEach { (k, v) -> scope.setExtra(k, v) }
+                Sentry.captureMessage(message)
+            }
+        } catch (_: Exception) {
+            // Best-effort — never fail the caller because logging failed.
+        }
+    }
 }

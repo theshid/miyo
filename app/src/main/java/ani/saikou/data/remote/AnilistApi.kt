@@ -1,5 +1,6 @@
 package ani.saikou.data.remote
 
+import ani.saikou.domain.model.AnilistFailure
 import io.github.theshid.prettylog.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
@@ -23,21 +24,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-
-/** Last failure observed by [AnilistApi.execute] after exhausting retries. */
-sealed class AnilistFailure {
-    data class Network(
-        val cause: Throwable,
-    ) : AnilistFailure()
-
-    data class Server(
-        val httpStatus: Int,
-    ) : AnilistFailure()
-
-    data class Other(
-        val cause: Throwable,
-    ) : AnilistFailure()
-}
 
 class AnilistApi(
     private val tokenProvider: () -> String?,

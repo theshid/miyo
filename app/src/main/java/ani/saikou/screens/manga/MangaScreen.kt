@@ -18,12 +18,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import ani.saikou.components.MediaPosterCard
-import ani.saikou.components.SaikouSearchBar
-import ani.saikou.components.TrendingCarousel
 import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.components.MediaBannerCard
+import ani.saikou.sharedui.components.MediaPosterCard
+import ani.saikou.sharedui.components.SaikouSearchBar
 import ani.saikou.sharedui.components.SectionHeader
+import ani.saikou.sharedui.components.TrendingCarousel
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -59,7 +59,7 @@ fun MangaScreen(
         // ── Load failure banner ──────────────────────────────
         state.error?.let { msg ->
             item {
-                ani.saikou.components.LoadErrorBanner(
+                ani.saikou.sharedui.components.LoadErrorBanner(
                     message = msg,
                     onRetry = { viewModel.loadMangaData() },
                     modifier = Modifier.padding(horizontal = 16.dp),

@@ -35,12 +35,14 @@ import ani.saikou.domain.usecase.ai.CatchMeUpUseCase
 import ani.saikou.domain.usecase.ai.SendAiChatMessageUseCase
 import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
 import ani.saikou.domain.usecase.anilist.GetAiringRangeUseCase
+import ani.saikou.domain.usecase.anilist.GetAnimeDiscoveryUseCase
 import ani.saikou.domain.usecase.anilist.GetCharacterUseCase
 import ani.saikou.domain.usecase.anilist.GetSeasonalAnimeUseCase
 import ani.saikou.domain.usecase.anilist.GetUserAnimeListUseCase
 import ani.saikou.domain.usecase.anilist.GetUserFavoritesUseCase
 import ani.saikou.domain.usecase.anilist.GetUserMangaListUseCase
 import ani.saikou.domain.usecase.anilist.GetUserStatsUseCase
+import ani.saikou.domain.usecase.anilist.LoadMorePopularAnimeUseCase
 import ani.saikou.domain.usecase.anilist.ResolveChapterCountUseCase
 import ani.saikou.domain.usecase.anilist.SearchMediaUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
@@ -56,6 +58,7 @@ import ani.saikou.domain.usecase.news.GetAiringScheduleUseCase
 import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
 import ani.saikou.domain.usecase.torrents.SearchTorrentsUseCase
 import ani.saikou.presentation.screens.ai.AiChatViewModel
+import ani.saikou.presentation.screens.anime.AnimeViewModel
 import ani.saikou.presentation.screens.character.CharacterDetailViewModel
 import ani.saikou.presentation.screens.downloads.DownloadsViewModel
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
@@ -66,7 +69,6 @@ import ani.saikou.presentation.screens.search.SearchViewModel
 import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.presentation.screens.torrent.TorrentSearchViewModel
-import ani.saikou.screens.anime.AnimeViewModel
 import ani.saikou.screens.detail.MediaDetailViewModel
 import ani.saikou.screens.home.HomeViewModel
 import ani.saikou.screens.manga.MangaViewModel
@@ -164,6 +166,7 @@ val appModule =
         factoryOf(::GetAiringRangeUseCase)
         factoryOf(::GetAiringScheduleUseCase)
         factoryOf(::GetAnilistAuthUrlUseCase)
+        factoryOf(::GetAnimeDiscoveryUseCase)
         factoryOf(::GetCharacterUseCase)
         factoryOf(::GetLatestNewsUseCase)
         factoryOf(::GetSeasonalAnimeUseCase)
@@ -171,6 +174,7 @@ val appModule =
         factoryOf(::GetUserFavoritesUseCase)
         factoryOf(::GetUserMangaListUseCase)
         factoryOf(::GetUserStatsUseCase)
+        factoryOf(::LoadMorePopularAnimeUseCase)
         factoryOf(::ObserveDownloadsUseCase)
         factoryOf(::PauseChapterDownloadUseCase)
         factoryOf(::QueueChapterDownloadUseCase)
