@@ -55,7 +55,6 @@ import ani.saikou.components.HalftoneVariant
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.ui.theme.HiroMisake
 import ani.saikou.ui.theme.InstrumentSerif
-import ani.saikou.ui.theme.JetBrainsMono
 import ani.saikou.ui.theme.Musashi
 import ani.saikou.ui.theme.OnSurfaceVariant
 import ani.saikou.ui.theme.Primary
@@ -163,8 +162,6 @@ fun LoginScreen() {
                     .padding(top = 56.dp, bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-
-
             // ── MIYO logo ─────────────────────────────────────
             Text(
                 text = "MIYO",
