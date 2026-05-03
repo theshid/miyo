@@ -10,11 +10,11 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import ani.saikou.data.android.di.dataAndroidModule
 import ani.saikou.data.di.dataModule
-import ani.saikou.data.local.ListEvent
-import ani.saikou.data.local.ListEventBus
 import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ActivityEventEntity
 import ani.saikou.di.appModule
+import ani.saikou.domain.event.ListEvent
+import ani.saikou.domain.event.ListEventBus
 import ani.saikou.notifications.EpisodeCheckWorker
 import ani.saikou.notifications.EpisodeNotificationChannel
 import ani.saikou.platform.android.di.platformAndroidModule

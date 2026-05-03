@@ -1,4 +1,4 @@
-package ani.saikou.screens.lists
+package ani.saikou.sharedui.screens.lists
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,12 +43,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import ani.saikou.domain.cache.MangaChapterCountCache
 import ani.saikou.domain.model.Media
+import ani.saikou.presentation.screens.lists.UserListsViewModel
 import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.components.HalftoneButton
 import ani.saikou.sharedui.components.HalftoneSize
 import ani.saikou.sharedui.components.HalftoneVariant
+import ani.saikou.sharedui.theme.Inter
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
 import ani.saikou.sharedui.theme.Primary
@@ -254,8 +256,7 @@ private fun ListMediaCard(
                     val label = if (type == "ANIME") "EPISODE PROGRESS" else "CHAPTER PROGRESS"
                     Text(label, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
 
-                    val cachedCounts by ani.saikou.data.local.MangaChapterCountCache.counts
-                        .collectAsState()
+                    val cachedCounts by MangaChapterCountCache.counts.collectAsState()
                     val progress = media.userProgress ?: 0
                     // Prefer AniList's count; fall back to the source-derived
                     // count we cached after the user opened the detail screen
@@ -277,8 +278,7 @@ private fun ListMediaCard(
         // Progress bar at bottom — same source-cache fallback as above. When
         // even that comes back empty we render 0 (vs the old fallback of 1f,
         // which made any progress > 0 look like the user finished the series).
-        val cachedCountsForBar by ani.saikou.data.local.MangaChapterCountCache.counts
-            .collectAsState()
+        val cachedCountsForBar by MangaChapterCountCache.counts.collectAsState()
         val progress = media.userProgress?.toFloat() ?: 0f
         val total = (media.totalEpisodes ?: media.totalChapters ?: cachedCountsForBar[media.id])?.toFloat()
         val fraction = if (total != null && total > 0) (progress / total).coerceIn(0f, 1f) else 0f
@@ -410,7 +410,7 @@ private fun EditBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 size = HalftoneSize.LG,
                 variant = HalftoneVariant.PURPLE,
-                geistFamily = ani.saikou.sharedui.theme.Inter,
+                geistFamily = Inter,
             )
 
             Spacer(modifier = Modifier.height(16.dp))

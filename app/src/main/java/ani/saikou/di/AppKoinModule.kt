@@ -27,10 +27,15 @@ import ani.saikou.domain.repository.TorrentRepository
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.source.NewsSource
 import ani.saikou.domain.source.TorrentSource
+import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
 import ani.saikou.domain.usecase.anilist.GetAiringRangeUseCase
 import ani.saikou.domain.usecase.anilist.GetCharacterUseCase
 import ani.saikou.domain.usecase.anilist.GetSeasonalAnimeUseCase
+import ani.saikou.domain.usecase.anilist.GetUserAnimeListUseCase
+import ani.saikou.domain.usecase.anilist.GetUserFavoritesUseCase
+import ani.saikou.domain.usecase.anilist.GetUserMangaListUseCase
 import ani.saikou.domain.usecase.anilist.GetUserStatsUseCase
+import ani.saikou.domain.usecase.anilist.ResolveChapterCountUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.DeleteAllDownloadsForMangaUseCase
@@ -46,6 +51,7 @@ import ani.saikou.domain.usecase.torrents.SearchTorrentsUseCase
 import ani.saikou.presentation.screens.character.CharacterDetailViewModel
 import ani.saikou.presentation.screens.downloads.DownloadsViewModel
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
+import ani.saikou.presentation.screens.lists.UserListsViewModel
 import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.presentation.screens.news.NewsFeedViewModel
 import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
@@ -55,7 +61,6 @@ import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
 import ani.saikou.screens.detail.MediaDetailViewModel
 import ani.saikou.screens.home.HomeViewModel
-import ani.saikou.screens.lists.UserListsViewModel
 import ani.saikou.screens.manga.MangaViewModel
 import ani.saikou.screens.player.VideoPlayerViewModel
 import ani.saikou.screens.reader.MangaReaderViewModel
@@ -144,6 +149,7 @@ val appModule =
         // the door open for parameterized state if a future use case needs it.
         factoryOf(::CancelChapterDownloadUseCase)
         factoryOf(::DeleteAllDownloadsForMangaUseCase)
+        factoryOf(::EditListEntryUseCase)
         factoryOf(::EvictReadChaptersUseCase)
         factoryOf(::GetAiringRangeUseCase)
         factoryOf(::GetAiringScheduleUseCase)
@@ -151,11 +157,15 @@ val appModule =
         factoryOf(::GetCharacterUseCase)
         factoryOf(::GetLatestNewsUseCase)
         factoryOf(::GetSeasonalAnimeUseCase)
+        factoryOf(::GetUserAnimeListUseCase)
+        factoryOf(::GetUserFavoritesUseCase)
+        factoryOf(::GetUserMangaListUseCase)
         factoryOf(::GetUserStatsUseCase)
         factoryOf(::ObserveDownloadsUseCase)
         factoryOf(::PauseChapterDownloadUseCase)
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)
+        factoryOf(::ResolveChapterCountUseCase)
         factoryOf(::SearchTorrentsUseCase)
         factoryOf(::SubmitFeedbackUseCase)
 

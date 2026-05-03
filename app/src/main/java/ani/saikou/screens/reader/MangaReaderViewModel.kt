@@ -5,8 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.components.ChapterDownloadState
 import ani.saikou.components.SourceItem
-import ani.saikou.data.local.ListEvent
-import ani.saikou.data.local.ListEventBus
 import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ActivityEventEntity
 import ani.saikou.data.local.db.ReadingHistoryDao
@@ -14,6 +12,8 @@ import ani.saikou.data.local.db.ReadingHistoryEntity
 import ani.saikou.data.local.downloads.ChapterSizeEstimator
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
+import ani.saikou.domain.event.ListEvent
+import ani.saikou.domain.event.ListEventBus
 import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.DownloadRequest
 import ani.saikou.domain.model.MangaPage

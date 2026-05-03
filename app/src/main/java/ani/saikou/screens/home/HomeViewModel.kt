@@ -2,8 +2,6 @@ package ani.saikou.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.data.local.ListEvent
-import ani.saikou.data.local.ListEventBus
 import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ReadingHistoryDao
 import ani.saikou.data.local.db.ReadingHistoryEntity
@@ -11,6 +9,8 @@ import ani.saikou.data.local.db.WatchHistoryDao
 import ani.saikou.data.local.db.WatchHistoryEntity
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.AnilistFailure
+import ani.saikou.domain.event.ListEvent
+import ani.saikou.domain.event.ListEventBus
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.User
 import ani.saikou.domain.repository.AnilistRepository

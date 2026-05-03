@@ -1,26 +1,31 @@
-package ani.saikou.screens.lists
+package ani.saikou.presentation.screens.lists
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.data.local.ListEvent
-import ani.saikou.data.local.ListEventBus
-import ani.saikou.data.local.MangaChapterCountCache
+import ani.saikou.domain.cache.MangaChapterCountCache
+import ani.saikou.domain.event.ListEvent
+import ani.saikou.domain.event.ListEventBus
 import ani.saikou.domain.model.Media
-import ani.saikou.domain.repository.AnilistRepository
-import ani.saikou.domain.repository.MangaSourceRepository
-import kotlinx.coroutines.Dispatchers
+import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
+import ani.saikou.domain.usecase.anilist.GetUserAnimeListUseCase
+import ani.saikou.domain.usecase.anilist.GetUserFavoritesUseCase
+import ani.saikou.domain.usecase.anilist.GetUserMangaListUseCase
+import ani.saikou.domain.usecase.anilist.ResolveChapterCountUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import kotlinx.coroutines.withContext
 
 class UserListsViewModel(
     savedStateHandle: SavedStateHandle,
-    private val repository: AnilistRepository,
-    private val mangaSourceRepo: MangaSourceRepository,
+    private val getUserAnimeList: GetUserAnimeListUseCase,
+    private val getUserMangaList: GetUserMangaListUseCase,
+    private val getUserFavorites: GetUserFavoritesUseCase,
+    private val editListEntry: EditListEntryUseCase,
+    private val resolveChapterCount: ResolveChapterCountUseCase,
 ) : ViewModel() {
     private val type: String = savedStateHandle["type"] ?: "ANIME"
 
@@ -55,7 +60,7 @@ class UserListsViewModel(
 
     fun selectTab(tab: String) {
         if (tab == _uiState.value.selectedTab) return
-        _uiState.value = _uiState.value.copy(selectedTab = tab)
+        _uiState.update { it.copy(selectedTab = tab) }
         loadList(tab)
     }
 
@@ -71,7 +76,7 @@ class UserListsViewModel(
         status: String?,
     ) {
         viewModelScope.launch {
-            repository.editListEntry(mediaId, progress, score, status)
+            editListEntry(mediaId, progress, score, status)
             ListEventBus.emit(ListEvent.ListEntryChanged(mediaId, status))
             loadList(_uiState.value.selectedTab) // refresh
         }
@@ -79,23 +84,19 @@ class UserListsViewModel(
 
     private fun loadList(tab: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.update { it.copy(isLoading = true) }
             val items =
                 if (tab == FAVORITES_TAB) {
-                    repository.getUserFavorites(type)
+                    getUserFavorites(type)
                 } else {
                     val anilistStatus = statusMap[tab] ?: "CURRENT"
                     if (type == "ANIME") {
-                        repository.getUserAnimeList(anilistStatus)
+                        getUserAnimeList(anilistStatus)
                     } else {
-                        repository.getUserMangaList(anilistStatus)
+                        getUserMangaList(anilistStatus)
                     }
                 }
-            _uiState.value =
-                _uiState.value.copy(
-                    items = items,
-                    isLoading = false,
-                )
+            _uiState.update { it.copy(items = items, isLoading = false) }
             // For manga whose AniList chapter count is null/0, kick off a
             // background source probe and stash the real number in the cache.
             // Subsequent renders pick it up reactively via MangaChapterCountCache.counts.
@@ -116,10 +117,11 @@ class UserListsViewModel(
         if (targets.isEmpty()) return
         for (entry in targets) {
             probesInFlight += entry.id
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch {
                 try {
                     probeSemaphore.withPermit {
-                        val count = resolveChapterCount(entry.nameRomaji ?: entry.name ?: return@withPermit)
+                        val title = entry.nameRomaji ?: entry.name ?: return@withPermit
+                        val count = resolveChapterCount(title)
                         if (count != null) MangaChapterCountCache.put(entry.id, count)
                     }
                 } finally {
@@ -128,11 +130,6 @@ class UserListsViewModel(
             }
         }
     }
-
-    private suspend fun resolveChapterCount(title: String): Int? =
-        withContext(Dispatchers.IO) {
-            mangaSourceRepo.resolveChapterCount(title)
-        }
 
     companion object {
         const val FAVORITES_TAB = "Favorites"

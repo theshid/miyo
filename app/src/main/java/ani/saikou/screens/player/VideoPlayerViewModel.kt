@@ -4,8 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.components.SourceItem
-import ani.saikou.data.local.ListEvent
-import ani.saikou.data.local.ListEventBus
 import ani.saikou.data.local.db.ActivityEventDao
 import ani.saikou.data.local.db.ActivityEventEntity
 import ani.saikou.data.local.db.WatchHistoryDao
@@ -13,6 +11,8 @@ import ani.saikou.data.local.db.WatchHistoryEntity
 import ani.saikou.data.remote.AniSkipApi
 import ani.saikou.data.remote.SkipTimes
 import ani.saikou.data.source.anime.GogoParser
+import ani.saikou.domain.event.ListEvent
+import ani.saikou.domain.event.ListEventBus
 import ani.saikou.domain.model.AnimeSearchResult
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.StreamLink

@@ -1,4 +1,4 @@
-package ani.saikou.data.local
+package ani.saikou.domain.event
 
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow

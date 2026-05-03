@@ -4,8 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.components.ChapterDownloadState
-import ani.saikou.data.local.ListEvent
-import ani.saikou.data.local.ListEventBus
+import ani.saikou.domain.event.ListEvent
+import ani.saikou.domain.event.ListEventBus
 import ani.saikou.domain.model.DownloadRequest
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.repository.AnilistRepository

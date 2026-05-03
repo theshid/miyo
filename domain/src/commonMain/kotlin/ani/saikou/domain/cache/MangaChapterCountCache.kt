@@ -1,4 +1,4 @@
-package ani.saikou.data.local
+package ani.saikou.domain.cache
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

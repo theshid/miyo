@@ -892,7 +892,7 @@ private fun ChaptersTab(
                 // keyed by AniList mediaId — that mapping isn't visible to
                 // the repo, so the put() stays here.
                 if (resolved != null) {
-                    ani.saikou.data.local.MangaChapterCountCache
+                    ani.saikou.domain.cache.MangaChapterCountCache
                         .put(mediaId, resolved)
                 }
             }
