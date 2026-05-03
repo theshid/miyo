@@ -24,10 +24,6 @@ class AniSkipApi(
     private val client: HttpClient,
     private val logger: Logger,
 ) {
-    companion object {
-        private const val BASE = "https://api.aniskip.com/v2/skip-times"
-    }
-
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
@@ -40,14 +36,13 @@ class AniSkipApi(
         episodeNumber: Int,
     ): SkipTimes {
         return try {
-            val url = "$BASE/$malId/$episodeNumber?types=op&types=ed&episodeLength=0"
-            val response = client.get(url)
+            val response = client.get(AniSkipSite.Endpoints.skipTimes(malId, episodeNumber))
             val body = json.parseToJsonElement(response.bodyAsText()).jsonObject
 
-            val found = body["found"]?.jsonPrimitive?.content == "true"
+            val found = body[AniSkipSite.JsonKeys.FOUND]?.jsonPrimitive?.content == "true"
             if (!found) return SkipTimes.EMPTY
 
-            val results = body["results"]?.jsonArray ?: return SkipTimes.EMPTY
+            val results = body[AniSkipSite.JsonKeys.RESULTS]?.jsonArray ?: return SkipTimes.EMPTY
 
             var opStart: Float? = null
             var opEnd: Float? = null
@@ -58,17 +53,17 @@ class AniSkipApi(
             @Suppress("LoopWithTooManyJumpStatements")
             for (result in results) {
                 val obj = result.jsonObject
-                val type = obj["skipType"]?.jsonPrimitive?.content ?: continue
-                val interval = obj["interval"]?.takeIf { it != JsonNull }?.jsonObject ?: continue
-                val start = interval["startTime"]?.jsonPrimitive?.content?.toFloatOrNull() ?: continue
-                val end = interval["endTime"]?.jsonPrimitive?.content?.toFloatOrNull() ?: continue
+                val type = obj[AniSkipSite.JsonKeys.SKIP_TYPE]?.jsonPrimitive?.content ?: continue
+                val interval = obj[AniSkipSite.JsonKeys.INTERVAL]?.takeIf { it != JsonNull }?.jsonObject ?: continue
+                val start = interval[AniSkipSite.JsonKeys.START_TIME]?.jsonPrimitive?.content?.toFloatOrNull() ?: continue
+                val end = interval[AniSkipSite.JsonKeys.END_TIME]?.jsonPrimitive?.content?.toFloatOrNull() ?: continue
 
                 when (type) {
-                    "op" -> {
+                    AniSkipSite.SkipTypes.OP -> {
                         opStart = start
                         opEnd = end
                     }
-                    "ed" -> {
+                    AniSkipSite.SkipTypes.ED -> {
                         edStart = start
                         edEnd = end
                     }
@@ -85,6 +80,40 @@ class AniSkipApi(
             )
             SkipTimes.EMPTY
         }
+    }
+}
+
+/**
+ * AniSkip API contract — endpoint composition, JSON keys, and skip-type tokens.
+ *
+ * Grouped here so an API change is a one-place fix rather than scattered
+ * magic strings the catch path would swallow silently.
+ */
+internal object AniSkipSite {
+    private const val HOST = "https://api.aniskip.com"
+
+    object Endpoints {
+        private const val SKIP_TIMES_BASE = "$HOST/v2/skip-times"
+        private const val QUERY = "?types=op&types=ed&episodeLength=0"
+
+        fun skipTimes(
+            malId: Int,
+            episodeNumber: Int,
+        ): String = "$SKIP_TIMES_BASE/$malId/$episodeNumber$QUERY"
+    }
+
+    object JsonKeys {
+        const val FOUND = "found"
+        const val RESULTS = "results"
+        const val SKIP_TYPE = "skipType"
+        const val INTERVAL = "interval"
+        const val START_TIME = "startTime"
+        const val END_TIME = "endTime"
+    }
+
+    object SkipTypes {
+        const val OP = "op"
+        const val ED = "ed"
     }
 }
 
