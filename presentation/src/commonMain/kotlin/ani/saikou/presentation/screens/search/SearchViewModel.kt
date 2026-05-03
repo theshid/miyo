@@ -1,17 +1,18 @@
-package ani.saikou.screens.search
+package ani.saikou.presentation.screens.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.domain.model.Media
-import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.usecase.anilist.SearchMediaUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SearchViewModel(
-    private val repository: AnilistRepository,
+    private val searchMedia: SearchMediaUseCase,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState
@@ -24,38 +25,36 @@ class SearchViewModel(
     private val searchCache = mutableMapOf<String, List<Media>>()
 
     fun updateQuery(query: String) {
-        _uiState.value = _uiState.value.copy(query = query)
+        _uiState.update { it.copy(query = query) }
         debounceSearch()
     }
 
     fun updateType(type: String) {
-        _uiState.value = _uiState.value.copy(type = type)
+        _uiState.update { it.copy(type = type) }
         search()
     }
 
     fun toggleGenre(genre: String) {
-        val current = _uiState.value.selectedGenres.toMutableList()
-        if (genre in current) current.remove(genre) else current.add(genre)
-        _uiState.value = _uiState.value.copy(selectedGenres = current)
+        _uiState.update { state ->
+            val next = state.selectedGenres.toMutableList()
+            if (genre in next) next.remove(genre) else next.add(genre)
+            state.copy(selectedGenres = next)
+        }
         search()
     }
 
     fun updateSort(sort: String?) {
-        _uiState.value = _uiState.value.copy(sort = sort)
+        _uiState.update { it.copy(sort = sort) }
         search()
     }
 
     fun clearFilters() {
-        _uiState.value =
-            _uiState.value.copy(
-                selectedGenres = emptyList(),
-                sort = null,
-            )
+        _uiState.update { it.copy(selectedGenres = emptyList(), sort = null) }
         search()
     }
 
     fun toggleGridView() {
-        _uiState.value = _uiState.value.copy(isGridView = !_uiState.value.isGridView)
+        _uiState.update { it.copy(isGridView = !it.isGridView) }
     }
 
     private fun debounceSearch() {
@@ -66,7 +65,7 @@ class SearchViewModel(
         // results. With at least one filter (genre or sort), browse without a
         // typed query is the whole point.
         if (!hasAnyFilter(state)) {
-            _uiState.value = state.copy(results = emptyList(), totalFound = 0, isLoading = false)
+            _uiState.update { it.copy(results = emptyList(), totalFound = 0, isLoading = false) }
             return
         }
         searchJob =
@@ -80,7 +79,7 @@ class SearchViewModel(
         val state = _uiState.value
         val query = state.query.trim()
         if (!hasAnyFilter(state)) {
-            _uiState.value = state.copy(results = emptyList(), totalFound = 0, isLoading = false)
+            _uiState.update { it.copy(results = emptyList(), totalFound = 0, isLoading = false) }
             return
         }
 
@@ -91,19 +90,16 @@ class SearchViewModel(
 
         // Serve from cache immediately if hit
         searchCache[cacheKey]?.let { cached ->
-            _uiState.value =
-                state.copy(
-                    results = cached,
-                    totalFound = cached.size,
-                    isLoading = false,
-                )
+            _uiState.update {
+                it.copy(results = cached, totalFound = cached.size, isLoading = false)
+            }
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = state.copy(isLoading = true)
+            _uiState.update { it.copy(isLoading = true) }
             val results =
-                repository.search(
+                searchMedia(
                     query = query,
                     type = state.type,
                     genres = state.selectedGenres.ifEmpty { null },
@@ -115,12 +111,9 @@ class SearchViewModel(
             if (searchCache.size > MAX_CACHE_ENTRIES) {
                 searchCache.remove(searchCache.keys.first())
             }
-            _uiState.value =
-                _uiState.value.copy(
-                    results = results,
-                    totalFound = results.size,
-                    isLoading = false,
-                )
+            _uiState.update {
+                it.copy(results = results, totalFound = results.size, isLoading = false)
+            }
         }
     }
 
@@ -130,18 +123,16 @@ class SearchViewModel(
         viewModelScope.launch {
             currentPage++
             val more =
-                repository.search(
+                searchMedia(
                     query = state.query,
                     type = state.type,
                     genres = state.selectedGenres.ifEmpty { null },
                     sort = state.sort,
                     page = currentPage,
                 )
-            _uiState.value =
-                _uiState.value.copy(
-                    results = _uiState.value.results + more,
-                    totalFound = _uiState.value.results.size + more.size,
-                )
+            _uiState.update {
+                it.copy(results = it.results + more, totalFound = it.results.size + more.size)
+            }
         }
     }
 

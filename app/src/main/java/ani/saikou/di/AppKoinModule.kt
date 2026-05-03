@@ -36,6 +36,7 @@ import ani.saikou.domain.usecase.anilist.GetUserFavoritesUseCase
 import ani.saikou.domain.usecase.anilist.GetUserMangaListUseCase
 import ani.saikou.domain.usecase.anilist.GetUserStatsUseCase
 import ani.saikou.domain.usecase.anilist.ResolveChapterCountUseCase
+import ani.saikou.domain.usecase.anilist.SearchMediaUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.DeleteAllDownloadsForMangaUseCase
@@ -54,6 +55,7 @@ import ani.saikou.presentation.screens.feedback.FeedbackViewModel
 import ani.saikou.presentation.screens.lists.UserListsViewModel
 import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.presentation.screens.news.NewsFeedViewModel
+import ani.saikou.presentation.screens.search.SearchViewModel
 import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.presentation.screens.torrent.TorrentSearchViewModel
@@ -64,7 +66,6 @@ import ani.saikou.screens.home.HomeViewModel
 import ani.saikou.screens.manga.MangaViewModel
 import ani.saikou.screens.player.VideoPlayerViewModel
 import ani.saikou.screens.reader.MangaReaderViewModel
-import ani.saikou.screens.search.SearchViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.factoryOf
@@ -166,6 +167,7 @@ val appModule =
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)
         factoryOf(::ResolveChapterCountUseCase)
+        factoryOf(::SearchMediaUseCase)
         factoryOf(::SearchTorrentsUseCase)
         factoryOf(::SubmitFeedbackUseCase)
 
