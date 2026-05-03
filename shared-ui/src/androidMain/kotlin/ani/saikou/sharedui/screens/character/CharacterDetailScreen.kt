@@ -1,4 +1,4 @@
-package ani.saikou.screens.character
+package ani.saikou.sharedui.screens.character
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -39,8 +39,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.domain.model.Media
+import ani.saikou.presentation.screens.character.CharacterDetailViewModel
 import ani.saikou.sharedui.theme.Background
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant

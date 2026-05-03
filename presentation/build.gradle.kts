@@ -27,6 +27,7 @@ kotlin {
             // KMP-aware Lifecycle — gives commonMain access to ViewModel +
             // viewModelScope without pulling Android into common code.
             implementation(libs.lifecycle.viewmodel.kmp)
+            implementation(libs.lifecycle.viewmodel.savedstate.kmp)
 
             // Koin — VMs are constructor-injected; commonMain only needs the
             // core to declare definitions. The Android-side bridge

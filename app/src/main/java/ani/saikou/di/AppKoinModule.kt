@@ -21,6 +21,7 @@ import ani.saikou.domain.repository.FeedbackRepository
 import ani.saikou.domain.repository.NewsRepository
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.source.NewsSource
+import ani.saikou.domain.usecase.anilist.GetCharacterUseCase
 import ani.saikou.domain.usecase.anilist.GetUserStatsUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
@@ -28,13 +29,13 @@ import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
 import ani.saikou.domain.usecase.feedback.SubmitFeedbackUseCase
 import ani.saikou.domain.usecase.news.GetAiringScheduleUseCase
 import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
+import ani.saikou.presentation.screens.character.CharacterDetailViewModel
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
 import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.presentation.screens.news.NewsFeedViewModel
 import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
-import ani.saikou.screens.character.CharacterDetailViewModel
 import ani.saikou.screens.detail.MediaDetailViewModel
 import ani.saikou.screens.downloads.DownloadsViewModel
 import ani.saikou.screens.home.HomeViewModel
@@ -114,6 +115,7 @@ val appModule =
         // the door open for parameterized state if a future use case needs it.
         factoryOf(::GetAiringScheduleUseCase)
         factoryOf(::GetAnilistAuthUrlUseCase)
+        factoryOf(::GetCharacterUseCase)
         factoryOf(::GetLatestNewsUseCase)
         factoryOf(::GetUserStatsUseCase)
         factoryOf(::QueueChapterDownloadUseCase)

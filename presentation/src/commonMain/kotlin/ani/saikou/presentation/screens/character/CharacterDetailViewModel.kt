@@ -1,17 +1,18 @@
-package ani.saikou.screens.character
+package ani.saikou.presentation.screens.character
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.domain.model.CharacterDetail
-import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.usecase.anilist.GetCharacterUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class CharacterDetailViewModel(
     savedStateHandle: SavedStateHandle,
-    private val repository: AnilistRepository,
+    private val getCharacter: GetCharacterUseCase,
 ) : ViewModel() {
     private val characterId: Int = savedStateHandle["id"] ?: 0
 
@@ -23,14 +24,10 @@ class CharacterDetailViewModel(
     }
 
     private fun load() {
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            val character = repository.getCharacter(characterId)
-            _uiState.value =
-                CharacterUiState(
-                    character = character,
-                    isLoading = false,
-                )
+            val character = getCharacter(characterId)
+            _uiState.update { it.copy(character = character, isLoading = false) }
         }
     }
 }

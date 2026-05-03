@@ -98,6 +98,9 @@ lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx
 # KMP Lifecycle — the JetBrains-published port of androidx.lifecycle that
 # resolves on commonMain. Required for VMs in :presentation/commonMain.
 lifecycle-viewmodel-kmp = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle-kmp" }
+# KMP SavedStateHandle — same group, needed by VMs that read nav args
+# (e.g. CharacterDetailViewModel reading the character id).
+lifecycle-viewmodel-savedstate-kmp = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate", version.ref = "lifecycle-kmp" }
 navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
 core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
