@@ -1,4 +1,4 @@
-package ani.saikou.screens.stats
+package ani.saikou.sharedui.screens.stats
 
 import android.content.Context
 import androidx.compose.foundation.Canvas
@@ -47,12 +47,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import ani.saikou.components.GlassCard
 import ani.saikou.domain.model.GenreStat
 import ani.saikou.domain.model.ScoreStat
 import ani.saikou.domain.model.StatusStat
 import ani.saikou.domain.model.UserStats
+import ani.saikou.presentation.screens.stats.StatsViewModel
+import ani.saikou.sharedui.components.GlassCard
 import ani.saikou.sharedui.theme.Background
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
@@ -60,7 +60,7 @@ import ani.saikou.sharedui.theme.Primary
 import ani.saikou.sharedui.theme.Secondary
 import ani.saikou.sharedui.theme.SurfaceContainerHigh
 import ani.saikou.sharedui.theme.Tertiary
-import ani.saikou.util.ShareCardGenerator
+import ani.saikou.sharedui.util.ShareCardGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -113,7 +113,8 @@ fun StatsScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                ani.saikou.components.DiscoveryShimmer()
+                ani.saikou.sharedui.components
+                    .DiscoveryShimmer()
             }
             return
         }

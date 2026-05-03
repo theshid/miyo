@@ -1,15 +1,16 @@
-package ani.saikou.screens.stats
+package ani.saikou.presentation.screens.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ani.saikou.domain.model.UserStats
-import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.usecase.anilist.GetUserStatsUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class StatsViewModel(
-    private val repository: AnilistRepository,
+    private val getUserStats: GetUserStatsUseCase,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState
@@ -19,14 +20,10 @@ class StatsViewModel(
     }
 
     fun loadStats() {
+        _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            val stats = repository.getUserStats()
-            _uiState.value =
-                StatsUiState(
-                    stats = stats,
-                    isLoading = false,
-                )
+            val stats = getUserStats()
+            _uiState.update { it.copy(stats = stats, isLoading = false) }
         }
     }
 }

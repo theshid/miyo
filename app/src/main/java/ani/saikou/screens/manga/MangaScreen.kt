@@ -35,7 +35,8 @@ fun MangaScreen(
     val state by viewModel.uiState.collectAsState()
 
     if (state.isLoading) {
-        ani.saikou.components.DiscoveryShimmer()
+        ani.saikou.sharedui.components
+            .DiscoveryShimmer()
         return
     }
 

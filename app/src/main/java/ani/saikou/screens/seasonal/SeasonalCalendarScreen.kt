@@ -143,7 +143,8 @@ fun SeasonalCalendarScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                ani.saikou.components.DiscoveryShimmer()
+                ani.saikou.sharedui.components
+                    .DiscoveryShimmer()
             }
         } else {
             when (state.selectedTab) {

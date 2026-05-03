@@ -1,4 +1,4 @@
-package ani.saikou.util
+package ani.saikou.sharedui.util
 
 import android.content.Context
 import android.content.Intent

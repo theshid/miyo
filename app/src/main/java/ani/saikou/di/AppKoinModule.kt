@@ -21,6 +21,7 @@ import ani.saikou.domain.repository.FeedbackRepository
 import ani.saikou.domain.repository.NewsRepository
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.source.NewsSource
+import ani.saikou.domain.usecase.anilist.GetUserStatsUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
@@ -30,6 +31,7 @@ import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
 import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.presentation.screens.news.NewsFeedViewModel
+import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
 import ani.saikou.screens.character.CharacterDetailViewModel
@@ -42,7 +44,6 @@ import ani.saikou.screens.player.VideoPlayerViewModel
 import ani.saikou.screens.reader.MangaReaderViewModel
 import ani.saikou.screens.search.SearchViewModel
 import ani.saikou.screens.seasonal.SeasonalCalendarViewModel
-import ani.saikou.screens.stats.StatsViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.factoryOf
@@ -114,6 +115,7 @@ val appModule =
         factoryOf(::GetAiringScheduleUseCase)
         factoryOf(::GetAnilistAuthUrlUseCase)
         factoryOf(::GetLatestNewsUseCase)
+        factoryOf(::GetUserStatsUseCase)
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)
         factoryOf(::SubmitFeedbackUseCase)

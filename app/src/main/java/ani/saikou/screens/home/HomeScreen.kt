@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.ActivityHeatmap
 import ani.saikou.components.DefaultHomeTourSteps
-import ani.saikou.components.GlassCard
 import ani.saikou.components.MediaPosterCard
 import ani.saikou.components.PulseAvatar
 import ani.saikou.components.TourOverlay
@@ -59,6 +58,7 @@ import ani.saikou.components.TourTarget
 import ani.saikou.components.rememberTourState
 import ani.saikou.components.tourTarget
 import ani.saikou.data.local.OnboardingPrefs
+import ani.saikou.sharedui.components.GlassCard
 import ani.saikou.sharedui.components.SectionHeader
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
@@ -169,7 +169,8 @@ fun HomeScreen(
     }
 
     if (state.isLoading) {
-        ani.saikou.components.HomeShimmer()
+        ani.saikou.sharedui.components
+            .HomeShimmer()
         return
     }
 

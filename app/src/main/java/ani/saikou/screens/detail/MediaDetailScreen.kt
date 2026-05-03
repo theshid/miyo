@@ -60,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.ChapterDownloadState
 import ani.saikou.components.ChapterRow
-import ani.saikou.components.GlassCard
 import ani.saikou.components.MediaPosterCard
 import ani.saikou.components.SourceItem
 import ani.saikou.components.SourceSelectorSheet
@@ -75,6 +74,7 @@ import ani.saikou.domain.model.Media
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.domain.repository.MangaSourceRepository
 import ani.saikou.sharedui.components.GenreChip
+import ani.saikou.sharedui.components.GlassCard
 import ani.saikou.sharedui.components.HalftoneButton
 import ani.saikou.sharedui.components.HalftoneSize
 import ani.saikou.sharedui.components.HalftoneVariant
@@ -85,7 +85,7 @@ import ani.saikou.sharedui.theme.OnSurfaceVariant
 import ani.saikou.sharedui.theme.Primary
 import ani.saikou.sharedui.theme.Secondary
 import ani.saikou.sharedui.theme.SurfaceContainer
-import ani.saikou.util.ShareCardGenerator
+import ani.saikou.sharedui.util.ShareCardGenerator
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
