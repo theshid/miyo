@@ -1,19 +1,19 @@
-package ani.saikou.screens.manga
+package ani.saikou.presentation.screens.manga
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.data.remote.AnilistApi
 import ani.saikou.domain.model.AnilistFailure
 import ani.saikou.domain.model.Media
-import ani.saikou.domain.repository.AnilistRepository
-import kotlinx.coroutines.async
+import ani.saikou.domain.usecase.anilist.GetMangaDiscoveryUseCase
+import ani.saikou.domain.usecase.anilist.LoadMorePopularMangaUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class MangaViewModel(
-    private val repository: AnilistRepository,
-    private val api: AnilistApi,
+    private val getDiscovery: GetMangaDiscoveryUseCase,
+    private val loadMorePopularPage: LoadMorePopularMangaUseCase,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MangaUiState())
     val uiState: StateFlow<MangaUiState> = _uiState
@@ -27,27 +27,18 @@ class MangaViewModel(
 
     fun loadMangaData() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
-            val trendingDeferred = async { repository.getTrendingManga() }
-            val updatedDeferred = async { repository.getRecentlyUpdatedManga() }
-            val popularDeferred = async { repository.getPopularManga() }
-
-            val trending = trendingDeferred.await()
-            val updated = updatedDeferred.await()
-            val popular = popularDeferred.await()
-
-            val networkFailure = api.lastFailure.value
-            val allEmpty = trending.isEmpty() && updated.isEmpty() && popular.isEmpty()
-
-            _uiState.value =
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            val snapshot = getDiscovery()
+            popularPage = 1
+            _uiState.update {
                 MangaUiState(
-                    trending = trending,
-                    recentlyUpdated = updated,
-                    popular = popular,
+                    trending = snapshot.trending,
+                    recentlyUpdated = snapshot.recentlyUpdated,
+                    popular = snapshot.popular,
                     isLoading = false,
-                    error = if (networkFailure != null && allEmpty) friendlyMessage(networkFailure) else null,
+                    error = snapshot.failure?.let(::friendlyMessage),
                 )
+            }
         }
     }
 
@@ -67,11 +58,8 @@ class MangaViewModel(
         isLoadingMore = true
         viewModelScope.launch {
             popularPage++
-            val more = repository.getPopularManga(page = popularPage)
-            _uiState.value =
-                _uiState.value.copy(
-                    popular = _uiState.value.popular + more,
-                )
+            val more = loadMorePopularPage(popularPage)
+            _uiState.update { it.copy(popular = it.popular + more) }
             isLoadingMore = false
         }
     }

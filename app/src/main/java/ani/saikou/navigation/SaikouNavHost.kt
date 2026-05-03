@@ -14,7 +14,6 @@ import ani.saikou.data.local.TokenStorage
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.screens.detail.MediaDetailScreen
 import ani.saikou.screens.home.HomeScreen
-import ani.saikou.screens.manga.MangaScreen
 import ani.saikou.screens.player.VideoPlayerScreen
 import ani.saikou.screens.reader.MangaReaderScreen
 import ani.saikou.sharedui.screens.ai.AiChatScreen
@@ -24,6 +23,7 @@ import ani.saikou.sharedui.screens.downloads.DownloadsScreen
 import ani.saikou.sharedui.screens.feedback.FeedbackScreen
 import ani.saikou.sharedui.screens.lists.UserListsScreen
 import ani.saikou.sharedui.screens.login.LoginScreen
+import ani.saikou.sharedui.screens.manga.MangaScreen
 import ani.saikou.sharedui.screens.news.NewsFeedScreen
 import ani.saikou.sharedui.screens.search.SearchScreen
 import ani.saikou.sharedui.screens.seasonal.SeasonalCalendarScreen

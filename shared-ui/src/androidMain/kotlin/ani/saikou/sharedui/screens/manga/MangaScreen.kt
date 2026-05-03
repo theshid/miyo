@@ -1,4 +1,4 @@
-package ani.saikou.screens.manga
+package ani.saikou.sharedui.screens.manga
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,8 +17,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import ani.saikou.presentation.screens.manga.MangaViewModel
+import ani.saikou.sharedui.components.DiscoveryShimmer
 import ani.saikou.sharedui.components.GenreChip
+import ani.saikou.sharedui.components.LoadErrorBanner
 import ani.saikou.sharedui.components.MediaBannerCard
 import ani.saikou.sharedui.components.MediaPosterCard
 import ani.saikou.sharedui.components.SaikouSearchBar
@@ -35,8 +37,7 @@ fun MangaScreen(
     val state by viewModel.uiState.collectAsState()
 
     if (state.isLoading) {
-        ani.saikou.sharedui.components
-            .DiscoveryShimmer()
+        DiscoveryShimmer()
         return
     }
 
@@ -59,7 +60,7 @@ fun MangaScreen(
         // ── Load failure banner ──────────────────────────────
         state.error?.let { msg ->
             item {
-                ani.saikou.sharedui.components.LoadErrorBanner(
+                LoadErrorBanner(
                     message = msg,
                     onRetry = { viewModel.loadMangaData() },
                     modifier = Modifier.padding(horizontal = 16.dp),
