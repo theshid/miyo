@@ -1,4 +1,4 @@
-package ani.saikou.components
+package ani.saikou.sharedui.components
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height

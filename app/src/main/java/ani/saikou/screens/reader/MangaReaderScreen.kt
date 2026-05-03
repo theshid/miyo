@@ -69,12 +69,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import ani.saikou.components.PillButton
-import ani.saikou.components.TourOverlay
-import ani.saikou.components.TourTarget
-import ani.saikou.components.rememberTourState
-import ani.saikou.components.tourTarget
 import ani.saikou.sharedui.components.GenreChip
+import ani.saikou.sharedui.components.PillButton
+import ani.saikou.sharedui.components.TourOverlay
+import ani.saikou.sharedui.components.TourTarget
+import ani.saikou.sharedui.components.rememberTourState
+import ani.saikou.sharedui.components.tourTarget
 import ani.saikou.sharedui.theme.Background
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
@@ -578,7 +578,7 @@ fun MangaReaderScreen(
     if (showReaderTour) {
         var tourStep by remember { androidx.compose.runtime.mutableIntStateOf(0) }
         TourOverlay(
-            steps = ani.saikou.components.DefaultReaderTourSteps,
+            steps = ani.saikou.sharedui.components.DefaultReaderTourSteps,
             state = tourState,
             currentStep = tourStep,
             onStepChanged = { tourStep = it },

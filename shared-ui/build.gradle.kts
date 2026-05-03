@@ -41,6 +41,11 @@ kotlin {
         }
 
         androidMain.dependencies {
+            // :data-android exposes Android-only utilities (e.g. OnboardingPrefs,
+            // backed by SharedPreferences) that androidMain screens reach via
+            // koinInject. The KMP-portable contracts already live in :domain.
+            implementation(project(":data-android"))
+
             // ExoPlayer + AndroidView host live here — splash plays an MP4
             // via media3, which is Android-only. iOS will get an actual{}
             // impl using AVPlayer when targets are enabled.

@@ -1,4 +1,4 @@
-package ani.saikou.screens.home
+package ani.saikou.sharedui.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -48,22 +48,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import ani.saikou.components.ActivityHeatmap
-import ani.saikou.components.DefaultHomeTourSteps
-import ani.saikou.components.PulseAvatar
-import ani.saikou.components.TourOverlay
-import ani.saikou.components.TourTarget
-import ani.saikou.components.rememberTourState
-import ani.saikou.components.tourTarget
 import ani.saikou.data.local.OnboardingPrefs
+import ani.saikou.presentation.screens.home.HomeViewModel
+import ani.saikou.sharedui.components.ActivityHeatmap
+import ani.saikou.sharedui.components.AiringInfo
+import ani.saikou.sharedui.components.DefaultHomeTourSteps
 import ani.saikou.sharedui.components.GlassCard
 import ani.saikou.sharedui.components.MediaPosterCard
+import ani.saikou.sharedui.components.PulseAvatar
 import ani.saikou.sharedui.components.SectionHeader
+import ani.saikou.sharedui.components.TourOverlay
+import ani.saikou.sharedui.components.TourTarget
+import ani.saikou.sharedui.components.rememberTourState
+import ani.saikou.sharedui.components.tourTarget
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
 import ani.saikou.sharedui.theme.Primary
 import ani.saikou.sharedui.theme.Secondary
+import kotlinx.datetime.toJavaLocalDate
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -288,7 +290,7 @@ fun HomeScreen(
                                     .toLocalDate()
                             if (java.time.YearMonth.from(date) != displayedMonth) return@mapNotNull null
                             date to
-                                ani.saikou.components.AiringInfo(
+                                AiringInfo(
                                     mediaId = media.id,
                                     title = media.displayTitle,
                                     coverUrl = media.cover,
@@ -298,10 +300,21 @@ fun HomeScreen(
                         }.groupBy({ it.first }, { it.second })
                         .mapValues { (_, list) -> list.sortedBy { it.airingTimeMs } }
                 }
+            // VM's calendar maps are keyed on kotlinx.datetime.LocalDate
+            // (commonMain types). ActivityHeatmap takes java.time.LocalDate
+            // (uses YearMonth/DateTimeFormatter); convert at the boundary.
+            val countsByJavaDate =
+                remember(state.activityByDay) {
+                    state.activityByDay.mapKeys { (k, _) -> k.toJavaLocalDate() }
+                }
+            val activitiesByJavaDate =
+                remember(state.activitiesByDay) {
+                    state.activitiesByDay.mapKeys { (k, _) -> k.toJavaLocalDate() }
+                }
             ActivityHeatmap(
-                countsByDay = state.activityByDay,
+                countsByDay = countsByJavaDate,
                 airingsByDay = airingsForMonth,
-                activitiesByDay = state.activitiesByDay,
+                activitiesByDay = activitiesByJavaDate,
                 onAiringClick = onNavigateToMedia,
                 onActivityClick = onNavigateToMedia,
                 displayedMonth = displayedMonth,
@@ -594,7 +607,7 @@ fun HomeScreen(
 
 @Composable
 private fun WatchHistoryCard(
-    entry: ani.saikou.data.local.db.WatchHistoryEntity,
+    entry: ani.saikou.domain.model.WatchHistoryItem,
     showProgress: Boolean,
     onClick: () -> Unit,
 ) {

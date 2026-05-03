@@ -24,6 +24,12 @@ kotlin {
             // adding their own dep.
             api(libs.kotlinx.coroutines.core)
 
+            // kotlinx-datetime — domain models + use cases that bucket by
+            // local date (e.g. ActivityCalendarSnapshot) need a portable
+            // LocalDate. Exposed as `api` because [ActivityCalendarSnapshot]
+            // surfaces `LocalDate` in its public type.
+            api(libs.kotlinx.datetime)
+
             // :platform is the Logger contract (abstract; concrete Sentry
             // routing lives in :platform-android). Use cases pull it in
             // for "this shouldn't happen" diagnostics — e.g. discovery

@@ -1,4 +1,4 @@
-package ani.saikou.components
+package ani.saikou.sharedui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,7 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import ani.saikou.sharedui.components.GlassCard
+import ani.saikou.domain.model.DayActivity
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
 import ani.saikou.sharedui.theme.Primary
@@ -59,18 +59,6 @@ data class AiringInfo(
     val episodeNumber: Int,
     val airingTimeMs: Long,
 )
-
-/** Something the user actually did on a given day (watched an episode or read a chapter). */
-data class DayActivity(
-    val mediaId: Int,
-    val title: String,
-    val coverUrl: String?,
-    val kind: Kind,
-    val number: Int,
-    val timestampMs: Long,
-) {
-    enum class Kind { WATCHED, READ }
-}
 
 @Composable
 fun ActivityHeatmap(

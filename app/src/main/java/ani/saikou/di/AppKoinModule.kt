@@ -30,6 +30,7 @@ import ani.saikou.domain.source.AiChatService
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.source.NewsSource
 import ani.saikou.domain.source.TorrentSource
+import ani.saikou.domain.usecase.activity.ObserveActivityCalendarUseCase
 import ani.saikou.domain.usecase.ai.BuildAiUserContextSnippetUseCase
 import ani.saikou.domain.usecase.ai.CatchMeUpUseCase
 import ani.saikou.domain.usecase.ai.SendAiChatMessageUseCase
@@ -37,6 +38,7 @@ import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
 import ani.saikou.domain.usecase.anilist.GetAiringRangeUseCase
 import ani.saikou.domain.usecase.anilist.GetAnimeDiscoveryUseCase
 import ani.saikou.domain.usecase.anilist.GetCharacterUseCase
+import ani.saikou.domain.usecase.anilist.GetHomeAnilistSnapshotUseCase
 import ani.saikou.domain.usecase.anilist.GetMangaDiscoveryUseCase
 import ani.saikou.domain.usecase.anilist.GetSeasonalAnimeUseCase
 import ani.saikou.domain.usecase.anilist.GetUserAnimeListUseCase
@@ -45,6 +47,7 @@ import ani.saikou.domain.usecase.anilist.GetUserMangaListUseCase
 import ani.saikou.domain.usecase.anilist.GetUserStatsUseCase
 import ani.saikou.domain.usecase.anilist.LoadMorePopularAnimeUseCase
 import ani.saikou.domain.usecase.anilist.LoadMorePopularMangaUseCase
+import ani.saikou.domain.usecase.anilist.RefreshHomeAnilistSnapshotUseCase
 import ani.saikou.domain.usecase.anilist.ResolveChapterCountUseCase
 import ani.saikou.domain.usecase.anilist.SearchMediaUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
@@ -56,6 +59,11 @@ import ani.saikou.domain.usecase.downloads.PauseChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
 import ani.saikou.domain.usecase.feedback.SubmitFeedbackUseCase
+import ani.saikou.domain.usecase.history.ObserveChaptersReadCountUseCase
+import ani.saikou.domain.usecase.history.ObserveContinueWatchingUseCase
+import ani.saikou.domain.usecase.history.ObserveEpisodesWatchedCountUseCase
+import ani.saikou.domain.usecase.history.ObserveReadingHistoryUseCase
+import ani.saikou.domain.usecase.history.ObserveRecentWatchHistoryUseCase
 import ani.saikou.domain.usecase.news.GetAiringScheduleUseCase
 import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
 import ani.saikou.domain.usecase.torrents.SearchTorrentsUseCase
@@ -64,6 +72,7 @@ import ani.saikou.presentation.screens.anime.AnimeViewModel
 import ani.saikou.presentation.screens.character.CharacterDetailViewModel
 import ani.saikou.presentation.screens.downloads.DownloadsViewModel
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
+import ani.saikou.presentation.screens.home.HomeViewModel
 import ani.saikou.presentation.screens.lists.UserListsViewModel
 import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.presentation.screens.manga.MangaViewModel
@@ -73,7 +82,6 @@ import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.presentation.screens.torrent.TorrentSearchViewModel
 import ani.saikou.screens.detail.MediaDetailViewModel
-import ani.saikou.screens.home.HomeViewModel
 import ani.saikou.screens.player.VideoPlayerViewModel
 import ani.saikou.screens.reader.MangaReaderViewModel
 import org.koin.android.ext.koin.androidContext
@@ -170,6 +178,7 @@ val appModule =
         factoryOf(::GetAnilistAuthUrlUseCase)
         factoryOf(::GetAnimeDiscoveryUseCase)
         factoryOf(::GetCharacterUseCase)
+        factoryOf(::GetHomeAnilistSnapshotUseCase)
         factoryOf(::GetLatestNewsUseCase)
         factoryOf(::GetMangaDiscoveryUseCase)
         factoryOf(::GetSeasonalAnimeUseCase)
@@ -179,10 +188,17 @@ val appModule =
         factoryOf(::GetUserStatsUseCase)
         factoryOf(::LoadMorePopularAnimeUseCase)
         factoryOf(::LoadMorePopularMangaUseCase)
+        factoryOf(::ObserveActivityCalendarUseCase)
+        factoryOf(::ObserveChaptersReadCountUseCase)
+        factoryOf(::ObserveContinueWatchingUseCase)
         factoryOf(::ObserveDownloadsUseCase)
+        factoryOf(::ObserveEpisodesWatchedCountUseCase)
+        factoryOf(::ObserveReadingHistoryUseCase)
+        factoryOf(::ObserveRecentWatchHistoryUseCase)
         factoryOf(::PauseChapterDownloadUseCase)
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)
+        factoryOf(::RefreshHomeAnilistSnapshotUseCase)
         factoryOf(::ResolveChapterCountUseCase)
         factoryOf(::SearchMediaUseCase)
         factoryOf(::SearchTorrentsUseCase)
