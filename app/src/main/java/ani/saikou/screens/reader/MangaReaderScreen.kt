@@ -69,12 +69,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import ani.saikou.components.GenreChip
 import ani.saikou.components.PillButton
 import ani.saikou.components.TourOverlay
 import ani.saikou.components.TourTarget
 import ani.saikou.components.rememberTourState
 import ani.saikou.components.tourTarget
+import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.theme.Background
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant

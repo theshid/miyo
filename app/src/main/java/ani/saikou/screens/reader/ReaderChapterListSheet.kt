@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import ani.saikou.components.ChapterDownloadState
 import ani.saikou.components.ChapterRow
 import ani.saikou.components.ChapterRowShimmer
-import ani.saikou.components.GenreChip
+import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
 import ani.saikou.sharedui.theme.Primary

@@ -6,18 +6,19 @@ import ani.saikou.data.local.ConnectivityObserver
 import ani.saikou.data.local.OnboardingPrefs
 import ani.saikou.data.local.TokenStorage
 import ani.saikou.data.remote.AnilistApi
-import ani.saikou.data.remote.FeedbackService
+import ani.saikou.data.remote.FeedbackServiceImpl
 import ani.saikou.data.remote.OpenAiService
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
+import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
+import ani.saikou.presentation.screens.feedback.FeedbackViewModel
 import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
 import ani.saikou.screens.character.CharacterDetailViewModel
 import ani.saikou.screens.detail.MediaDetailViewModel
 import ani.saikou.screens.downloads.DownloadsViewModel
-import ani.saikou.screens.feedback.FeedbackViewModel
 import ani.saikou.screens.home.HomeViewModel
 import ani.saikou.screens.lists.UserListsViewModel
 import ani.saikou.screens.manga.MangaViewModel
@@ -29,7 +30,6 @@ import ani.saikou.screens.stats.StatsViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.factoryOf
-import org.koin.core.module.dsl.singleOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -60,7 +60,13 @@ val appModule =
 
         // ─── Remote services ───────────────────────────────────────────────
         single { OpenAiService(BuildConfig.OPENAI_API_KEY) }
-        singleOf(::FeedbackService)
+        single<FeedbackService> {
+            FeedbackServiceImpl(
+                webhookUrl = BuildConfig.DISCORD_FEEDBACK_WEBHOOK,
+                appVersionName = BuildConfig.VERSION_NAME,
+                appVersionCode = BuildConfig.VERSION_CODE,
+            )
+        }
 
         // ─── Use cases ─────────────────────────────────────────────────────
         // factoryOf — fresh instance per resolution. Use cases are stateless

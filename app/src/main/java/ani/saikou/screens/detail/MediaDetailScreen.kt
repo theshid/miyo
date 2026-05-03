@@ -60,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ani.saikou.components.ChapterDownloadState
 import ani.saikou.components.ChapterRow
-import ani.saikou.components.GenreChip
 import ani.saikou.components.GlassCard
 import ani.saikou.components.MediaPosterCard
 import ani.saikou.components.SourceItem
@@ -75,6 +74,7 @@ import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.model.Media
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.domain.repository.MangaSourceRepository
+import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.components.HalftoneButton
 import ani.saikou.sharedui.components.HalftoneSize
 import ani.saikou.sharedui.components.HalftoneVariant

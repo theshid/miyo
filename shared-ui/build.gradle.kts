@@ -32,6 +32,12 @@ kotlin {
             // `api` so consumers (e.g. :app) can `import org.jetbrains.compose.
             // resources.*` and use `Res` directly without re-declaring the dep.
             api(libs.compose.multiplatform.components.resources)
+
+            // Screens reference VM types from :presentation and domain types
+            // (e.g. FeedbackService.Category) from :domain. Both are KMP, so
+            // commonMain dep here.
+            implementation(project(":domain"))
+            implementation(project(":presentation"))
         }
 
         androidMain.dependencies {
@@ -55,6 +61,10 @@ kotlin {
             // BOM pins the version in lockstep with :app's Compose libs.
             implementation(project.dependencies.platform(libs.compose.bom))
             implementation(libs.compose.material.icons.extended)
+
+            // koinViewModel() lookup. KMP equivalent (koin-compose-viewmodel)
+            // gets pulled in commonMain when screens move there.
+            implementation(libs.koin.androidx.compose)
         }
     }
 

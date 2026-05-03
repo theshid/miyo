@@ -15,6 +15,10 @@ compose-bom = "2024.12.01"
 compose-multiplatform = "1.7.3"
 activity = "1.9.3"
 lifecycle = "2.8.7"
+# KMP-aware Lifecycle artifact group (org.jetbrains.androidx.lifecycle).
+# Tracks the same minor as androidx Lifecycle. Used by :presentation
+# so VMs in commonMain can extend ViewModel + use viewModelScope.
+lifecycle-kmp = "2.8.4"
 navigation = "2.8.5"
 core-ktx = "1.15.0"
 splashscreen = "1.0.1"
@@ -87,6 +91,10 @@ activity-compose = { module = "androidx.activity:activity-compose", version.ref 
 lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+
+# KMP Lifecycle — the JetBrains-published port of androidx.lifecycle that
+# resolves on commonMain. Required for VMs in :presentation/commonMain.
+lifecycle-viewmodel-kmp = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle-kmp" }
 navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
 core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }

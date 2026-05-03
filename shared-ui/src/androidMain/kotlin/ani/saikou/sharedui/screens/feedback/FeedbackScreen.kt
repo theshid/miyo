@@ -1,4 +1,4 @@
-package ani.saikou.screens.feedback
+package ani.saikou.sharedui.screens.feedback
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,9 +33,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import ani.saikou.components.GenreChip
-import ani.saikou.data.remote.FeedbackService
+import ani.saikou.domain.source.FeedbackService
+import ani.saikou.presentation.screens.feedback.FeedbackViewModel
+import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.theme.GhostBorder
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant

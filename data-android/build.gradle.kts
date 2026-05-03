@@ -36,6 +36,11 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
+    // Ktor + serialization — FeedbackServiceImpl POSTs Discord embeds.
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.kotlinx.serialization.json)
+
     // Koin — koin-android brings androidContext() for the SaikouDatabase
     // binding, which needs an Application context to instantiate.
     implementation(libs.koin.core)

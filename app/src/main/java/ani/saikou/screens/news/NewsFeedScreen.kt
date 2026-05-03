@@ -41,11 +41,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import ani.saikou.components.GenreChip
 import ani.saikou.components.SectionHeader
 import ani.saikou.domain.model.AiringScheduleItem
 import ani.saikou.domain.model.NewsCategory
 import ani.saikou.domain.model.NewsItem
+import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.theme.Background
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant

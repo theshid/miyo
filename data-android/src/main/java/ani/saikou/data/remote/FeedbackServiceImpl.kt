@@ -1,7 +1,7 @@
 package ani.saikou.data.remote
 
 import android.os.Build
-import ani.saikou.BuildConfig
+import ani.saikou.domain.source.FeedbackService
 import io.github.theshid.prettylog.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
@@ -13,20 +13,23 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
 /**
- * Posts user feedback to a Discord webhook. The webhook URL is provided via
- * [BuildConfig.DISCORD_FEEDBACK_WEBHOOK] (sourced from `local.properties`,
- * which is gitignored). Renders the feedback as a Discord embed so the
- * channel shows it as a tidy card with category color, message body, and
- * device/version footer fields.
+ * Android impl of [FeedbackService] — posts feedback to a Discord webhook.
+ *
+ * The webhook URL and app-version strings are injected at construction so
+ * this module doesn't need its own BuildConfig. DI in :app reads them
+ * from the application BuildConfig and hands them in.
  */
-class FeedbackService {
+class FeedbackServiceImpl(
+    private val webhookUrl: String,
+    private val appVersionName: String,
+    private val appVersionCode: Int,
+) : FeedbackService {
     private val client =
         HttpClient(OkHttp) {
             engine {
@@ -37,37 +40,17 @@ class FeedbackService {
             }
         }
 
-    enum class Category(
-        val title: String,
-        val emoji: String,
-        val color: Int,
-    ) {
-        BUG("Bug report", "🐞", 0xE74C3C), // red
-        FEATURE("Feature request", "✨", 0xF1C40F), // yellow
-        GENERAL("General feedback", "💬", 0x3498DB), // blue
-    }
-
-    /** Result of [submit]. The screen turns this into a snackbar/banner. */
-    sealed class Result {
-        data object Success : Result()
-
-        data class Failure(
-            val reason: String,
-        ) : Result()
-    }
-
     /**
      * POSTs the feedback as a Discord embed. Captures device + app context
      * automatically so each report carries enough info to triage. No PII.
      */
-    suspend fun submit(
-        category: Category,
+    override suspend fun submit(
+        category: FeedbackService.Category,
         message: String,
-    ): Result =
+    ): FeedbackService.Result =
         withContext(Dispatchers.IO) {
-            val webhookUrl = BuildConfig.DISCORD_FEEDBACK_WEBHOOK
             if (webhookUrl.isBlank()) {
-                return@withContext Result.Failure("Feedback isn't configured for this build.")
+                return@withContext FeedbackService.Result.Failure("Feedback isn't configured for this build.")
             }
 
             val payload =
@@ -80,7 +63,7 @@ class FeedbackService {
                             putJsonArray("fields") {
                                 addJsonObject {
                                     put("name", "App version")
-                                    put("value", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                                    put("value", "$appVersionName ($appVersionCode)")
                                     put("inline", true)
                                 }
                                 addJsonObject {
@@ -114,14 +97,14 @@ class FeedbackService {
                 // Discord returns 204 No Content on success, or 4xx with an error body.
                 val status = response.status.value
                 if (status in 200..299) {
-                    Result.Success
+                    FeedbackService.Result.Success
                 } else {
                     Log.w(tag = "Feedback", message = "Discord webhook returned HTTP $status: ${response.bodyAsText()}")
-                    Result.Failure("Couldn't send (HTTP $status). Try again later.")
+                    FeedbackService.Result.Failure("Couldn't send (HTTP $status). Try again later.")
                 }
             } catch (e: Exception) {
                 Log.e(tag = "Feedback", message = "Webhook POST failed", throwable = e)
-                Result.Failure("Couldn't reach the server. Check your connection.")
+                FeedbackService.Result.Failure("Couldn't reach the server. Check your connection.")
             }
         }
 }

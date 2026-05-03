@@ -97,6 +97,7 @@ dependencies {
     implementation(project(":platform-android"))
     implementation(project(":data"))
     implementation(project(":data-android"))
+    implementation(project(":presentation"))
     implementation(project(":shared-ui"))
 
     // Koin — DI graph. koin-androidx-compose unlocks koinViewModel() in
