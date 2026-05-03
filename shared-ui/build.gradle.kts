@@ -65,6 +65,11 @@ kotlin {
             // koinViewModel() lookup. KMP equivalent (koin-compose-viewmodel)
             // gets pulled in commonMain when screens move there.
             implementation(libs.koin.androidx.compose)
+
+            // Coil 3 — AsyncImage in NewsFeedScreen et al. Same versions
+            // as :app to stay in lockstep.
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.okhttp)
         }
     }
 

@@ -45,10 +45,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import ani.saikou.components.SectionHeader
 import ani.saikou.domain.model.AiringEntry
 import ani.saikou.domain.model.Media
 import ani.saikou.sharedui.components.GenreChip
+import ani.saikou.sharedui.components.SectionHeader
 import ani.saikou.sharedui.theme.Background
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant

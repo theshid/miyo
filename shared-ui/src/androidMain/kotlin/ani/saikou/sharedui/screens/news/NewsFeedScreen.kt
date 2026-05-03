@@ -1,4 +1,4 @@
-package ani.saikou.screens.news
+package ani.saikou.sharedui.screens.news
 
 import android.content.Intent
 import android.net.Uri
@@ -40,12 +40,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import ani.saikou.components.SectionHeader
 import ani.saikou.domain.model.AiringScheduleItem
 import ani.saikou.domain.model.NewsCategory
 import ani.saikou.domain.model.NewsItem
+import ani.saikou.presentation.screens.news.NewsFeedViewModel
 import ani.saikou.sharedui.components.GenreChip
+import ani.saikou.sharedui.components.SectionHeader
 import ani.saikou.sharedui.theme.Background
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
@@ -54,11 +54,12 @@ import ani.saikou.sharedui.theme.Secondary
 import ani.saikou.sharedui.theme.SurfaceContainer
 import ani.saikou.sharedui.theme.Tertiary
 import coil3.compose.AsyncImage
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun NewsFeedScreen(
     onBack: () -> Unit,
-    viewModel: NewsFeedViewModel = viewModel(),
+    viewModel: NewsFeedViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -193,8 +194,7 @@ fun NewsFeedScreen(
                 }
             }
         } else {
-            val filtered = viewModel.getFilteredNews()
-            items(filtered, key = { it.url }) { news ->
+            items(state.filteredNews, key = { it.url }) { news ->
                 NewsCard(
                     item = news,
                     onClick = {

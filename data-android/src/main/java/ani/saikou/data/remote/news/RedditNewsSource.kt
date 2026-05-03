@@ -2,6 +2,7 @@ package ani.saikou.data.remote.news
 
 import ani.saikou.domain.model.NewsCategory
 import ani.saikou.domain.model.NewsItem
+import ani.saikou.domain.source.NewsSource
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.get

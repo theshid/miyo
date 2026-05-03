@@ -2,6 +2,7 @@ package ani.saikou.data.remote.news
 
 import ani.saikou.domain.model.NewsCategory
 import ani.saikou.domain.model.NewsItem
+import ani.saikou.domain.source.NewsSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup

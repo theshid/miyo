@@ -8,19 +8,28 @@ import ani.saikou.data.local.TokenStorage
 import ani.saikou.data.remote.AnilistApi
 import ani.saikou.data.remote.FeedbackServiceImpl
 import ani.saikou.data.remote.OpenAiService
+import ani.saikou.data.remote.news.ANNNewsSource
+import ani.saikou.data.remote.news.JikanNewsSource
+import ani.saikou.data.remote.news.RedditNewsSource
 import ani.saikou.data.repository.AnilistRepositoryImpl
 import ani.saikou.data.repository.AuthRepositoryImpl
 import ani.saikou.data.repository.FeedbackRepositoryImpl
+import ani.saikou.data.repository.NewsRepositoryImpl
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.domain.repository.AuthRepository
 import ani.saikou.domain.repository.FeedbackRepository
+import ani.saikou.domain.repository.NewsRepository
 import ani.saikou.domain.source.FeedbackService
+import ani.saikou.domain.source.NewsSource
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
 import ani.saikou.domain.usecase.feedback.SubmitFeedbackUseCase
+import ani.saikou.domain.usecase.news.GetAiringScheduleUseCase
+import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
 import ani.saikou.presentation.screens.feedback.FeedbackViewModel
 import ani.saikou.presentation.screens.login.LoginViewModel
+import ani.saikou.presentation.screens.news.NewsFeedViewModel
 import ani.saikou.screens.ai.AiChatViewModel
 import ani.saikou.screens.anime.AnimeViewModel
 import ani.saikou.screens.character.CharacterDetailViewModel
@@ -83,11 +92,28 @@ val appModule =
         // outbound transport directly.
         single<FeedbackRepository> { FeedbackRepositoryImpl(get()) }
 
+        // ─── News sources + repository ────────────────────────────────────
+        // Three sources fan-out into a deduped, sorted feed via the repo.
+        // Jikan is also exposed by name because it's the only source that
+        // backs the airing schedule (kept as a typed dep, not a NewsSource
+        // lookup, so the contract is explicit).
+        single { JikanNewsSource() }
+        single { RedditNewsSource() }
+        single { ANNNewsSource() }
+        single<NewsRepository> {
+            NewsRepositoryImpl(
+                sources = listOf<NewsSource>(get<JikanNewsSource>(), get<RedditNewsSource>(), get<ANNNewsSource>()),
+                jikan = get(),
+            )
+        }
+
         // ─── Use cases ─────────────────────────────────────────────────────
         // factoryOf — fresh instance per resolution. Use cases are stateless
         // wrappers and don't benefit from singleton-ness; per-call alloc keeps
         // the door open for parameterized state if a future use case needs it.
+        factoryOf(::GetAiringScheduleUseCase)
         factoryOf(::GetAnilistAuthUrlUseCase)
+        factoryOf(::GetLatestNewsUseCase)
         factoryOf(::QueueChapterDownloadUseCase)
         factoryOf(::QueueNextChaptersUseCase)
         factoryOf(::SubmitFeedbackUseCase)
@@ -106,6 +132,7 @@ val appModule =
         viewModelOf(::MangaReaderViewModel)
         viewModelOf(::MangaViewModel)
         viewModelOf(::MediaDetailViewModel)
+        viewModelOf(::NewsFeedViewModel)
         viewModelOf(::SearchViewModel)
         viewModelOf(::SeasonalCalendarViewModel)
         viewModelOf(::StatsViewModel)

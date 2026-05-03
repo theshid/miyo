@@ -41,6 +41,9 @@ dependencies {
     implementation(libs.ktor.client.okhttp)
     implementation(libs.kotlinx.serialization.json)
 
+    // Jsoup — ANNNewsSource scrapes Anime News Network's RSS index.
+    implementation(libs.jsoup)
+
     // Koin — koin-android brings androidContext() for the SaikouDatabase
     // binding, which needs an Application context to instantiate.
     implementation(libs.koin.core)

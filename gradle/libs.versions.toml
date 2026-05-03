@@ -29,6 +29,9 @@ media3 = "1.5.1"
 # Kotlin / coroutines / serialization
 coroutines = "1.9.0"
 serialization = "1.7.3"
+# KMP date/time — used by VMs in :presentation/commonMain for things
+# like weekday lookups. Stays in lockstep with Kotlin 2.0.x.
+kotlinx-datetime = "0.6.1"
 
 # DI — Koin 4.x supports KMP + Compose
 koin = "4.0.0"
@@ -106,6 +109,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
 # --- Koin ---
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
