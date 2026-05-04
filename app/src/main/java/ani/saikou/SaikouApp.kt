@@ -74,23 +74,36 @@ fun SaikouApp() {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // Suppress the global backdrop while the splash MP4 is on screen — it
+    // would otherwise flash through for one frame before the SplashScreen's
+    // black Box composes on top of it. Also covers the brief null-route
+    // window before NavHost wires up its start destination.
+    val showAppBackdrop = currentRoute != null && currentRoute != Screen.Splash.route
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+    ) {
         // Global app backdrop. Renders once at the nav root so screens just
         // stop painting solid black; the same asset peeks through every
         // route. Fixed (not scrolled) — content layers compose on top.
-        Image(
-            painter = painterResource(Res.drawable.login_background),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-        )
-        // Dark scrim for legibility over arbitrary image colours
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),
-        )
+        if (showAppBackdrop) {
+            Image(
+                painter = painterResource(Res.drawable.login_background),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+            // Dark scrim for legibility over arbitrary image colours
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f)),
+            )
+        }
 
         Scaffold(
             containerColor = Color.Transparent,
