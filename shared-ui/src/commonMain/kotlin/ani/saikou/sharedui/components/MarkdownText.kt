@@ -5,6 +5,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -20,16 +21,23 @@ import ani.saikou.sharedui.theme.Primary
  * - `code` → monospace-styled
  * - Bullet lines (- item or • item) get a bullet prefix
  * - ### headings → bold + primary color
+ *
+ * [color] sets the base body color. Defaults to [Color.Unspecified], which
+ * lets Compose fall through to `LocalContentColor` — but most callers should
+ * pass an explicit color, since the chat bubbles this renders into don't sit
+ * inside a Material `Surface` and `LocalContentColor` defaults to black.
  */
 @Composable
 fun MarkdownText(
     text: String,
     modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
 ) {
     val annotated = remember(text) { parseMarkdown(text) }
     Text(
         text = annotated,
         style = MaterialTheme.typography.bodyMedium,
+        color = color,
         modifier = modifier,
     )
 }

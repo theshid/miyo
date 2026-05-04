@@ -10,15 +10,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -79,8 +82,13 @@ fun AiChatScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .navigationBarsPadding()
-                .imePadding(),
+                // Union pattern: bottom inset = max(navigationBars, ime). When
+                // the keyboard is closed the input bar floats above the nav
+                // bar; when it's open the bar sits flush against the keyboard
+                // top. Replaces a `.navigationBarsPadding().imePadding()` pair
+                // whose consume-tracking landed off on some Android versions
+                // and left a visible gap between the TextField and the IME.
+                .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
     ) {
         // ── Top Bar ──────────────────────────────────────────
         Row(
@@ -247,6 +255,7 @@ private fun ChatBubbleRow(bubble: ChatBubble) {
                 } else {
                     MarkdownText(
                         text = bubble.text,
+                        color = Color.White,
                     )
                 }
             }
