@@ -47,6 +47,26 @@ interface DownloadDao {
         chapterNumber: Int,
     ): DownloadEntity?
 
+    /**
+     * Find the row for a chapter NUMBER regardless of status. Used by the
+     * picker's cancel/delete affordances, which receive a chapter number
+     * but need the actual row id (which may be `mangaId_<UUID>` rather
+     * than `mangaId_<chapterNumber>` after the `QueueNextChaptersUseCase`
+     * fix started writing real source-side chapter ids as `chapterKey`).
+     * Picks the most recently created when multiple rows match.
+     */
+    @Query(
+        """
+        SELECT * FROM downloads
+        WHERE mangaId = :mangaId AND chapterNumber = :chapterNumber
+        ORDER BY createdAt DESC LIMIT 1
+        """,
+    )
+    suspend fun getByChapterNumber(
+        mangaId: Int,
+        chapterNumber: Int,
+    ): DownloadEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDownload(download: DownloadEntity)
 

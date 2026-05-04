@@ -61,6 +61,7 @@ import ani.saikou.domain.usecase.anime.GetEpisodeSkipTimesUseCase
 import ani.saikou.domain.usecase.anime.LoadEpisodeStreamUseCase
 import ani.saikou.domain.usecase.anime.ResolveAnimeSourcesUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
+import ani.saikou.domain.usecase.downloads.CancelChapterByNumberUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.DeleteAllDownloadsForMangaUseCase
 import ani.saikou.domain.usecase.downloads.EstimateNextChaptersBytesUseCase
@@ -197,6 +198,7 @@ val appModule =
         // wrappers and don't benefit from singleton-ness; per-call alloc keeps
         // the door open for parameterized state if a future use case needs it.
         factoryOf(::BuildAiUserContextSnippetUseCase)
+        factoryOf(::CancelChapterByNumberUseCase)
         factoryOf(::CancelChapterDownloadUseCase)
         factoryOf(::CatchMeUpUseCase)
         factoryOf(::DeleteAllDownloadsForMangaUseCase)

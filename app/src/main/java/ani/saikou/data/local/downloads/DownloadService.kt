@@ -104,7 +104,13 @@ class DownloadService : Service() {
 
                 for (download in pending) {
                     // Try MangaDex first, fall back to MangaPill — same order as the reader.
-                    val resolved = resolvePages(download.mangaTitle, download.chapterNumber)
+                    val resolved =
+                        resolvePages(
+                            mangaTitle = download.mangaTitle,
+                            chapterNumber = download.chapterNumber,
+                            chapterKey = download.chapterKey,
+                            sourceId = download.sourceId,
+                        )
                     if (resolved == null) {
                         dao.updateStatus(download.id, "ERROR")
                         continue
@@ -149,21 +155,47 @@ class DownloadService : Service() {
     )
 
     /**
-     * Resolves the page list for a chapter. Tries MangaDex first; falls back
-     * to MangaPill (the parser the reader uses for licensed/unavailable
-     * titles). Page objects keep their `headers` so the downloader can apply
-     * the Referer that MangaPill's CDN requires. The resolved sourceId is
+     * Resolves the page list for a chapter. Two paths:
+     *
+     *  1. Fast path — when the queued row carries a real source-side
+     *     [chapterKey] (UUID or path-shaped slug, not a stringified
+     *     chapter number), fetch pages directly from the matching parser.
+     *     Picked by id shape: MangaPill ids start with `/`; MangaDex ids
+     *     are UUIDs. This is what `QueueNextChaptersUseCase` produces.
+     *
+     *  2. Fuzzy path — title-keyed resolve, MangaDex first then MangaPill.
+     *     Used when the row was queued without a known source id (the
+     *     single-chapter download flow) or when the fast path comes up
+     *     empty.
+     *
+     * Page objects keep their `headers` so the downloader can apply the
+     * Referer that MangaPill's CDN requires. The resolved sourceId is
      * returned so the caller can persist it back onto the download row.
      */
     private suspend fun resolvePages(
         mangaTitle: String,
         chapterNumber: Int,
+        chapterKey: String,
+        sourceId: String,
     ): ResolvedChapter? {
         if (chapterNumber < 0) return null
 
-        // MangaDex — exact-title preference via pickBestMatch handles the
-        // case where relevance ranking floats colored re-releases or
-        // spin-offs above the canonical entry.
+        // Fast path — chapterKey is a real source-side id when it isn't
+        // just a stringified chapter number. Skip search + chapter lookup;
+        // go straight to getPages on the parser the id belongs to.
+        if (chapterKey.isNotEmpty() && chapterKey != chapterNumber.toString()) {
+            val parser = if (chapterKey.startsWith("/")) mangaPill else mangaDex
+            runCatching {
+                val pages = parser.getPages(chapterKey)
+                if (pages.isNotEmpty()) {
+                    return ResolvedChapter(pages, sourceId.ifEmpty { chapterKey })
+                }
+            }
+        }
+
+        // Fuzzy MangaDex path — exact-title preference via pickBestMatch
+        // handles the case where relevance ranking floats colored re-releases
+        // or spin-offs above the canonical entry.
         runCatching {
             val source = mangaDex.search(mangaTitle).pickBestMatch(mangaTitle)
             if (source != null) {

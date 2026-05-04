@@ -71,6 +71,14 @@ class DownloadRepositoryImpl(
         manager.cancelDownload(downloadId)
     }
 
+    override suspend fun cancelChapterByNumber(
+        mangaId: Int,
+        chapterNumber: Int,
+    ) {
+        val row = dao.getByChapterNumber(mangaId, chapterNumber) ?: return
+        manager.cancelDownload(row.id)
+    }
+
     override suspend fun pauseChapter(downloadId: String) {
         manager.pauseDownload(downloadId)
     }

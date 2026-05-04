@@ -14,6 +14,7 @@ import ani.saikou.domain.model.ReadingHistoryItem
 import ani.saikou.domain.usecase.activity.RecordActivityEventUseCase
 import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
 import ani.saikou.domain.usecase.anilist.GetMediaDetailUseCase
+import ani.saikou.domain.usecase.downloads.CancelChapterByNumberUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.EstimateNextChaptersBytesUseCase
 import ani.saikou.domain.usecase.downloads.GetCompletedChapterUseCase
@@ -56,6 +57,7 @@ class MangaReaderViewModel(
     private val queueChapter: QueueChapterDownloadUseCase,
     private val queueNextChaptersUseCase: QueueNextChaptersUseCase,
     private val cancelChapter: CancelChapterDownloadUseCase,
+    private val cancelChapterByNumber: CancelChapterByNumberUseCase,
     observeChapterDownloads: ObserveChapterDownloadsForMangaUseCase,
     private val logger: Logger,
 ) : ViewModel() {
@@ -111,33 +113,39 @@ class MangaReaderViewModel(
      */
     fun ensureChapterListLoaded() {
         if (_allChapters.value.isNotEmpty() || _chapterListLoading.value) return
-        viewModelScope.launch {
-            _chapterListLoading.value = true
-            val chapters =
-                try {
-                    val sid = resolvedSourceId?.takeIf { it.isNotEmpty() }
-                    if (sid != null) {
-                        getChaptersForSource(sid)
+        viewModelScope.launch { loadChapterListNow() }
+    }
+
+    private suspend fun loadChapterListNow() {
+        if (_allChapters.value.isNotEmpty()) return
+        _chapterListLoading.value = true
+        val chapters =
+            try {
+                val sid = resolvedSourceId?.takeIf { it.isNotEmpty() }
+                if (sid != null) {
+                    getChaptersForSource(sid)
+                } else {
+                    val resolved = resolveChaptersForManga(_uiState.value.title)
+                    if (resolved != null) {
+                        activeParser = resolved.sourceName
+                        resolvedSourceId = resolved.sourceMangaId
+                        resolved.chapters
                     } else {
-                        val resolved = resolveChaptersForManga(_uiState.value.title)
-                        if (resolved != null) {
-                            activeParser = resolved.sourceName
-                            resolvedSourceId = resolved.sourceMangaId
-                            resolved.chapters
-                        } else {
-                            emptyList()
-                        }
+                        emptyList()
                     }
-                } catch (_: Exception) {
-                    emptyList()
                 }
-            _allChapters.value = chapters
-            _chapterListLoading.value = false
-        }
+            } catch (_: Exception) {
+                emptyList()
+            }
+        _allChapters.value = chapters
+        _chapterListLoading.value = false
     }
 
     fun cancelDownload(chapterNumber: Int) {
-        viewModelScope.launch { cancelChapter("${mediaId}_$chapterNumber") }
+        // Looks the row up by chapter number, so it works whether the row's
+        // chapterKey is a real source-side id (queue-next path / single-queue
+        // post-fix) or a legacy stringified chapter number.
+        viewModelScope.launch { cancelChapterByNumber(mediaId, chapterNumber) }
     }
 
     fun queueSingleChapterDownload(
@@ -146,15 +154,22 @@ class MangaReaderViewModel(
     ) {
         val state = _uiState.value
         viewModelScope.launch {
+            // Mirror the queue-next fix: look up the chapter in the source's
+            // real list so DownloadService can fetch pages directly via the
+            // parser id. Falls back to the legacy synthetic key when the list
+            // isn't available — preserves single-chapter download for screens
+            // that haven't loaded the picker yet.
+            loadChapterListNow()
+            val chapter = _allChapters.value.firstOrNull { it.number.toInt() == chapterNumber }
             queueChapter(
                 DownloadRequest(
                     mangaId = mediaId,
                     mangaTitle = state.title,
                     coverUrl = coverUrl,
-                    chapterKey = chapterNumber.toString(),
+                    chapterKey = chapter?.id ?: chapterNumber.toString(),
                     chapterNumber = chapterNumber,
-                    chapterName = "Chapter $chapterNumber",
-                    sourceId = "",
+                    chapterName = chapter?.name ?: "Chapter $chapterNumber",
+                    sourceId = chapter?.let { resolvedSourceId.orEmpty() } ?: "",
                 ),
             )
             onQueued()
@@ -289,11 +304,18 @@ class MangaReaderViewModel(
     ) {
         val state = _uiState.value
         viewModelScope.launch {
+            // Banner can fire before the picker has been opened — make sure
+            // we have the real chapter list (with source-side ids) before
+            // queueing, so the use case can clamp + use real ids instead of
+            // synthesizing fake ones past the end of the manga.
+            loadChapterListNow()
             queueNextChaptersUseCase(
                 mangaId = mediaId,
                 mangaTitle = state.title,
                 coverUrl = coverUrl,
-                startChapter = chapterNum,
+                sourceId = resolvedSourceId.orEmpty(),
+                availableChapters = _allChapters.value,
+                afterChapterNumber = chapterNum,
                 count = count,
             )
             onQueued()

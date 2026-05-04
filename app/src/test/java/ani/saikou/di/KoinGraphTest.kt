@@ -20,6 +20,7 @@ import ani.saikou.domain.repository.DownloadRepository
 import ani.saikou.domain.repository.MangaSourceRepository
 import ani.saikou.domain.source.AiChatService
 import ani.saikou.domain.source.FeedbackService
+import ani.saikou.domain.usecase.downloads.CancelChapterByNumberUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
 import ani.saikou.platform.android.di.platformAndroidModule
@@ -97,5 +98,6 @@ class KoinGraphTest : KoinTest {
         // use cases
         inject<QueueChapterDownloadUseCase>().value.javaClass
         inject<QueueNextChaptersUseCase>().value.javaClass
+        inject<CancelChapterByNumberUseCase>().value.javaClass
     }
 }

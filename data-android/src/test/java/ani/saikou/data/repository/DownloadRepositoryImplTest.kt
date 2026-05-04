@@ -152,6 +152,33 @@ class DownloadRepositoryImplTest {
             coVerify(exactly = 0) { manager.cancelDownload(any()) }
         }
 
+    // -------- cancelChapterByNumber --------
+
+    @Test
+    fun `cancelChapterByNumber resolves the row and cancels by its real id`() =
+        runTest {
+            // Row queued via QueueNextChaptersUseCase carries the real
+            // source-side id as chapterKey, so the row id is mangaId_<UUID> —
+            // not mangaId_<chapterNumber>. Cancelling by chapter number must
+            // still find and tear down the right row.
+            coEvery { dao.getByChapterNumber(42, 217) } returns
+                entity(id = "42_uuid-217", chapterNumber = 217)
+
+            repo.cancelChapterByNumber(42, 217)
+
+            coVerify(exactly = 1) { manager.cancelDownload("42_uuid-217") }
+        }
+
+    @Test
+    fun `cancelChapterByNumber is a no-op when no row exists`() =
+        runTest {
+            coEvery { dao.getByChapterNumber(42, 999) } returns null
+
+            repo.cancelChapterByNumber(42, 999)
+
+            coVerify(exactly = 0) { manager.cancelDownload(any()) }
+        }
+
     // -------- listEvictableReadChapters --------
 
     @Test

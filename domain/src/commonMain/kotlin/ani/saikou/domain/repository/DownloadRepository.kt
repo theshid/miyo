@@ -71,6 +71,19 @@ interface DownloadRepository {
      */
     suspend fun cancelChapter(downloadId: String)
 
+    /**
+     * Cancel by chapter NUMBER — the picker's cancel/delete affordance only
+     * has a chapter number, not the row id. Resolves the row internally
+     * (any status, most recent) so callers don't have to reconstruct the
+     * id, which broke once `QueueNextChaptersUseCase` started writing
+     * real source-side chapter ids as `chapterKey`. No-op when the row is
+     * already gone (idempotent — the user might double-tap).
+     */
+    suspend fun cancelChapterByNumber(
+        mangaId: Int,
+        chapterNumber: Int,
+    )
+
     /** Pause an in-flight download — keeps partial files on disk so a
      *  subsequent resume picks up where it left off. */
     suspend fun pauseChapter(downloadId: String)
