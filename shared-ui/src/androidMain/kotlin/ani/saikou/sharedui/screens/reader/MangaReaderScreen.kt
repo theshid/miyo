@@ -1,4 +1,4 @@
-package ani.saikou.screens.reader
+package ani.saikou.sharedui.screens.reader
 
 import android.app.Activity
 import android.view.WindowManager
@@ -69,8 +69,13 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import ani.saikou.domain.source.DownloadDispatcher
+import ani.saikou.presentation.screens.reader.MangaReaderViewModel
+import ani.saikou.sharedui.components.CatLoader
 import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.components.PillButton
+import ani.saikou.sharedui.components.SourceItem
+import ani.saikou.sharedui.components.SourceSelectorSheet
 import ani.saikou.sharedui.components.TourOverlay
 import ani.saikou.sharedui.components.TourTarget
 import ani.saikou.sharedui.components.rememberTourState
@@ -126,6 +131,7 @@ fun MangaReaderScreen(
     val settingsStorage = remember { ReaderSettingsStorage(context) }
     val onboardingPrefs = org.koin.compose.koinInject<ani.saikou.data.local.OnboardingPrefs>()
     val connectivity = org.koin.compose.koinInject<ani.saikou.data.local.ConnectivityObserver>()
+    val downloadDispatcher = org.koin.compose.koinInject<DownloadDispatcher>()
     val tourState = rememberTourState()
     var showReaderTour by remember { mutableStateOf(false) }
     var showOverlay by remember { mutableStateOf(false) }
@@ -223,8 +229,7 @@ fun MangaReaderScreen(
 
     fun startBatchDownload() {
         viewModel.queueNextChapters(batchSize) {
-            ani.saikou.data.local.downloads.DownloadService
-                .start(context)
+            downloadDispatcher.dispatch()
         }
         downloadQueued = true
     }
@@ -241,8 +246,7 @@ fun MangaReaderScreen(
     // Loading
     if (readerState.isLoading && readerState.error == null) {
         Box(Modifier.fillMaxSize().background(Color.White), contentAlignment = Alignment.Center) {
-            ani.saikou.sharedui.components
-                .CatLoader(message = "Loading chapter...")
+            CatLoader(message = "Loading chapter...")
         }
         return
     }
@@ -529,10 +533,15 @@ fun MangaReaderScreen(
     }
 
     // ── Source selector ───────────────────────────────────────
+    // VM exposes domain MangaSearchResult; sheet takes the SourceItem UI
+    // projection. Map at the boundary.
     if (readerState.showSourceSelector) {
-        ani.saikou.sharedui.components.SourceSelectorSheet(
+        SourceSelectorSheet(
             title = "Select Manga Source",
-            sources = readerState.availableSources,
+            sources =
+                readerState.availableSources.map {
+                    SourceItem(id = it.id, title = it.title, coverUrl = it.coverUrl)
+                },
             onSelect = { source -> viewModel.selectSourceById(source.id) },
             onDismiss = { viewModel.dismissSourceSelector() },
         )
@@ -559,8 +568,7 @@ fun MangaReaderScreen(
             },
             onDownloadClick = { ch ->
                 viewModel.queueSingleChapterDownload(ch) {
-                    ani.saikou.data.local.downloads.DownloadService
-                        .start(context)
+                    downloadDispatcher.dispatch()
                 }
             },
             onCancelDownloadClick = { ch ->
@@ -655,7 +663,7 @@ private fun WebtoonReader(
                                 .height(500.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        ani.saikou.sharedui.components.CatLoader(
+                        CatLoader(
                             message = "Page ${index + 1}",
                             size = 80.dp,
                         )
@@ -756,7 +764,7 @@ private fun PagerReader(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            ani.saikou.sharedui.components.CatLoader(
+                            CatLoader(
                                 message = "Page ${page + 1}",
                                 size = 80.dp,
                             )

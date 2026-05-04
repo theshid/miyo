@@ -1,4 +1,4 @@
-package ani.saikou.screens.reader
+package ani.saikou.sharedui.screens.reader
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color

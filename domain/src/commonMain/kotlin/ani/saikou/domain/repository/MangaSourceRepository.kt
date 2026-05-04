@@ -1,5 +1,7 @@
 package ani.saikou.domain.repository
 
+import ani.saikou.domain.model.Chapter
+import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.model.ResolvedChapters
 
@@ -44,4 +46,15 @@ interface MangaSourceRepository {
      * null when no source surfaces the title.
      */
     suspend fun resolveChapters(title: String): ResolvedChapters?
+
+    /**
+     * Chapters hosted on the source for the given source-side manga id.
+     * Impl picks the right parser by the id shape (MangaPill ids start
+     * with `/manga/` or `/chapters/`; MangaDex ids are UUIDs), so callers
+     * don't have to track which provider owned the lookup.
+     */
+    suspend fun getChapters(sourceMangaId: String): List<Chapter>
+
+    /** Pages for a single chapter id; same auto-detect rule as [getChapters]. */
+    suspend fun getPages(chapterId: String): List<MangaPage>
 }

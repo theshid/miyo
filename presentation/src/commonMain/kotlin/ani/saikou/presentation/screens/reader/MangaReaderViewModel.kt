@@ -1,31 +1,34 @@
-package ani.saikou.screens.reader
+package ani.saikou.presentation.screens.reader
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import ani.saikou.data.local.db.ActivityEventDao
-import ani.saikou.data.local.db.ActivityEventEntity
-import ani.saikou.data.local.db.ReadingHistoryDao
-import ani.saikou.data.local.db.ReadingHistoryEntity
-import ani.saikou.data.local.downloads.ChapterSizeEstimator
-import ani.saikou.data.source.manga.MangaDexParser
-import ani.saikou.data.source.manga.MangaPillParser
 import ani.saikou.domain.event.ListEvent
 import ani.saikou.domain.event.ListEventBus
+import ani.saikou.domain.model.ActivityEvent
 import ani.saikou.domain.model.Chapter
 import ani.saikou.domain.model.DownloadRequest
 import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSearchResult
-import ani.saikou.domain.repository.AnilistRepository
-import ani.saikou.domain.repository.DownloadRepository
-import ani.saikou.domain.repository.MangaSourceRepository
+import ani.saikou.domain.model.ReadingHistoryItem
+import ani.saikou.domain.usecase.activity.RecordActivityEventUseCase
+import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
+import ani.saikou.domain.usecase.anilist.GetMediaDetailUseCase
+import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
+import ani.saikou.domain.usecase.downloads.EstimateNextChaptersBytesUseCase
+import ani.saikou.domain.usecase.downloads.GetCompletedChapterUseCase
+import ani.saikou.domain.usecase.downloads.GetLocalPagesUseCase
+import ani.saikou.domain.usecase.downloads.ObserveChapterDownloadsForMangaUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
+import ani.saikou.domain.usecase.history.GetReadingHistoryForMediaUseCase
+import ani.saikou.domain.usecase.history.UpsertReadingHistoryUseCase
+import ani.saikou.domain.usecase.manga.GetChapterPagesUseCase
+import ani.saikou.domain.usecase.manga.GetChaptersForSourceUseCase
+import ani.saikou.domain.usecase.manga.ResolveChaptersForMangaUseCase
+import ani.saikou.domain.usecase.manga.ResolveMangaSourcesUseCase
+import ani.saikou.platform.log.Logger
 import ani.saikou.presentation.screens.detail.ChapterDownloadState
-import ani.saikou.sharedui.components.SourceItem
-import io.github.theshid.prettylog.Log
-import io.sentry.Sentry
-import io.sentry.SentryLevel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,20 +37,29 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 
 class MangaReaderViewModel(
     savedStateHandle: SavedStateHandle,
-    private val repository: AnilistRepository,
-    private val historyDao: ReadingHistoryDao,
-    private val activityDao: ActivityEventDao,
-    private val downloadRepo: DownloadRepository,
-    private val mangaSourceRepo: MangaSourceRepository,
-    private val mangaDex: MangaDexParser,
-    private val mangaPill: MangaPillParser,
+    private val getMediaDetail: GetMediaDetailUseCase,
+    private val editListEntry: EditListEntryUseCase,
+    private val getReadingHistoryFor: GetReadingHistoryForMediaUseCase,
+    private val upsertReadingHistory: UpsertReadingHistoryUseCase,
+    private val recordActivityEvent: RecordActivityEventUseCase,
+    private val resolveMangaSources: ResolveMangaSourcesUseCase,
+    private val resolveChaptersForManga: ResolveChaptersForMangaUseCase,
+    private val getChaptersForSource: GetChaptersForSourceUseCase,
+    private val getChapterPages: GetChapterPagesUseCase,
+    private val getCompletedChapter: GetCompletedChapterUseCase,
+    private val getLocalPages: GetLocalPagesUseCase,
+    private val estimateNextChaptersBytes: EstimateNextChaptersBytesUseCase,
     private val queueChapter: QueueChapterDownloadUseCase,
     private val queueNextChaptersUseCase: QueueNextChaptersUseCase,
+    private val cancelChapter: CancelChapterDownloadUseCase,
+    observeChapterDownloads: ObserveChapterDownloadsForMangaUseCase,
+    private val logger: Logger,
 ) : ViewModel() {
-    private var activeParser: String = "MangaDex" // tracks which parser resolved the source
+    private var activeParser: String = SOURCE_MANGA_DEX
 
     val mediaId: Int = savedStateHandle["mediaId"] ?: 0
     val chapterNum: Int = savedStateHandle["chapterNum"] ?: 1
@@ -65,8 +77,7 @@ class MangaReaderViewModel(
 
     /** Reactive map of chapterNumber → download state for this manga. */
     val chapterDownloads: StateFlow<Map<Int, ChapterDownloadState>> =
-        downloadRepo
-            .observeDownloadsForManga(mediaId)
+        observeChapterDownloads(mediaId)
             .map { downloads ->
                 downloads.mapValues { (_, d) ->
                     ChapterDownloadState(
@@ -94,10 +105,9 @@ class MangaReaderViewModel(
 
     /**
      * Populate [allChapters] for the chapter picker. If we already have a
-     * resolved source id, hit its parser directly. Otherwise (common when the
-     * user opened a cached/offline chapter and never hit the live source),
-     * fall back to a title search so the sheet still gets a list. No-op if
-     * the list is already loaded. Safe to call from UI — idempotent.
+     * resolved source id, hit it directly. Otherwise fall back to a
+     * title-keyed resolve so the sheet still gets a list. No-op when
+     * already loaded; safe to call from UI.
      */
     fun ensureChapterListLoaded() {
         if (_allChapters.value.isNotEmpty() || _chapterListLoading.value) return
@@ -107,18 +117,9 @@ class MangaReaderViewModel(
                 try {
                     val sid = resolvedSourceId?.takeIf { it.isNotEmpty() }
                     if (sid != null) {
-                        // Source already resolved (from previous call or history) —
-                        // skip the search round-trip.
-                        if (activeParser == "MangaPill") {
-                            mangaPill.getChapters(sid)
-                        } else {
-                            mangaDex.getChapters(sid)
-                        }
+                        getChaptersForSource(sid)
                     } else {
-                        // First-time resolution — let the repo pick the best source
-                        // (handles the partial-catalog and licensed-title cases that
-                        // used to be hand-coded here).
-                        val resolved = mangaSourceRepo.resolveChapters(_uiState.value.title)
+                        val resolved = resolveChaptersForManga(_uiState.value.title)
                         if (resolved != null) {
                             activeParser = resolved.sourceName
                             resolvedSourceId = resolved.sourceMangaId
@@ -136,9 +137,7 @@ class MangaReaderViewModel(
     }
 
     fun cancelDownload(chapterNumber: Int) {
-        viewModelScope.launch {
-            downloadRepo.cancelChapter("${mediaId}_$chapterNumber")
-        }
+        viewModelScope.launch { cancelChapter("${mediaId}_$chapterNumber") }
     }
 
     fun queueSingleChapterDownload(
@@ -162,42 +161,33 @@ class MangaReaderViewModel(
         }
     }
 
-    // TODO: extract private helpers per branch (loadFromCache, loadFromHistory,
-    //       loadFromSearch) — the function reads as 3 stages stacked into one.
     @Suppress("CyclomaticComplexMethod")
     private fun loadSources() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             // Cache-first: if this chapter is downloaded, skip ALL network work.
-            // Works even fully offline because we don't touch the AniList API
-            // or the source parser to discover the chapter id.
-            val localDownload = downloadRepo.getCompletedChapter(mediaId, chapterNum)
+            // Works fully offline because we never hit the AniList API or the
+            // source parser to discover the chapter id.
+            val localDownload = getCompletedChapter(mediaId, chapterNum)
             if (localDownload != null) {
-                val localPages = downloadRepo.getLocalPages(mediaId, localDownload.chapterKey)
+                val localPages = getLocalPages(mediaId, localDownload.chapterKey)
                 if (localPages.isNotEmpty()) {
-                    activeParser =
-                        localDownload.sourceId.let { sid ->
-                            if (sid.startsWith("/manga/") || sid.startsWith("/chapters/")) "MangaPill" else "MangaDex"
-                        }
+                    activeParser = inferSourceName(localDownload.sourceId)
                     resolvedSourceId = localDownload.sourceId
                     resolvedChapterId = localDownload.chapterKey
-                    val history = historyDao.getForManga(mediaId)
+                    val history = getReadingHistoryFor(mediaId)
                     val startPage = if (history != null && history.chapterNumber == chapterNum) history.lastPage else 0
                     // Best-effort cover fetch — don't fail offline reads if AniList isn't reachable.
                     coverUrl =
                         try {
-                            repository.getMedia(mediaId)?.cover
+                            getMediaDetail(mediaId)?.cover
                         } catch (_: Exception) {
                             null
                         }
-                    Log.d(
-                        tag = "MangaReader",
-                        message = "Loaded ${localPages.size} pages from local cache for chapter $chapterNum",
-                    )
-                    activityDao.insert(
-                        ActivityEventEntity(
-                            timestampMs = System.currentTimeMillis(),
+                    recordActivityEvent(
+                        ActivityEvent(
+                            timestampMs = Clock.System.now().toEpochMilliseconds(),
                             type = "read",
                             mediaId = mediaId,
                             mediaTitle = localDownload.mangaTitle,
@@ -219,27 +209,26 @@ class MangaReaderViewModel(
                 }
             }
 
-            val media = repository.getMedia(mediaId)
+            val media = getMediaDetail(mediaId)
             val title = media?.nameRomaji ?: media?.name ?: "Unknown"
             coverUrl = media?.cover
             _uiState.value = _uiState.value.copy(title = title, chapterTitle = "Chapter $chapterNum")
 
-            // If source ID was passed via navigation (user already picked), use it directly
+            // If source ID was passed via navigation (user already picked), use it directly.
             if (navSourceId != null) {
                 resolvedSourceId = navSourceId
-                val history = historyDao.getForManga(mediaId)
+                activeParser = inferSourceName(navSourceId)
+                val history = getReadingHistoryFor(mediaId)
                 val startPage = if (history != null && history.chapterNumber == chapterNum) history.lastPage else 0
                 loadChapterFromSource(sourceId = navSourceId, startPage = startPage)
                 return@launch
             }
 
-            // Check if we have a saved source from history — skip search
-            val history = historyDao.getForManga(mediaId)
+            // Saved source from history — skip search.
+            val history = getReadingHistoryFor(mediaId)
             if (history != null && history.sourceId.isNotEmpty()) {
                 activeParser =
-                    history.sourceName.ifEmpty {
-                        if (history.sourceId.startsWith("/manga/") || history.sourceId.startsWith("/chapters/")) "MangaPill" else "MangaDex"
-                    }
+                    history.sourceName.ifEmpty { inferSourceName(history.sourceId) }
                 resolvedSourceId = history.sourceId
                 loadChapterFromSource(
                     sourceId = history.sourceId,
@@ -248,33 +237,9 @@ class MangaReaderViewModel(
                 return@launch
             }
 
-            // History may exist without a usable sourceId (e.g., chapter was read from a
-            // local download queued with an empty sourceId). Fall back on the parser name
-            // so we don't blindly search MangaDex for licensed titles like Vinland Saga
-            // that only MangaPill hosts.
-            val preferredParser = history?.sourceName?.takeIf { it.isNotEmpty() }
-            mangaSources =
-                when (preferredParser) {
-                    "MangaPill" -> mangaPill.search(title).also { activeParser = "MangaPill" }
-                    "MangaDex" -> mangaDex.search(title).also { activeParser = "MangaDex" }
-                    else -> {
-                        // Search MangaDex first, then fall back to MangaPill
-                        val dex = mangaDex.search(title)
-                        if (dex.isNotEmpty()) {
-                            activeParser = "MangaDex"
-                            dex
-                        } else {
-                            Log.d(tag = "MangaReader", message = "No results on MangaDex — trying MangaPill")
-                            activeParser = "MangaPill"
-                            mangaPill.search(title)
-                        }
-                    }
-                }
-            Log.d(
-                tag = "MangaReader",
-                message = "Found ${mangaSources.size} sources on $activeParser (preferredParser=$preferredParser)",
-            )
-
+            // No saved source — search both sources and let the user pick (or
+            // auto-pick when there's only one hit).
+            mangaSources = resolveMangaSources(title)
             if (mangaSources.isEmpty()) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = "Manga not found on any source")
                 reportReaderError("Manga not found on any source", chapter = null)
@@ -287,10 +252,7 @@ class MangaReaderViewModel(
                 _uiState.value =
                     _uiState.value.copy(
                         showSourceSelector = true,
-                        availableSources =
-                            mangaSources.map {
-                                SourceItem(id = it.id, title = it.title, coverUrl = it.coverUrl)
-                            },
+                        availableSources = mangaSources,
                         isLoading = false,
                     )
             }
@@ -299,6 +261,7 @@ class MangaReaderViewModel(
 
     fun selectSource(source: MangaSearchResult) {
         resolvedSourceId = source.id
+        activeParser = inferSourceName(source.id)
         _uiState.value = _uiState.value.copy(showSourceSelector = false, isLoading = true)
         viewModelScope.launch {
             loadChapterFromSource(sourceId = source.id, startPage = 0)
@@ -320,10 +283,6 @@ class MangaReaderViewModel(
         loadSources()
     }
 
-    /**
-     * Queue chapters [chapterNum + 1 .. chapterNum + count] for download.
-     * Relies on the same MangaDex→MangaPill fallback the reader uses.
-     */
     fun queueNextChapters(
         count: Int,
         onQueued: () -> Unit = {},
@@ -341,23 +300,22 @@ class MangaReaderViewModel(
         }
     }
 
-    /** Bytes estimate for `count` upcoming chapters, rendered via [ChapterSizeEstimator.format]. */
-    suspend fun estimateBytesForNext(count: Int): Long = downloadRepo.estimateBytesForNext(mediaId, count)
+    /** Bytes estimate for `count` upcoming chapters. */
+    suspend fun estimateBytesForNext(count: Int): Long = estimateNextChaptersBytes(mediaId, count)
 
-    fun formatBytes(bytes: Long): String = ChapterSizeEstimator.format(bytes)
+    fun formatBytes(bytes: Long): String =
+        ani.saikou.domain.util
+            .formatBytes(bytes)
 
     /** True iff the next chapter is NOT yet fully downloaded on this device. */
-    suspend fun isNextChapterMissing(): Boolean = downloadRepo.getCompletedChapter(mediaId, chapterNum + 1) == null
+    suspend fun isNextChapterMissing(): Boolean = getCompletedChapter(mediaId, chapterNum + 1) == null
 
-    /**
-     * Called from the reader composable whenever the page changes.
-     * Debounced to avoid spamming the DB on every scroll frame.
-     */
+    /** Called from the reader composable on page change. Debounced to avoid DB spam. */
     fun onPageChanged(page: Int) {
         saveJob?.cancel()
         saveJob =
             viewModelScope.launch {
-                delay(2000) // Debounce 2 seconds
+                delay(SAVE_DEBOUNCE_MS)
                 saveProgress(page)
             }
     }
@@ -366,37 +324,25 @@ class MangaReaderViewModel(
         sourceId: String,
         startPage: Int,
     ) {
-        // Use the parser that found this source
-        val isMangaPill = activeParser == "MangaPill" || sourceId.startsWith("/manga/") || sourceId.startsWith("/chapters/")
-        val parserName = if (isMangaPill) "MangaPill" else "MangaDex"
-
-        Log.d(tag = "MangaReader", message = "loadChapter: sourceId=$sourceId, parser=$parserName, chapter=$chapterNum")
-
-        val chapters = if (isMangaPill) mangaPill.getChapters(sourceId) else mangaDex.getChapters(sourceId)
+        val chapters = getChaptersForSource(sourceId)
         if (chapters.isNotEmpty()) _allChapters.value = chapters
-        Log.d(tag = "MangaReader", message = "Found ${chapters.size} chapters on $parserName")
-        if (chapters.isNotEmpty()) {
-            Log.d(tag = "MangaReader", message = "First: ${chapters.first().number}, Last: ${chapters.last().number}")
-        }
 
         var chapter = chapters.find { it.number.toInt() == chapterNum }
-        var usedParser = parserName
-        var usedMangaPill = isMangaPill
 
-        // If chapter not found on primary parser, try the fallback
-        if (chapter == null && !isMangaPill) {
-            Log.d(tag = "MangaReader", message = "Chapter $chapterNum not on $parserName — trying MangaPill fallback")
+        // Chapter not on the picked source? Fall back to the alternative
+        // (MangaPill if we started on MangaDex, and vice versa) — covers
+        // the case where MangaDex catalogs a series but doesn't host the
+        // user's specific chapter.
+        if (chapter == null && activeParser == SOURCE_MANGA_DEX) {
             val title = _uiState.value.title
-            val pillSources = mangaPill.search(title)
-            if (pillSources.isNotEmpty()) {
-                val pillChapters = mangaPill.getChapters(pillSources.first().id)
-                Log.d(tag = "MangaReader", message = "MangaPill: ${pillChapters.size} chapters found")
+            val pillSources = resolveMangaSources(title).filter { inferSourceName(it.id) == SOURCE_MANGA_PILL }
+            val pillFirst = pillSources.firstOrNull()
+            if (pillFirst != null) {
+                val pillChapters = getChaptersForSource(pillFirst.id)
                 chapter = pillChapters.find { it.number.toInt() == chapterNum }
                 if (chapter != null) {
-                    usedParser = "MangaPill"
-                    usedMangaPill = true
-                    activeParser = "MangaPill"
-                    resolvedSourceId = pillSources.first().id
+                    activeParser = SOURCE_MANGA_PILL
+                    resolvedSourceId = pillFirst.id
                 }
             }
         }
@@ -411,14 +357,10 @@ class MangaReaderViewModel(
             return
         }
 
-        Log.d(tag = "MangaReader", message = "Loading pages for: ${chapter.name}, id=${chapter.id} via $usedParser")
-
         resolvedChapterId = chapter.id
         _uiState.value = _uiState.value.copy(chapterTitle = chapter.name)
 
-        val pages = if (usedMangaPill) mangaPill.getPages(chapter.id) else mangaDex.getPages(chapter.id)
-        Log.d(tag = "MangaReader", message = "Got ${pages.size} pages")
-
+        val pages = getChapterPages(chapter.id)
         if (pages.isEmpty()) {
             _uiState.value = _uiState.value.copy(isLoading = false, error = "No pages found for chapter $chapterNum")
             reportReaderError("No pages found for chapter", chapter = chapterNum)
@@ -433,9 +375,9 @@ class MangaReaderViewModel(
                 isLoading = false,
             )
 
-        activityDao.insert(
-            ActivityEventEntity(
-                timestampMs = System.currentTimeMillis(),
+        recordActivityEvent(
+            ActivityEvent(
+                timestampMs = Clock.System.now().toEpochMilliseconds(),
                 type = "read",
                 mediaId = mediaId,
                 mediaTitle = _uiState.value.title,
@@ -444,7 +386,6 @@ class MangaReaderViewModel(
             ),
         )
 
-        // Save initial history entry
         saveProgress(startPage)
     }
 
@@ -453,8 +394,8 @@ class MangaReaderViewModel(
         val srcId = resolvedSourceId ?: return
         val chapId = resolvedChapterId ?: return
 
-        historyDao.upsert(
-            ReadingHistoryEntity(
+        upsertReadingHistory(
+            ReadingHistoryItem(
                 mangaId = mediaId,
                 mangaTitle = state.title,
                 coverUrl = coverUrl,
@@ -465,26 +406,26 @@ class MangaReaderViewModel(
                 sourceName = activeParser,
                 lastPage = page.coerceAtLeast(0),
                 totalPages = state.totalPages,
-                lastReadAt = System.currentTimeMillis(),
+                lastReadAt = Clock.System.now().toEpochMilliseconds(),
             ),
         )
 
-        // Sync progress to AniList when ≥80% of the chapter is read (once per chapter)
         val totalPages = state.totalPages
         if (totalPages > 0 && !anilistProgressSynced) {
             val readFraction = (page + 1).toFloat() / totalPages
-            if (readFraction >= 0.80f) {
+            if (readFraction >= ANILIST_PROGRESS_FRACTION) {
                 anilistProgressSynced = true
                 try {
-                    repository.editListEntry(
-                        mediaId = mediaId,
-                        progress = chapterNum,
-                        status = "CURRENT",
-                    )
-                    Log.i(tag = "AniSync", message = "Synced reading progress to AniList: $mediaId ch $chapterNum")
+                    editListEntry(mediaId = mediaId, progress = chapterNum, status = "CURRENT")
                     ListEventBus.emit(ListEvent.ReadingProgressUpdated(mediaId, chapterNum))
                 } catch (e: Exception) {
-                    Log.e(tag = "AniSync", message = "Failed to sync reading progress", throwable = e)
+                    // Don't latch — let the next page tick retry.
+                    logger.reportError(
+                        area = "MangaReader",
+                        method = "anilistSync",
+                        throwable = e,
+                        extras = mapOf("mediaId" to mediaId.toString(), "chapter" to chapterNum.toString()),
+                    )
                     anilistProgressSynced = false
                 }
             }
@@ -492,31 +433,43 @@ class MangaReaderViewModel(
     }
 
     override fun onCleared() {
-        // Final save when leaving reader
         saveJob?.cancel()
-        // Can't use suspend here, but the debounced save should have caught the last page
         super.onCleared()
     }
 
-    /** Report a non-fatal reader error to Sentry with the context needed to debug it. */
     private fun reportReaderError(
         message: String,
         chapter: Int?,
     ) {
-        try {
-            Sentry.withScope { scope ->
-                scope.level = SentryLevel.WARNING
-                scope.setTag("area", "MangaReader")
-                scope.setTag("mediaId", mediaId.toString())
-                if (chapter != null) scope.setTag("chapter", chapter.toString())
-                scope.setTag("activeParser", activeParser)
-                scope.setExtra("title", _uiState.value.title)
-                scope.setExtra("resolvedSourceId", resolvedSourceId ?: "")
-                Sentry.captureMessage(message)
+        val extras =
+            buildMap {
+                put("mediaId", mediaId.toString())
+                if (chapter != null) put("chapter", chapter.toString())
+                put("activeParser", activeParser)
+                put("title", _uiState.value.title)
+                put("resolvedSourceId", resolvedSourceId ?: "")
             }
-        } catch (_: Exception) {
-            // best-effort
-        }
+        logger.reportWarning(
+            area = "MangaReader",
+            method = "loadSources",
+            message = message,
+            extras = extras,
+        )
+    }
+
+    /**
+     * MangaPill source ids are path-shaped (`/manga/...` or `/chapters/...`),
+     * MangaDex ids are UUIDs. The repo dispatches by the same rule; this
+     * helper just maps an id to a display name for history rows.
+     */
+    private fun inferSourceName(id: String): String =
+        if (id.startsWith("/manga/") || id.startsWith("/chapters/")) SOURCE_MANGA_PILL else SOURCE_MANGA_DEX
+
+    companion object {
+        private const val SOURCE_MANGA_DEX = "MangaDex"
+        private const val SOURCE_MANGA_PILL = "MangaPill"
+        private const val ANILIST_PROGRESS_FRACTION = 0.80f
+        private const val SAVE_DEBOUNCE_MS = 2_000L
     }
 }
 
@@ -526,7 +479,8 @@ data class ReaderUiState(
     val pages: List<MangaPage> = emptyList(),
     val totalPages: Int = 0,
     val startPage: Int = 0,
-    val availableSources: List<SourceItem> = emptyList(),
+    /** Sources the user can pick from when no id was passed via navigation. */
+    val availableSources: List<MangaSearchResult> = emptyList(),
     val showSourceSelector: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,

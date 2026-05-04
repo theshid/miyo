@@ -40,4 +40,7 @@ interface HistoryRepository {
      * writes here on every progress tick (debounced).
      */
     suspend fun upsertWatchHistory(item: WatchHistoryItem)
+
+    /** Insert-or-replace the reading-history row for one manga. */
+    suspend fun upsertReadingHistory(item: ReadingHistoryItem)
 }

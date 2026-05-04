@@ -63,7 +63,10 @@ import ani.saikou.domain.usecase.anime.ResolveAnimeSourcesUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.DeleteAllDownloadsForMangaUseCase
+import ani.saikou.domain.usecase.downloads.EstimateNextChaptersBytesUseCase
 import ani.saikou.domain.usecase.downloads.EvictReadChaptersUseCase
+import ani.saikou.domain.usecase.downloads.GetCompletedChapterUseCase
+import ani.saikou.domain.usecase.downloads.GetLocalPagesUseCase
 import ani.saikou.domain.usecase.downloads.ObserveChapterDownloadsForMangaUseCase
 import ani.saikou.domain.usecase.downloads.ObserveDownloadsUseCase
 import ani.saikou.domain.usecase.downloads.PauseChapterDownloadUseCase
@@ -77,7 +80,11 @@ import ani.saikou.domain.usecase.history.ObserveContinueWatchingUseCase
 import ani.saikou.domain.usecase.history.ObserveEpisodesWatchedCountUseCase
 import ani.saikou.domain.usecase.history.ObserveReadingHistoryUseCase
 import ani.saikou.domain.usecase.history.ObserveRecentWatchHistoryUseCase
+import ani.saikou.domain.usecase.history.UpsertReadingHistoryUseCase
 import ani.saikou.domain.usecase.history.UpsertWatchHistoryUseCase
+import ani.saikou.domain.usecase.manga.GetChapterPagesUseCase
+import ani.saikou.domain.usecase.manga.GetChaptersForSourceUseCase
+import ani.saikou.domain.usecase.manga.ResolveChaptersForMangaUseCase
 import ani.saikou.domain.usecase.manga.ResolveMangaSourcesUseCase
 import ani.saikou.domain.usecase.news.GetAiringScheduleUseCase
 import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
@@ -94,11 +101,11 @@ import ani.saikou.presentation.screens.login.LoginViewModel
 import ani.saikou.presentation.screens.manga.MangaViewModel
 import ani.saikou.presentation.screens.news.NewsFeedViewModel
 import ani.saikou.presentation.screens.player.VideoPlayerViewModel
+import ani.saikou.presentation.screens.reader.MangaReaderViewModel
 import ani.saikou.presentation.screens.search.SearchViewModel
 import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.presentation.screens.torrent.TorrentSearchViewModel
-import ani.saikou.screens.reader.MangaReaderViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.factoryOf
@@ -195,15 +202,20 @@ val appModule =
         factoryOf(::DeleteAllDownloadsForMangaUseCase)
         factoryOf(::DeleteAnilistListEntryUseCase)
         factoryOf(::EditListEntryUseCase)
+        factoryOf(::EstimateNextChaptersBytesUseCase)
         factoryOf(::EvictReadChaptersUseCase)
         factoryOf(::GetAiringRangeUseCase)
         factoryOf(::GetAiringScheduleUseCase)
         factoryOf(::GetAnilistAuthUrlUseCase)
         factoryOf(::GetAnimeDiscoveryUseCase)
+        factoryOf(::GetChapterPagesUseCase)
+        factoryOf(::GetChaptersForSourceUseCase)
         factoryOf(::GetCharacterUseCase)
+        factoryOf(::GetCompletedChapterUseCase)
         factoryOf(::GetEpisodeSkipTimesUseCase)
         factoryOf(::GetHomeAnilistSnapshotUseCase)
         factoryOf(::GetLatestNewsUseCase)
+        factoryOf(::GetLocalPagesUseCase)
         factoryOf(::GetMangaDiscoveryUseCase)
         factoryOf(::GetMediaDetailUseCase)
         factoryOf(::GetReadingHistoryForMediaUseCase)
@@ -232,12 +244,14 @@ val appModule =
         factoryOf(::RefreshHomeAnilistSnapshotUseCase)
         factoryOf(::ResolveAnimeSourcesUseCase)
         factoryOf(::ResolveChapterCountUseCase)
+        factoryOf(::ResolveChaptersForMangaUseCase)
         factoryOf(::ResolveMangaSourcesUseCase)
         factoryOf(::SearchMediaUseCase)
         factoryOf(::SearchTorrentsUseCase)
         factoryOf(::SendAiChatMessageUseCase)
         factoryOf(::SubmitFeedbackUseCase)
         factoryOf(::ToggleFavoriteMediaUseCase)
+        factoryOf(::UpsertReadingHistoryUseCase)
         factoryOf(::UpsertWatchHistoryUseCase)
 
         // ─── ViewModels ────────────────────────────────────────────────────

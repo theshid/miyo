@@ -1,6 +1,7 @@
 package ani.saikou.data.repository
 
 import ani.saikou.domain.model.Chapter
+import ani.saikou.domain.model.MangaPage
 import ani.saikou.domain.model.MangaSearchResult
 import ani.saikou.domain.model.ResolvedChapters
 import ani.saikou.domain.model.pickBestMatch
@@ -118,6 +119,19 @@ class MangaSourceRepositoryImpl(
         val chapters = runCatching { source.getChapters(picked.id) }.getOrDefault(emptyList())
         return SourceProbe(picked.id, picked.totalChapterHint, chapters)
     }
+
+    override suspend fun getChapters(sourceMangaId: String): List<Chapter> = pickSource(sourceMangaId).getChapters(sourceMangaId)
+
+    override suspend fun getPages(chapterId: String): List<MangaPage> = pickSource(chapterId).getPages(chapterId)
+
+    /**
+     * Pick the parser by id shape. MangaPill ids are path-shaped
+     * (`/manga/...` or `/chapters/...`); MangaDex ids are UUIDs. Anything
+     * else defaults to MangaDex — its `getChapters` / `getPages` swallows
+     * 404s and returns empty, which is the correct behavior for unknown
+     * ids on either side.
+     */
+    private fun pickSource(id: String): MangaSource = if (id.startsWith("/manga/") || id.startsWith("/chapters/")) mangaPill else mangaDex
 
     private data class SourceProbe(
         val sourceMangaId: String,

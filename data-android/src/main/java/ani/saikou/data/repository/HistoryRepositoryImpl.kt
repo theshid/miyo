@@ -40,6 +40,25 @@ class HistoryRepositoryImpl(
         watchDao.upsert(toEntity(item))
     }
 
+    override suspend fun upsertReadingHistory(item: ReadingHistoryItem) {
+        readingDao.upsert(toEntity(item))
+    }
+
+    private fun toEntity(item: ReadingHistoryItem) =
+        ReadingHistoryEntity(
+            mangaId = item.mangaId,
+            mangaTitle = item.mangaTitle,
+            coverUrl = item.coverUrl,
+            chapterNumber = item.chapterNumber,
+            chapterName = item.chapterName,
+            chapterId = item.chapterId,
+            sourceId = item.sourceId,
+            sourceName = item.sourceName,
+            lastPage = item.lastPage,
+            totalPages = item.totalPages,
+            lastReadAt = item.lastReadAt,
+        )
+
     private fun toEntity(item: WatchHistoryItem) =
         WatchHistoryEntity(
             mediaId = item.mediaId,

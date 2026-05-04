@@ -1,6 +1,7 @@
 package ani.saikou.data.local.downloads
 
 import ani.saikou.data.local.db.DownloadDao
+import ani.saikou.domain.util.formatBytes
 
 /**
  * Estimates how many bytes `count` chapters of a given manga will take on
@@ -20,21 +21,11 @@ class ChapterSizeEstimator(
         const val DEFAULT_CHAPTER_BYTES = 10L * 1024 * 1024
 
         /**
-         * Human-readable "≈ 42 MB" or "≈ 1.2 GB" form. Static so callers
-         * (UI, repos) can format byte counts without holding a DAO-bound
-         * estimator instance.
+         * Human-readable "≈ 42 MB" or "≈ 1.2 GB" form. Delegates to the
+         * domain util — kept here as a static for backwards compatibility
+         * with existing call sites.
          */
-        fun format(bytes: Long): String {
-            val kb = bytes / 1024.0
-            val mb = kb / 1024.0
-            val gb = mb / 1024.0
-            return when {
-                gb >= 1.0 -> "%.1f GB".format(gb)
-                mb >= 10.0 -> "%.0f MB".format(mb)
-                mb >= 1.0 -> "%.1f MB".format(mb)
-                else -> "%.0f KB".format(kb)
-            }
-        }
+        fun format(bytes: Long): String = formatBytes(bytes)
     }
 
     /**

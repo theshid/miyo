@@ -1,4 +1,4 @@
-package ani.saikou.screens.reader
+package ani.saikou.sharedui.screens.reader
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
