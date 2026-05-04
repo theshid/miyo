@@ -87,6 +87,20 @@ class DownloadRepositoryImpl(
         manager.deleteAllForManga(mangaId)
     }
 
+    override suspend fun cleanupPhantomDownloads(
+        mangaId: Int,
+        maxKnownChapter: Int,
+    ) {
+        val phantoms = dao.getPhantomDownloads(mangaId, maxKnownChapter)
+        for (row in phantoms) {
+            // cancelDownload removes the row + any partial pages. Phantom
+            // rows usually have nothing on disk (resolvePages failed before
+            // any page download started), but we go through the manager
+            // anyway so this stays robust against the partial-progress case.
+            manager.cancelDownload(row.id)
+        }
+    }
+
     override fun observeAllDownloads(): Flow<List<Download>> =
         dao.getAllDownloads().map { rows ->
             rows.map {

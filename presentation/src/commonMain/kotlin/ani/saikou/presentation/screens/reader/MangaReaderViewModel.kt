@@ -16,6 +16,7 @@ import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
 import ani.saikou.domain.usecase.anilist.GetMediaDetailUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterByNumberUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
+import ani.saikou.domain.usecase.downloads.CleanupPhantomDownloadsUseCase
 import ani.saikou.domain.usecase.downloads.EstimateNextChaptersBytesUseCase
 import ani.saikou.domain.usecase.downloads.GetCompletedChapterUseCase
 import ani.saikou.domain.usecase.downloads.GetLocalPagesUseCase
@@ -58,6 +59,7 @@ class MangaReaderViewModel(
     private val queueNextChaptersUseCase: QueueNextChaptersUseCase,
     private val cancelChapter: CancelChapterDownloadUseCase,
     private val cancelChapterByNumber: CancelChapterByNumberUseCase,
+    private val cleanupPhantomDownloads: CleanupPhantomDownloadsUseCase,
     observeChapterDownloads: ObserveChapterDownloadsForMangaUseCase,
     private val logger: Logger,
 ) : ViewModel() {
@@ -139,6 +141,21 @@ class MangaReaderViewModel(
             }
         _allChapters.value = chapters
         _chapterListLoading.value = false
+        purgePhantomDownloadsFor(chapters)
+    }
+
+    /**
+     * Best-effort sweep of stranded download rows for any chapter number
+     * past the source's known max. Called whenever a fresh chapter list is
+     * resolved — backfills the fix for the pre-clamp `QueueNextChaptersUseCase`,
+     * so users who already have phantom 221/222/223 rows from before don't
+     * keep seeing them in the picker. No-op on empty input (avoids deleting
+     * legitimate downloads if the source temporarily returns nothing).
+     */
+    private suspend fun purgePhantomDownloadsFor(chapters: List<Chapter>) {
+        if (chapters.isEmpty()) return
+        val maxKnown = chapters.maxOf { it.number.toInt() }
+        runCatching { cleanupPhantomDownloads(mediaId, maxKnown) }
     }
 
     fun cancelDownload(chapterNumber: Int) {
@@ -193,13 +210,14 @@ class MangaReaderViewModel(
                     resolvedChapterId = localDownload.chapterKey
                     val history = getReadingHistoryFor(mediaId)
                     val startPage = if (history != null && history.chapterNumber == chapterNum) history.lastPage else 0
-                    // Best-effort cover fetch — don't fail offline reads if AniList isn't reachable.
-                    coverUrl =
+                    // Best-effort media fetch — don't fail offline reads if AniList isn't reachable.
+                    val mediaForStatus =
                         try {
-                            getMediaDetail(mediaId)?.cover
+                            getMediaDetail(mediaId)
                         } catch (_: Exception) {
                             null
                         }
+                    coverUrl = mediaForStatus?.cover
                     recordActivityEvent(
                         ActivityEvent(
                             timestampMs = Clock.System.now().toEpochMilliseconds(),
@@ -218,6 +236,7 @@ class MangaReaderViewModel(
                             totalPages = localPages.size,
                             startPage = startPage.coerceIn(0, (localPages.size - 1).coerceAtLeast(0)),
                             isLoading = false,
+                            mediaStatus = mediaForStatus?.status,
                         )
                     saveProgress(startPage)
                     return@launch
@@ -227,7 +246,12 @@ class MangaReaderViewModel(
             val media = getMediaDetail(mediaId)
             val title = media?.nameRomaji ?: media?.name ?: "Unknown"
             coverUrl = media?.cover
-            _uiState.value = _uiState.value.copy(title = title, chapterTitle = "Chapter $chapterNum")
+            _uiState.value =
+                _uiState.value.copy(
+                    title = title,
+                    chapterTitle = "Chapter $chapterNum",
+                    mediaStatus = media?.status,
+                )
 
             // If source ID was passed via navigation (user already picked), use it directly.
             if (navSourceId != null) {
@@ -329,8 +353,23 @@ class MangaReaderViewModel(
         ani.saikou.domain.util
             .formatBytes(bytes)
 
-    /** True iff the next chapter is NOT yet fully downloaded on this device. */
-    suspend fun isNextChapterMissing(): Boolean = getCompletedChapter(mediaId, chapterNum + 1) == null
+    /**
+     * Tri-state classification of what's after the current chapter, driving
+     * which (if any) end-of-chapter banner the reader shows:
+     *  - [Absent]    — no chapter > current exists on the source. The reader
+     *                  surfaces a "you've reached the end" banner.
+     *  - [Available] — there's a next chapter and it isn't on disk yet.
+     *                  Lights up the "save next N" / offline banners.
+     *  - [Downloaded] — the next chapter is already on disk; no banner.
+     */
+    enum class NextChapterStatus { Absent, Available, Downloaded }
+
+    suspend fun nextChapterStatus(): NextChapterStatus {
+        val hasNextInSource = _allChapters.value.any { it.number.toInt() > chapterNum }
+        if (!hasNextInSource) return NextChapterStatus.Absent
+        val downloaded = getCompletedChapter(mediaId, chapterNum + 1) != null
+        return if (downloaded) NextChapterStatus.Downloaded else NextChapterStatus.Available
+    }
 
     /** Called from the reader composable on page change. Debounced to avoid DB spam. */
     fun onPageChanged(page: Int) {
@@ -347,7 +386,10 @@ class MangaReaderViewModel(
         startPage: Int,
     ) {
         val chapters = getChaptersForSource(sourceId)
-        if (chapters.isNotEmpty()) _allChapters.value = chapters
+        if (chapters.isNotEmpty()) {
+            _allChapters.value = chapters
+            purgePhantomDownloadsFor(chapters)
+        }
 
         var chapter = chapters.find { it.number.toInt() == chapterNum }
 
@@ -508,4 +550,7 @@ data class ReaderUiState(
     val error: String? = null,
     /** Opaque id of the manga on the resolved source — forwarded to the next chapter so it doesn't re-search. */
     val resolvedSourceId: String? = null,
+    /** AniList publication status — RELEASING / FINISHED / HIATUS / CANCELLED / NOT_YET_RELEASED. Drives the
+     *  end-of-series banner copy on the last chapter (FINISHED → "complete", else → "caught up"). */
+    val mediaStatus: String? = null,
 )

@@ -128,6 +128,28 @@ interface DownloadDao {
     @Query("DELETE FROM downloads WHERE id = :id")
     suspend fun deleteDownload(id: String)
 
+    /**
+     * Non-completed rows whose chapter number is strictly above the source's
+     * known max — phantoms from the pre-fix `QueueNextChaptersUseCase` that
+     * blindly queued `currentChapter + 1..N`. Excludes COMPLETED rows so we
+     * never touch a chapter the user actually has on disk (could legitimately
+     * have been downloaded from a source that hosts more chapters than the
+     * current one). Returned for cancel-path teardown so any partial files
+     * also get cleaned.
+     */
+    @Query(
+        """
+        SELECT * FROM downloads
+        WHERE mangaId = :mangaId
+          AND chapterNumber > :maxKnownChapter
+          AND status != 'COMPLETED'
+        """,
+    )
+    suspend fun getPhantomDownloads(
+        mangaId: Int,
+        maxKnownChapter: Int,
+    ): List<DownloadEntity>
+
     @Query("DELETE FROM downloads WHERE mangaId = :mangaId")
     suspend fun deleteAllForManga(mangaId: Int)
 

@@ -152,6 +152,38 @@ class DownloadRepositoryImplTest {
             coVerify(exactly = 0) { manager.cancelDownload(any()) }
         }
 
+    // -------- cleanupPhantomDownloads --------
+
+    @Test
+    fun `cleanupPhantomDownloads cancels each non-completed row above the known max`() =
+        runTest {
+            // 220-chapter manga with stranded ERROR rows for 221/222/223 from
+            // the pre-fix `QueueNextChaptersUseCase` blindly queueing past
+            // the end of the manga. Cleanup must tear all three down.
+            coEvery { dao.getPhantomDownloads(42, 220) } returns
+                listOf(
+                    entity(id = "42_221", chapterNumber = 221, status = "ERROR"),
+                    entity(id = "42_222", chapterNumber = 222, status = "QUEUED"),
+                    entity(id = "42_223", chapterNumber = 223, status = "ERROR"),
+                )
+
+            repo.cleanupPhantomDownloads(42, 220)
+
+            coVerify(exactly = 1) { manager.cancelDownload("42_221") }
+            coVerify(exactly = 1) { manager.cancelDownload("42_222") }
+            coVerify(exactly = 1) { manager.cancelDownload("42_223") }
+        }
+
+    @Test
+    fun `cleanupPhantomDownloads is a no-op when DB has no phantoms`() =
+        runTest {
+            coEvery { dao.getPhantomDownloads(42, 220) } returns emptyList()
+
+            repo.cleanupPhantomDownloads(42, 220)
+
+            coVerify(exactly = 0) { manager.cancelDownload(any()) }
+        }
+
     // -------- cancelChapterByNumber --------
 
     @Test

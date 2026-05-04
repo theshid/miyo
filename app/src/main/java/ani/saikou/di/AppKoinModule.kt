@@ -63,6 +63,7 @@ import ani.saikou.domain.usecase.anime.ResolveAnimeSourcesUseCase
 import ani.saikou.domain.usecase.auth.GetAnilistAuthUrlUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterByNumberUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
+import ani.saikou.domain.usecase.downloads.CleanupPhantomDownloadsUseCase
 import ani.saikou.domain.usecase.downloads.DeleteAllDownloadsForMangaUseCase
 import ani.saikou.domain.usecase.downloads.EstimateNextChaptersBytesUseCase
 import ani.saikou.domain.usecase.downloads.EvictReadChaptersUseCase
@@ -200,6 +201,7 @@ val appModule =
         factoryOf(::BuildAiUserContextSnippetUseCase)
         factoryOf(::CancelChapterByNumberUseCase)
         factoryOf(::CancelChapterDownloadUseCase)
+        factoryOf(::CleanupPhantomDownloadsUseCase)
         factoryOf(::CatchMeUpUseCase)
         factoryOf(::DeleteAllDownloadsForMangaUseCase)
         factoryOf(::DeleteAnilistListEntryUseCase)

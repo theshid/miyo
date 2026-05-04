@@ -91,6 +91,20 @@ interface DownloadRepository {
     /** Remove every download (and on-disk file) for [mangaId]. */
     suspend fun deleteAllForManga(mangaId: Int)
 
+    /**
+     * Self-heal pass for phantom download rows — non-completed entries whose
+     * chapter number is past the source's known max. Pre-fix the reader's
+     * "save next N" banner queued `currentChapter + 1..N` blindly, leaving
+     * stranded ERROR/QUEUED rows past the real end of the manga (e.g. 221,
+     * 222, 223 for a 220-chapter title). Called from the reader VM whenever
+     * a fresh chapter list is resolved, so the picker count + the
+     * "next chapter missing" banner stop being polluted by them.
+     */
+    suspend fun cleanupPhantomDownloads(
+        mangaId: Int,
+        maxKnownChapter: Int,
+    )
+
     // ─── Library-wide observations / queries ──────────────────────────────
 
     /** Reactive list of every download row across the whole DB. */

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Download
@@ -188,9 +189,13 @@ fun MangaReaderScreen(
 
     // End-of-chapter download suggestion state
     val batchSize = 5
-    var nextChapterMissing by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf<Boolean?>(null) }
+    var nextChapterStatus by
+        remember(viewModel.mediaId, viewModel.chapterNum) {
+            mutableStateOf<MangaReaderViewModel.NextChapterStatus?>(null)
+        }
     var suggestionDismissed by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
     var offlineBannerDismissed by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
+    var lastChapterDismissed by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
     var showCellularConfirm by remember { mutableStateOf(false) }
     var estimatedBytes by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
     var downloadQueued by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
@@ -200,11 +205,14 @@ fun MangaReaderScreen(
         !readerState.isLoading &&
             readerState.error == null &&
             totalPages > 1 &&
-            currentPage == totalPages &&
-            nextChapterMissing == true
+            currentPage == totalPages
+
+    val nextAvailable = nextChapterStatus == MangaReaderViewModel.NextChapterStatus.Available
+    val nextAbsent = nextChapterStatus == MangaReaderViewModel.NextChapterStatus.Absent
 
     val showSuggestionBanner =
         atEndOfChapter &&
+            nextAvailable &&
             settings.suggestDownloads &&
             !suggestionDismissed &&
             !downloadQueued &&
@@ -212,17 +220,23 @@ fun MangaReaderScreen(
 
     val showOfflineBanner =
         atEndOfChapter &&
+            nextAvailable &&
             !offlineBannerDismissed &&
             !isOnline
 
-    // Kick off the cache check once the user hits the last page. Runs even when
-    // download suggestions are off, since the offline banner depends on it too.
+    val showLastChapterBanner =
+        atEndOfChapter &&
+            nextAbsent &&
+            !lastChapterDismissed
+
+    // Kick off the source-vs-disk check once the user hits the last page. Runs
+    // for every status, since the "last chapter" banner needs it too.
     LaunchedEffect(currentPage, totalPages) {
-        if (nextChapterMissing != null) return@LaunchedEffect
+        if (nextChapterStatus != null) return@LaunchedEffect
         if (totalPages <= 1 || currentPage != totalPages) return@LaunchedEffect
-        val missing = viewModel.isNextChapterMissing()
-        nextChapterMissing = missing
-        if (missing) {
+        val status = viewModel.nextChapterStatus()
+        nextChapterStatus = status
+        if (status == MangaReaderViewModel.NextChapterStatus.Available) {
             estimatedBytes = viewModel.estimateBytesForNext(batchSize)
         }
     }
@@ -242,6 +256,12 @@ fun MangaReaderScreen(
     LaunchedEffect(showChapterList) {
         if (showChapterList) viewModel.ensureChapterListLoaded()
     }
+
+    // Reader-end "next chapter" card. Hidden once we know the source has no
+    // chapter past the current one — gate it on a *positive* signal (chapter
+    // list loaded AND nothing > current). While the list is still loading the
+    // card stays visible, since hiding it speculatively would jank the layout.
+    val isLastChapter = allChapters.isNotEmpty() && allChapters.none { it.number.toInt() > viewModel.chapterNum }
 
     // Loading
     if (readerState.isLoading && readerState.error == null) {
@@ -359,6 +379,7 @@ fun MangaReaderScreen(
                         onPageChanged = { currentPage = it },
                         onNextChapter = onNextChapterWithSource,
                         chapterNum = chapterNum,
+                        showNextChapterCard = !isLastChapter,
                     )
                 }
                 ReadingMode.PAGER_LTR -> {
@@ -370,6 +391,7 @@ fun MangaReaderScreen(
                         onPageChanged = { currentPage = it },
                         onNextChapter = onNextChapterWithSource,
                         chapterNum = chapterNum,
+                        showNextChapterCard = !isLastChapter,
                     )
                 }
                 ReadingMode.PAGER_RTL -> {
@@ -381,6 +403,7 @@ fun MangaReaderScreen(
                         onPageChanged = { currentPage = it },
                         onNextChapter = onNextChapterWithSource,
                         chapterNum = chapterNum,
+                        showNextChapterCard = !isLastChapter,
                     )
                 }
             }
@@ -501,6 +524,19 @@ fun MangaReaderScreen(
                 onDismiss = { offlineBannerDismissed = true },
             )
         }
+
+        // ── End-of-series banner (no more chapters on the source) ───
+        AnimatedVisibility(
+            visible = showLastChapterBanner,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            LastChapterBanner(
+                isFinished = readerState.mediaStatus == "FINISHED",
+                onDismiss = { lastChapterDismissed = true },
+            )
+        }
     }
 
     // ── Cellular download confirmation ────────────────────────
@@ -611,6 +647,7 @@ private fun WebtoonReader(
     onPageChanged: (Int) -> Unit,
     onNextChapter: ((Int) -> Unit)? = null,
     chapterNum: Int = 0,
+    showNextChapterCard: Boolean = true,
 ) {
     val context = LocalContext.current
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = startPage)
@@ -685,8 +722,9 @@ private fun WebtoonReader(
                 }
             }
         }
-        // Next Chapter card at the end
-        if (pages.isNotEmpty() && onNextChapter != null) {
+        // Next Chapter card at the end — suppressed when the source has no
+        // chapter past the current one (last chapter of the series).
+        if (pages.isNotEmpty() && onNextChapter != null && showNextChapterCard) {
             item(key = "next_chapter") {
                 NextChapterCard(
                     nextChapterNum = chapterNum + 1,
@@ -707,9 +745,10 @@ private fun PagerReader(
     onPageChanged: (Int) -> Unit,
     onNextChapter: ((Int) -> Unit)? = null,
     chapterNum: Int = 0,
+    showNextChapterCard: Boolean = true,
 ) {
     val context = LocalContext.current
-    val hasNextPage = pages.isNotEmpty() && onNextChapter != null
+    val hasNextPage = pages.isNotEmpty() && onNextChapter != null && showNextChapterCard
     val pageCount = (if (pages.isNotEmpty()) pages.size else totalPages) + if (hasNextPage) 1 else 0
 
     val pagerState =
@@ -841,6 +880,62 @@ private fun DownloadNextChaptersBanner(
                 style = MaterialTheme.typography.labelLarge,
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
+            )
+        }
+        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Dismiss",
+                tint = OnSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+// ── Last Chapter Banner ─────────────────────────────────────
+@Composable
+private fun LastChapterBanner(
+    isFinished: Boolean,
+    onDismiss: () -> Unit,
+) {
+    val title = if (isFinished) "Series complete" else "You're all caught up"
+    val subtitle =
+        if (isFinished) {
+            "You've reached the end of the series."
+        } else {
+            "This is the latest chapter. New ones will appear as the series releases."
+        }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .clip(
+                    androidx.compose.foundation.shape
+                        .RoundedCornerShape(12.dp),
+                ).background(SurfaceContainerHigh)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            Icons.Default.CheckCircle,
+            contentDescription = null,
+            tint = Primary,
+            modifier = Modifier.size(20.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = OnSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = OnSurfaceVariant,
             )
         }
         IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
