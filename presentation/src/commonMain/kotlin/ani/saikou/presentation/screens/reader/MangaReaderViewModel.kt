@@ -237,6 +237,7 @@ class MangaReaderViewModel(
                             startPage = startPage.coerceIn(0, (localPages.size - 1).coerceAtLeast(0)),
                             isLoading = false,
                             mediaStatus = mediaForStatus?.status,
+                            totalChapters = mediaForStatus?.totalChapters,
                         )
                     saveProgress(startPage)
                     return@launch
@@ -251,6 +252,7 @@ class MangaReaderViewModel(
                     title = title,
                     chapterTitle = "Chapter $chapterNum",
                     mediaStatus = media?.status,
+                    totalChapters = media?.totalChapters,
                 )
 
             // If source ID was passed via navigation (user already picked), use it directly.
@@ -365,8 +367,23 @@ class MangaReaderViewModel(
     enum class NextChapterStatus { Absent, Available, Downloaded }
 
     suspend fun nextChapterStatus(): NextChapterStatus {
-        val hasNextInSource = _allChapters.value.any { it.number.toInt() > chapterNum }
-        if (!hasNextInSource) return NextChapterStatus.Absent
+        val state = _uiState.value
+        val sourceMax = _allChapters.value.maxOfOrNull { it.number.toInt() } ?: 0
+        // Non-airing series with a known AniList total: trust the larger of
+        // (sourceMax, totalChapters). Handles fragmentary source listings —
+        // MangaDex's "Vagabond (HK Colored)" hosts 5 of 327 chapters, so a
+        // sourceMax-only check would falsely flag chapter 5 as the last. For
+        // RELEASING / NOT_YET_RELEASED we stick with sourceMax since AniList
+        // may know more chapters than have been hosted yet.
+        val isAiring = state.mediaStatus == "RELEASING" || state.mediaStatus == "NOT_YET_RELEASED"
+        val total = state.totalChapters
+        val effectiveMax =
+            if (!isAiring && total != null && total > 0) {
+                maxOf(sourceMax, total)
+            } else {
+                sourceMax
+            }
+        if (chapterNum >= effectiveMax) return NextChapterStatus.Absent
         val downloaded = getCompletedChapter(mediaId, chapterNum + 1) != null
         return if (downloaded) NextChapterStatus.Downloaded else NextChapterStatus.Available
     }
@@ -396,7 +413,9 @@ class MangaReaderViewModel(
         // Chapter not on the picked source? Fall back to the alternative
         // (MangaPill if we started on MangaDex, and vice versa) — covers
         // the case where MangaDex catalogs a series but doesn't host the
-        // user's specific chapter.
+        // user's specific chapter. When the fallback succeeds, we also swap
+        // _allChapters to MangaPill's list so the picker, "save next N",
+        // and `nextChapterStatus` all reflect the source we actually use.
         if (chapter == null && activeParser == SOURCE_MANGA_DEX) {
             val title = _uiState.value.title
             val pillSources = resolveMangaSources(title).filter { inferSourceName(it.id) == SOURCE_MANGA_PILL }
@@ -407,6 +426,10 @@ class MangaReaderViewModel(
                 if (chapter != null) {
                     activeParser = SOURCE_MANGA_PILL
                     resolvedSourceId = pillFirst.id
+                    if (pillChapters.isNotEmpty()) {
+                        _allChapters.value = pillChapters
+                        purgePhantomDownloadsFor(pillChapters)
+                    }
                 }
             }
         }
@@ -553,4 +576,10 @@ data class ReaderUiState(
     /** AniList publication status — RELEASING / FINISHED / HIATUS / CANCELLED / NOT_YET_RELEASED. Drives the
      *  end-of-series banner copy on the last chapter (FINISHED → "complete", else → "caught up"). */
     val mediaStatus: String? = null,
+    /** AniList's known total chapter count. Used as a sanity check by `nextChapterStatus` for non-airing
+     *  series — when the user's picked source is a fragmentary edition (e.g. MangaDex's "Vagabond
+     *  (HK Colored)" hosts only 5 of 327 chapters), the source list under-reports the real series length
+     *  and would falsely flag every chapter past the partial cap as the "last chapter". Null for series
+     *  where AniList doesn't surface a count (typical for airing manga). */
+    val totalChapters: Int? = null,
 )
