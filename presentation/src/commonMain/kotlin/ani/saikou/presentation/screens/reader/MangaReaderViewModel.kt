@@ -14,6 +14,7 @@ import ani.saikou.domain.model.ReadingHistoryItem
 import ani.saikou.domain.usecase.activity.RecordActivityEventUseCase
 import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
 import ani.saikou.domain.usecase.anilist.GetMediaDetailUseCase
+import ani.saikou.domain.usecase.anilist.ResolveChapterCountUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterByNumberUseCase
 import ani.saikou.domain.usecase.downloads.CancelChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.CleanupPhantomDownloadsUseCase
@@ -50,6 +51,7 @@ class MangaReaderViewModel(
     private val recordActivityEvent: RecordActivityEventUseCase,
     private val resolveMangaSources: ResolveMangaSourcesUseCase,
     private val resolveChaptersForManga: ResolveChaptersForMangaUseCase,
+    private val resolveChapterCount: ResolveChapterCountUseCase,
     private val getChaptersForSource: GetChaptersForSourceUseCase,
     private val getChapterPages: GetChapterPagesUseCase,
     private val getCompletedChapter: GetCompletedChapterUseCase,
@@ -240,6 +242,7 @@ class MangaReaderViewModel(
                             totalChapters = mediaForStatus?.totalChapters,
                         )
                     saveProgress(startPage)
+                    refineTotalChaptersInBackground()
                     return@launch
                 }
             }
@@ -254,6 +257,7 @@ class MangaReaderViewModel(
                     mediaStatus = media?.status,
                     totalChapters = media?.totalChapters,
                 )
+            refineTotalChaptersInBackground()
 
             // If source ID was passed via navigation (user already picked), use it directly.
             if (navSourceId != null) {
@@ -367,25 +371,50 @@ class MangaReaderViewModel(
     enum class NextChapterStatus { Absent, Available, Downloaded }
 
     suspend fun nextChapterStatus(): NextChapterStatus {
+        // Make sure the chapter list is loaded — otherwise a cached/offline
+        // read (loadSources cache-first short-circuits before
+        // loadChapterFromSource fires) leaves _allChapters empty and we'd
+        // falsely flag every chapter as the last.
+        loadChapterListNow()
         val state = _uiState.value
         val sourceMax = _allChapters.value.maxOfOrNull { it.number.toInt() } ?: 0
-        // Non-airing series with a known AniList total: trust the larger of
-        // (sourceMax, totalChapters). Handles fragmentary source listings —
-        // MangaDex's "Vagabond (HK Colored)" hosts 5 of 327 chapters, so a
-        // sourceMax-only check would falsely flag chapter 5 as the last. For
-        // RELEASING / NOT_YET_RELEASED we stick with sourceMax since AniList
-        // may know more chapters than have been hosted yet.
-        val isAiring = state.mediaStatus == "RELEASING" || state.mediaStatus == "NOT_YET_RELEASED"
+        // Compare against the larger of sourceMax and the cross-source
+        // chapter total. Handles fragmentary listings (MangaDex's
+        // "Vagabond (HK Colored)" hosts 5 of 327 chapters) regardless of
+        // AniList publication status — Vagabond is RELEASING per AniList
+        // even though no new chapters have shipped in years, so an
+        // airing-status guard would miss it. The trade-off is that an
+        // airing series whose AniList total is ahead of every source
+        // would say Available; queueNextChapters clamps to _allChapters
+        // anyway, so we can't overshoot what's actually downloadable.
         val total = state.totalChapters
         val effectiveMax =
-            if (!isAiring && total != null && total > 0) {
-                maxOf(sourceMax, total)
-            } else {
-                sourceMax
-            }
+            if (total != null && total > 0) maxOf(sourceMax, total) else sourceMax
         if (chapterNum >= effectiveMax) return NextChapterStatus.Absent
         val downloaded = getCompletedChapter(mediaId, chapterNum + 1) != null
         return if (downloaded) NextChapterStatus.Downloaded else NextChapterStatus.Available
+    }
+
+    /**
+     * Fire-and-forget refinement of [ReaderUiState.totalChapters] using the
+     * cross-source resolver. AniList's `totalChapters` is null for many
+     * ongoing series and partially-listed editions; the resolver picks the
+     * max across MangaDex's hint, MangaDex's hosted count, and (when those
+     * look short) MangaPill's hosted count. Backed-off / best-effort —
+     * failures leave the AniList value in place.
+     */
+    private fun refineTotalChaptersInBackground() {
+        val title = _uiState.value.title.ifEmpty { return }
+        viewModelScope.launch {
+            val anilistTotal = _uiState.value.totalChapters
+            val resolved =
+                runCatching { resolveChapterCount(title, anilistTotal) }.getOrNull()
+                    ?: return@launch
+            val current = _uiState.value.totalChapters ?: 0
+            if (resolved > current) {
+                _uiState.value = _uiState.value.copy(totalChapters = resolved)
+            }
+        }
     }
 
     /** Called from the reader composable on page change. Debounced to avoid DB spam. */
