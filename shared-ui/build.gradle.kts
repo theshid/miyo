@@ -113,7 +113,10 @@ android {
 }
 
 dependencies {
-    // Tooling-time previews (debug only — don't ship).
+    // The @Preview annotation itself is referenced in androidMain source, so it
+    // must be on the classpath for every variant — `implementation`, not debug-only.
+    // The interactive renderer (ui-tooling) is still debug-only.
+    implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
 }
 
