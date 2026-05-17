@@ -140,6 +140,11 @@ class VideoPlayerViewModel(
             reportPlayerError("Episode not found on source")
             return
         }
+        if (links.isEmpty()) {
+            _uiState.update { it.copy(isLoading = false, error = "No playable streams found") }
+            reportPlayerError("No playable streams extracted from embeds")
+            return
+        }
         _uiState.update {
             it.copy(
                 streamLinks = links,

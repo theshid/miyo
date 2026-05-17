@@ -12,8 +12,9 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
 /**
- * Anime stream-URL parser scraping anitaku.to (a GogoAnime mirror).
- * Three-step pipeline: search → episode list → embed URL → direct stream.
+ * Anime stream-URL parser scraping anineko.to (the post-anitaku rebrand of
+ * GogoAnime). Three-step pipeline: search → episode list → embed URL →
+ * direct stream.
  *
  * Endpoint paths, CSS selectors, regex patterns, and site-stamped tokens
  * all live in [GogoSite] so a markup change is a one-place fix.
@@ -35,10 +36,11 @@ class GogoParser(
                         .get()
 
                 doc.select(GogoSite.Selectors.SEARCH_RESULTS).map { el: Element ->
+                    val img = el.selectFirst("img")
                     AnimeSearchResult(
-                        slug = el.attr("href").replace(GogoSite.Tokens.CATEGORY_PREFIX, ""),
-                        name = el.attr("title"),
-                        cover = el.select("img").attr("src"),
+                        slug = el.attr("href").removePrefix(GogoSite.Tokens.CATEGORY_PREFIX),
+                        name = img?.attr("alt").orEmpty(),
+                        cover = img?.attr("src").orEmpty(),
                     )
                 }
             } catch (e: Exception) {
@@ -58,54 +60,16 @@ class GogoParser(
                         .timeout(10000)
                         .get()
 
-                // New anitaku.to structure
-                val episodeLinks = doc.select(GogoSite.Selectors.EPISODE_LINKS_PRIMARY)
-                if (episodeLinks.isNotEmpty()) {
-                    for (el in episodeLinks.reversed()) {
-                        val href = el.attr("href").trim()
-                        if (!href.contains(GogoSite.Tokens.EPISODE_PATH_FRAGMENT)) continue
-                        val num =
-                            el.attr("data-num").ifEmpty {
-                                el
-                                    .select(GogoSite.Selectors.EPISODE_NAME)
-                                    .text()
-                                    .replace(GogoSite.Tokens.EPISODE_PREFIX, "")
-                                    .trim()
-                                    .ifEmpty {
-                                        GogoSite.Patterns.EPISODE_NUMBER
-                                            .find(href)
-                                            ?.groupValues
-                                            ?.get(1) ?: ""
-                                    }
-                            }
-                        if (num.isNotEmpty()) {
-                            episodes.add(Episode(number = num, link = GogoSite.Paths.absoluteUrl(href)))
-                        }
-                    }
-                }
-
-                // Fallback: AJAX method
-                if (episodes.isEmpty()) {
-                    val lastEpisode = doc.select(GogoSite.Selectors.EPISODE_PAGE_LAST).attr("ep_end")
-                    val animeId = doc.select(GogoSite.Selectors.MOVIE_ID_INPUT).attr("value")
-                    if (lastEpisode.isNotEmpty() && animeId.isNotEmpty()) {
-                        val ajax =
-                            Jsoup
-                                .connect(GogoSite.Paths.ajaxEpisodeList(animeId, lastEpisode))
-                                .userAgent(GogoSite.USER_AGENT)
-                                .timeout(10000)
-                                .get()
-
-                        for (el in ajax.select(GogoSite.Selectors.AJAX_EPISODE_ITEMS).reversed()) {
-                            val num =
-                                el
-                                    .select(GogoSite.Selectors.EPISODE_NAME)
-                                    .text()
-                                    .replace(GogoSite.Tokens.EPISODE_PREFIX, "")
-                                    .trim()
-                            episodes.add(Episode(number = num, link = GogoSite.HOST + el.attr("href").trim()))
-                        }
-                    }
+                for (el in doc.select(GogoSite.Selectors.EPISODE_LINKS_PRIMARY)) {
+                    val href = el.attr("href").trim()
+                    if (!href.contains(GogoSite.Tokens.EPISODE_PATH_FRAGMENT)) continue
+                    val num =
+                        GogoSite.Patterns.EPISODE_NUMBER
+                            .find(href)
+                            ?.groupValues
+                            ?.get(1)
+                            ?: continue
+                    episodes.add(Episode(number = num, link = GogoSite.Paths.absoluteUrl(href)))
                 }
             } catch (e: Exception) {
                 reportParserIssue("getEpisodes", e, mapOf("slug" to slug))
@@ -128,9 +92,6 @@ class GogoParser(
                 // (serverName, embedUrl, subtitleTracks)
                 val servers = mutableListOf<Triple<String, String, List<SubtitleTrack>>>()
                 collectServers(doc.select(GogoSite.Selectors.SERVER_LINKS_PRIMARY), servers)
-                if (servers.isEmpty()) {
-                    collectServers(doc.select(GogoSite.Selectors.SERVER_LINKS_FALLBACK), servers)
-                }
 
                 for ((name, url, subs) in servers) {
                     val extracted = extractDirectLink(name, url, subs)
