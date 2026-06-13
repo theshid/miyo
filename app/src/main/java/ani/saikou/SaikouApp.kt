@@ -205,13 +205,21 @@ fun SaikouApp() {
         // every nav destination including the bottom bar. Mandatory updates
         // are non-dismissible at the Compose level (Android home/back caveat
         // is documented in docs/self-update-and-release.md).
-        AppUpdateDialog(
-            state = updateState,
-            onUpdate = updateViewModel::startDownload,
-            onLater = updateViewModel::dismiss,
-            onInstall = updateViewModel::install,
-            onGrantPermission = updateViewModel::openInstallPermissionSettings,
-            onRetry = updateViewModel::retry,
-        )
+        //
+        // Suppressed during the splash MP4 + the brief null-route window
+        // before NavHost wires up — the check still runs in the background,
+        // so the dialog reveals immediately once nav moves past splash if
+        // an update was found.
+        val showUpdateDialog = currentRoute != null && currentRoute != Screen.Splash.route
+        if (showUpdateDialog) {
+            AppUpdateDialog(
+                state = updateState,
+                onUpdate = updateViewModel::startDownload,
+                onLater = updateViewModel::dismiss,
+                onInstall = updateViewModel::install,
+                onGrantPermission = updateViewModel::openInstallPermissionSettings,
+                onRetry = updateViewModel::retry,
+            )
+        }
     }
 }
