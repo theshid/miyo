@@ -8,7 +8,15 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.sentry.android)
+    // Sentry Gradle plugin removed: 6.5–6.11.x all hit a
+    // `setIgnoreExitValue(boolean)` API mismatch under Gradle 8.9, breaking
+    // `:app:assembleRelease` at configure time even when every upload flag
+    // is false. The runtime Sentry SDK is still in `dependencies` below, so
+    // crash + breadcrumb reporting works — only source-context + ProGuard
+    // mapping upload are sacrificed. Re-enable by re-adding `alias(libs.
+    // plugins.sentry.android)` here + the `sentry { … }` block once either
+    // the plugin ships a Gradle-8.9-compatible release or the wrapper is
+    // downgraded to 8.8.
 }
 
 android {
@@ -248,21 +256,5 @@ dependencies {
     testImplementation(libs.androidx.test.core)
 }
 
-sentry {
-    org.set("shidji-inc")
-    projectName.set("android")
-
-    // Source-bundle + mapping uploads need SENTRY_AUTH_TOKEN at build time.
-    // Skip on CI runs that don't provide one (e.g. PR forks, or a release
-    // workflow that hasn't been granted the Sentry secret yet). Local debug
-    // builds keep working via sentry.properties.
-    val hasSentryAuth =
-        !System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank() ||
-            rootProject.file("sentry.properties").exists()
-    includeSourceContext.set(hasSentryAuth)
-    // Disabling auto-upload covers the ProGuard mapping AND native symbol
-    // tasks — without this the release build still tries to hit Sentry and
-    // fails on auth.
-    autoUploadProguardMapping.set(hasSentryAuth)
-    autoUploadNativeSymbols.set(hasSentryAuth)
-}
+// `sentry { … }` block removed alongside the Sentry Gradle plugin — see the
+// rationale in the plugins block above.

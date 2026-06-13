@@ -57,7 +57,7 @@ jsoup = "1.18.3"
 lottie = "6.6.2"
 prettylog = "0.2.0"
 sentry = "7.18.1"
-sentry-plugin = "6.5.0"
+sentry-plugin = "6.11.0"
 
 # Static analysis. Both versions are confirmed Kotlin 2.0.21-compatible:
 # ktlint-gradle 12.1+ supports Kotlin 2.0; detekt added 2.0 support in 1.23.6.
