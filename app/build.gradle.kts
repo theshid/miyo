@@ -1,3 +1,5 @@
+import java.io.File
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -17,8 +19,8 @@ android {
         applicationId = "ani.saikou.v2"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.2.2"
+        versionCode = 5
+        versionName = "1.3.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -40,6 +42,56 @@ android {
                 .trim()
                 .removeSurrounding("\"")
         buildConfigField("String", "DISCORD_FEEDBACK_WEBHOOK", "\"$discordFeedback\"")
+
+        // Self-update manifest URL. Overridable per-build via local.properties
+        // (UPDATE_MANIFEST_URL=…) or via the environment, falling back to the
+        // GitHub Pages default that the release workflow publishes. Keeping
+        // it in BuildConfig means the feature module never hard-codes the URL.
+        val updateManifestUrl =
+            (
+                System.getenv("UPDATE_MANIFEST_URL")
+                    ?: props.getProperty("UPDATE_MANIFEST_URL")
+                    ?: "https://theshid.github.io/miyo/update.json"
+            ).trim()
+                .removeSurrounding("\"")
+        buildConfigField("String", "UPDATE_MANIFEST_URL", "\"$updateManifestUrl\"")
+    }
+
+    // Env-var driven release signing. Local debug builds are untouched —
+    // they continue to sign with the SDK's default debug keystore.
+    // CI fails with a clear message when the four secrets are missing;
+    // the workflow surfaces that as a workflow failure.
+    val ciKeystoreB64 = System.getenv("ANDROID_KEYSTORE_BASE64").orEmpty()
+    val ciKeystorePass = System.getenv("ANDROID_KEYSTORE_PASSWORD").orEmpty()
+    val ciKeyAlias = System.getenv("ANDROID_KEY_ALIAS").orEmpty()
+    val ciKeyPass = System.getenv("ANDROID_KEY_PASSWORD").orEmpty()
+    val ciSigningConfigured =
+        ciKeystoreB64.isNotBlank() &&
+            ciKeystorePass.isNotBlank() &&
+            ciKeyAlias.isNotBlank() &&
+            ciKeyPass.isNotBlank()
+
+    if (ciSigningConfigured) {
+        // Materialize the decoded keystore in the JVM's temp dir — NOT under
+        // app/build/. Using build/ would let `./gradlew clean assembleRelease`
+        // delete the file between configuration and the signing task,
+        // breaking a clean release build.
+        val keystoreFile: File = File.createTempFile("miyo-ci-keystore", ".jks")
+        keystoreFile.deleteOnExit()
+        // getMimeDecoder tolerates line breaks and surrounding whitespace —
+        // `base64 -i keystore.jks` produces multi-line output, and GitHub
+        // Actions can preserve those newlines in the secret. The strict
+        // decoder would reject either case.
+        keystoreFile.writeBytes(Base64.getMimeDecoder().decode(ciKeystoreB64))
+
+        signingConfigs {
+            create("release") {
+                storeFile = keystoreFile
+                storePassword = ciKeystorePass
+                keyAlias = ciKeyAlias
+                keyPassword = ciKeyPass
+            }
+        }
     }
 
     buildTypes {
@@ -49,6 +101,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (ciSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -197,7 +252,17 @@ sentry {
     org.set("shidji-inc")
     projectName.set("android")
 
-    // this will upload your source code to Sentry to show it as part of the stack traces
-    // disable if you don't want to expose your sources
-    includeSourceContext.set(true)
+    // Source-bundle + mapping uploads need SENTRY_AUTH_TOKEN at build time.
+    // Skip on CI runs that don't provide one (e.g. PR forks, or a release
+    // workflow that hasn't been granted the Sentry secret yet). Local debug
+    // builds keep working via sentry.properties.
+    val hasSentryAuth =
+        !System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank() ||
+            rootProject.file("sentry.properties").exists()
+    includeSourceContext.set(hasSentryAuth)
+    // Disabling auto-upload covers the ProGuard mapping AND native symbol
+    // tasks — without this the release build still tries to hit Sentry and
+    // fails on auth.
+    autoUploadProguardMapping.set(hasSentryAuth)
+    autoUploadNativeSymbols.set(hasSentryAuth)
 }

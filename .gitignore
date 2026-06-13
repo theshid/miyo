@@ -1,5 +1,6 @@
 *.iml
 .gradle
+.gradle-review
 /local.properties
 /.idea
 .DS_Store

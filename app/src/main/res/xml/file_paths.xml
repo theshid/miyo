@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="share_cards" path="share_cards/" />
+    <!-- Self-update artifacts. The path string MUST stay in sync with
+         UpdateCache.DIR_NAME in :data-android — the FileProvider only
+         exposes content:// URIs for files under this exact subtree. -->
+    <cache-path name="updates" path="updates/" />
 </paths>

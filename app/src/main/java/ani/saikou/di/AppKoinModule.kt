@@ -2,6 +2,7 @@ package ani.saikou.di
 
 import ani.saikou.BuildConfig
 import ani.saikou.data.android.di.IS_DEBUG_QUALIFIER
+import ani.saikou.data.android.update.UpdateRepositoryImpl
 import ani.saikou.data.local.ConnectivityObserver
 import ani.saikou.data.local.OnboardingPrefs
 import ani.saikou.data.local.TokenStorage
@@ -27,6 +28,7 @@ import ani.saikou.domain.repository.AuthRepository
 import ani.saikou.domain.repository.FeedbackRepository
 import ani.saikou.domain.repository.NewsRepository
 import ani.saikou.domain.repository.TorrentRepository
+import ani.saikou.domain.repository.UpdateRepository
 import ani.saikou.domain.source.AiChatService
 import ani.saikou.domain.source.DownloadDispatcher
 import ani.saikou.domain.source.FeedbackService
@@ -91,6 +93,10 @@ import ani.saikou.domain.usecase.manga.ResolveMangaSourcesUseCase
 import ani.saikou.domain.usecase.news.GetAiringScheduleUseCase
 import ani.saikou.domain.usecase.news.GetLatestNewsUseCase
 import ani.saikou.domain.usecase.torrents.SearchTorrentsUseCase
+import ani.saikou.domain.usecase.update.CheckForUpdateUseCase
+import ani.saikou.domain.usecase.update.CleanupUpdateArtifactsUseCase
+import ani.saikou.domain.usecase.update.DownloadUpdateUseCase
+import ani.saikou.domain.usecase.update.InstallUpdateUseCase
 import ani.saikou.presentation.screens.ai.AiChatViewModel
 import ani.saikou.presentation.screens.anime.AnimeViewModel
 import ani.saikou.presentation.screens.character.CharacterDetailViewModel
@@ -108,6 +114,7 @@ import ani.saikou.presentation.screens.search.SearchViewModel
 import ani.saikou.presentation.screens.seasonal.SeasonalCalendarViewModel
 import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.presentation.screens.torrent.TorrentSearchViewModel
+import ani.saikou.presentation.screens.update.UpdateViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.factoryOf
@@ -194,6 +201,23 @@ val appModule =
             )
         }
 
+        // ─── Self-update ──────────────────────────────────────────────────
+        // UpdateRepositoryImpl pulls the live HttpClient + Logger from the
+        // graph and reads BuildConfig values directly so the URL, applicationId,
+        // and versionCode/Name are configured in one place (app/build.gradle.kts).
+        single<UpdateRepository> {
+            UpdateRepositoryImpl(
+                context = androidContext(),
+                client = get(),
+                manifestUrl = BuildConfig.UPDATE_MANIFEST_URL,
+                fileProviderAuthority = "${androidContext().packageName}.fileprovider",
+                expectedPackage = androidContext().packageName,
+                installedVersionCode = BuildConfig.VERSION_CODE,
+                installedVersionName = BuildConfig.VERSION_NAME,
+                logger = get(),
+            )
+        }
+
         // ─── Use cases ─────────────────────────────────────────────────────
         // factoryOf — fresh instance per resolution. Use cases are stateless
         // wrappers and don't benefit from singleton-ness; per-call alloc keeps
@@ -201,10 +225,13 @@ val appModule =
         factoryOf(::BuildAiUserContextSnippetUseCase)
         factoryOf(::CancelChapterByNumberUseCase)
         factoryOf(::CancelChapterDownloadUseCase)
+        factoryOf(::CheckForUpdateUseCase)
         factoryOf(::CleanupPhantomDownloadsUseCase)
+        factoryOf(::CleanupUpdateArtifactsUseCase)
         factoryOf(::CatchMeUpUseCase)
         factoryOf(::DeleteAllDownloadsForMangaUseCase)
         factoryOf(::DeleteAnilistListEntryUseCase)
+        factoryOf(::DownloadUpdateUseCase)
         factoryOf(::EditListEntryUseCase)
         factoryOf(::EstimateNextChaptersBytesUseCase)
         factoryOf(::EvictReadChaptersUseCase)
@@ -230,6 +257,7 @@ val appModule =
         factoryOf(::GetUserMangaListUseCase)
         factoryOf(::GetUserStatsUseCase)
         factoryOf(::GetWatchHistoryForMediaUseCase)
+        factoryOf(::InstallUpdateUseCase)
         factoryOf(::LoadEpisodeStreamUseCase)
         factoryOf(::LoadMorePopularAnimeUseCase)
         factoryOf(::LoadMorePopularMangaUseCase)
@@ -277,6 +305,7 @@ val appModule =
         viewModelOf(::SeasonalCalendarViewModel)
         viewModelOf(::StatsViewModel)
         viewModelOf(::TorrentSearchViewModel)
+        viewModelOf(::UpdateViewModel)
         viewModelOf(::UserListsViewModel)
         viewModelOf(::VideoPlayerViewModel)
     }

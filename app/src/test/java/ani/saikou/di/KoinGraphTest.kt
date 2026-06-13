@@ -18,12 +18,16 @@ import ani.saikou.domain.repository.AiChatRepository
 import ani.saikou.domain.repository.AnilistRepository
 import ani.saikou.domain.repository.DownloadRepository
 import ani.saikou.domain.repository.MangaSourceRepository
+import ani.saikou.domain.repository.UpdateRepository
 import ani.saikou.domain.source.AiChatService
 import ani.saikou.domain.source.FeedbackService
 import ani.saikou.domain.usecase.downloads.CancelChapterByNumberUseCase
 import ani.saikou.domain.usecase.downloads.CleanupPhantomDownloadsUseCase
 import ani.saikou.domain.usecase.downloads.QueueChapterDownloadUseCase
 import ani.saikou.domain.usecase.downloads.QueueNextChaptersUseCase
+import ani.saikou.domain.usecase.update.CheckForUpdateUseCase
+import ani.saikou.domain.usecase.update.DownloadUpdateUseCase
+import ani.saikou.domain.usecase.update.InstallUpdateUseCase
 import ani.saikou.platform.android.di.platformAndroidModule
 import ani.saikou.platform.log.Logger
 import io.ktor.client.HttpClient
@@ -101,5 +105,11 @@ class KoinGraphTest : KoinTest {
         inject<QueueNextChaptersUseCase>().value.javaClass
         inject<CancelChapterByNumberUseCase>().value.javaClass
         inject<CleanupPhantomDownloadsUseCase>().value.javaClass
+
+        // self-update
+        inject<UpdateRepository>().value.javaClass
+        inject<CheckForUpdateUseCase>().value.javaClass
+        inject<DownloadUpdateUseCase>().value.javaClass
+        inject<InstallUpdateUseCase>().value.javaClass
     }
 }

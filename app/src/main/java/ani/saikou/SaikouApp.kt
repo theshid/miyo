@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,7 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import ani.saikou.components.SaikouBottomBar
@@ -37,10 +41,14 @@ import ani.saikou.data.local.ConnectivityObserver
 import ani.saikou.navigation.SaikouNavHost
 import ani.saikou.navigation.Screen
 import ani.saikou.navigation.bottomBarScreens
+import ani.saikou.presentation.screens.update.UpdateViewModel
+import ani.saikou.sharedui.screens.update.AppUpdateDialog
+import kotlinx.coroutines.flow.distinctUntilChanged
 import miyo.shared_ui.generated.resources.Res
 import miyo.shared_ui.generated.resources.login_background
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalResourceApi::class)
@@ -62,6 +70,36 @@ fun SaikouApp() {
     // gracefully via their own empty/error states.
     val connectivity = koinInject<ConnectivityObserver>()
     val isConnected by connectivity.isConnected.collectAsState(initial = true)
+
+    // Self-update controller — process-scoped so the check fires exactly once
+    // per launch even as SaikouApp recomposes. The dialog renders at the
+    // root Box below so it sits over every nav destination.
+    val updateViewModel: UpdateViewModel = koinViewModel()
+    val updateState by updateViewModel.uiState.collectAsState()
+
+    // Drive the check from connectivity transitions. The first "true"
+    // emission triggers it; if it fails transiently (captive portal,
+    // dropped Wi-Fi), the VM's guard is left open so the next connectivity
+    // recovery retries without needing a process restart.
+    LaunchedEffect(Unit) {
+        connectivity.isConnected.distinctUntilChanged().collect { connected ->
+            if (connected) updateViewModel.checkOnce()
+        }
+    }
+
+    // Re-check install-permission on every onResume so a user returning from
+    // the unknown-sources settings can pick up where they left off.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    updateViewModel.onForegrounded()
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Request notification permission on Android 13+
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -162,5 +200,18 @@ fun SaikouApp() {
                 }
             }
         }
+
+        // Global self-update dialog. Hosted at the root Box so it overlays
+        // every nav destination including the bottom bar. Mandatory updates
+        // are non-dismissible at the Compose level (Android home/back caveat
+        // is documented in docs/self-update-and-release.md).
+        AppUpdateDialog(
+            state = updateState,
+            onUpdate = updateViewModel::startDownload,
+            onLater = updateViewModel::dismiss,
+            onInstall = updateViewModel::install,
+            onGrantPermission = updateViewModel::openInstallPermissionSettings,
+            onRetry = updateViewModel::retry,
+        )
     }
 }

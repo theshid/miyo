@@ -1,0 +1,348 @@
+name: release
+
+# Triggered when a maintainer pushes a vX.Y.Z tag. Tag MUST match the
+# versionName in app/build.gradle.kts — the "verify tag" step fails the
+# workflow otherwise. Manual dispatch is supported for re-running the
+# pipeline against an existing tag without re-pushing.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to (re-)release, e.g. v1.3.0'
+        required: true
+        type: string
+
+# Hold the manifest publish lane single-file. Two simultaneous releases
+# would race on the Pages deployment — concurrency cancels the older run.
+concurrency:
+  group: release-manifest
+  cancel-in-progress: false
+
+# Minimal permissions: read repo contents, write release + Pages artifacts,
+# request an OIDC token for the Pages deployment.
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  JAVA_VERSION: '17'
+
+jobs:
+  release:
+    name: Build, sign, release, publish manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    outputs:
+      tag: ${{ steps.resolve_tag.outputs.tag }}
+      version_name: ${{ steps.resolve_tag.outputs.version_name }}
+      version_code: ${{ steps.verify_version.outputs.version_code }}
+
+    steps:
+      - name: Resolve tag
+        id: resolve_tag
+        shell: bash
+        env:
+          DISPATCH_TAG: ${{ github.event.inputs.tag }}
+          REF_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          tag="$DISPATCH_TAG"
+          if [[ -z "$tag" ]]; then
+            tag="$REF_TAG"
+          fi
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.+-]+)?$ ]]; then
+            echo "::error::Tag '$tag' is not a semver-style v* tag (vMAJOR.MINOR.PATCH[-suffix])"
+            exit 1
+          fi
+          version_name="${tag#v}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+
+      - name: Check out source at tag
+        # Pin to the resolved tag so workflow_dispatch reruns against an
+        # existing tag rebuild from the exact commit that tag points to,
+        # never from the default branch.
+        #
+        # IMPORTANT: tags created BEFORE this workflow + signing block was
+        # added (i.e. before docs/self-update-and-release.md exists) will
+        # check out an app/build.gradle.kts that does not consume the
+        # signing env vars — the build will produce an unsigned APK and
+        # the staging step will reject it. See the "Pre-feature tags"
+        # warning in docs/self-update-and-release.md for the recovery path.
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve_tag.outputs.tag }}
+          fetch-depth: 1
+
+      - name: Verify tag matches app versionName / versionCode
+        id: verify_version
+        env:
+          TAG_VERSION_NAME: ${{ steps.resolve_tag.outputs.version_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          file_version_name=$(
+            grep -E '^\s*versionName\s*=' app/build.gradle.kts \
+              | head -1 \
+              | sed -E 's/.*"([^"]+)".*/\1/'
+          )
+          file_version_code=$(
+            grep -E '^\s*versionCode\s*=' app/build.gradle.kts \
+              | head -1 \
+              | sed -E 's/.*=\s*([0-9]+).*/\1/'
+          )
+          if [[ "$TAG_VERSION_NAME" != "$file_version_name" ]]; then
+            echo "::error::Tag versionName '$TAG_VERSION_NAME' does not match app/build.gradle.kts ('$file_version_name')"
+            exit 1
+          fi
+          echo "version_code=$file_version_code" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse a release whose versionCode does not advance
+        # Pulls the currently-published update.json (if any) and refuses a
+        # release whose versionCode is not strictly greater. Without this,
+        # a tag with a forgotten versionCode bump would publish an APK that
+        # existing clients classify as up-to-date — the updater would never
+        # offer it.
+        #
+        # Escape hatches:
+        # - workflow_dispatch (manual): skipped entirely. The operator is
+        #   intentionally rerunning OR rolling back; this is the documented
+        #   rollback path.
+        # - tag push for a release that already exists: equality allowed
+        #   (idempotent automation reruns of a tag push).
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        env:
+          NEW_VC: ${{ steps.verify_version.outputs.version_code }}
+          TAG: ${{ steps.resolve_tag.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest_url="https://theshid.github.io/miyo/update.json"
+          if ! prev_vc=$(curl -fsSL "$manifest_url" | jq -r '.versionCode // empty' 2>/dev/null); then
+            echo "No published manifest yet — skipping advancement check."
+            exit 0
+          fi
+          if [[ -z "$prev_vc" || "$prev_vc" == "null" ]]; then
+            echo "Previous manifest had no versionCode — skipping."
+            exit 0
+          fi
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — allowing rerun (NEW_VC=$NEW_VC, published=$prev_vc)"
+            if (( NEW_VC < prev_vc )); then
+              echo "::error::versionCode $NEW_VC is below published $prev_vc — refusing rerun"
+              exit 1
+            fi
+            exit 0
+          fi
+          if (( NEW_VC <= prev_vc )); then
+            echo "::error::versionCode $NEW_VC must be strictly greater than the published $prev_vc"
+            exit 1
+          fi
+          echo "versionCode advances $prev_vc → $NEW_VC"
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle with cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: ktlint
+        run: ./gradlew --no-daemon ktlintCheck
+
+      - name: detekt
+        run: ./gradlew --no-daemon detekt
+
+      - name: Unit tests
+        run: |
+          ./gradlew --no-daemon \
+            :domain:testDebugUnitTest \
+            :data-android:testDebugUnitTest \
+            :app:testDebugUnitTest
+
+      - name: Verify release signing secrets are present
+        # Inject secrets via env (not direct ${{ … }} substitution into the
+        # script body) so passwords / aliases that contain quotes, newlines,
+        # or `$(…)` cannot corrupt the shell script.
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          missing=()
+          [[ -z "$KS_B64" ]] && missing+=("ANDROID_KEYSTORE_BASE64")
+          [[ -z "$KS_PASS" ]] && missing+=("ANDROID_KEYSTORE_PASSWORD")
+          [[ -z "$KS_ALIAS" ]] && missing+=("ANDROID_KEY_ALIAS")
+          [[ -z "$KEY_PASS" ]] && missing+=("ANDROID_KEY_PASSWORD")
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Build signed release APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # Optional. When set, app/build.gradle.kts's `hasSentryAuth` flips
+          # to true and the Sentry plugin uploads source context + ProGuard
+          # mapping. When absent, the build still succeeds — uploads are
+          # skipped at the plugin level (see `sentry { … }` block).
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: ./gradlew --no-daemon :app:assembleRelease
+
+      - name: Verify APK was signed and stage artifact
+        id: stage_apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          src=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name "*.apk" ! -name "*-unsigned.apk" | head -1)
+          if [[ -z "$src" || ! -f "$src" ]]; then
+            echo "::error::No signed release APK found under app/build/outputs/apk/release/"
+            ls -la app/build/outputs/apk/release/ || true
+            exit 1
+          fi
+          mkdir -p dist
+          dest="dist/miyo-${{ steps.resolve_tag.outputs.tag }}.apk"
+          cp "$src" "$dest"
+          sha256=$(sha256sum "$dest" | awk '{print $1}')
+          size=$(stat -c%s "$dest")
+          echo "path=$dest" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$dest")" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+          echo "size=$size" >> "$GITHUB_OUTPUT"
+
+      - name: Create draft GitHub Release
+        id: create_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.resolve_tag.outputs.tag }}"
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release $tag exists — reusing."
+          else
+            gh release create "$tag" \
+              --repo "${{ github.repository }}" \
+              --title "Miyo ${{ steps.resolve_tag.outputs.version_name }}" \
+              --notes "Automated release for ${tag}." \
+              --draft
+          fi
+
+      - name: Upload signed APK to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.resolve_tag.outputs.tag }}" \
+            "${{ steps.stage_apk.outputs.path }}" \
+            --repo "${{ github.repository }}" \
+            --clobber
+
+      - name: Publish (un-draft) the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "${{ steps.resolve_tag.outputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --draft=false
+
+      - name: Resolve final download URL from the published release
+        id: resolve_url
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.resolve_tag.outputs.tag }}"
+          name="${{ steps.stage_apk.outputs.name }}"
+          # Wait briefly for the asset to become listable after the upload.
+          for attempt in 1 2 3 4 5; do
+            url=$(
+              gh release view "$tag" --repo "${{ github.repository }}" --json assets \
+                --jq ".assets[] | select(.name == \"$name\") | .url"
+            )
+            if [[ -n "$url" ]]; then
+              break
+            fi
+            sleep 3
+          done
+          if [[ -z "$url" ]]; then
+            echo "::error::Could not resolve browser_download_url for asset $name"
+            exit 1
+          fi
+          echo "browser_download_url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Generate update.json with jq
+        id: generate_manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pages
+          jq -n \
+            --argjson versionCode '${{ steps.verify_version.outputs.version_code }}' \
+            --arg versionName '${{ steps.resolve_tag.outputs.version_name }}' \
+            --argjson minimumSupportedVersion 1 \
+            --arg apkUrl '${{ steps.resolve_url.outputs.browser_download_url }}' \
+            --arg sha256 '${{ steps.stage_apk.outputs.sha256 }}' \
+            --arg releaseNotes "Release ${{ steps.resolve_tag.outputs.tag }}" \
+            --argjson mandatory false \
+            --arg publishedAt "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            '{
+              versionCode: $versionCode,
+              versionName: $versionName,
+              minimumSupportedVersion: $minimumSupportedVersion,
+              apkUrl: $apkUrl,
+              sha256: $sha256,
+              releaseNotes: $releaseNotes,
+              mandatory: $mandatory,
+              publishedAt: $publishedAt
+            }' > pages/update.json
+          echo "--- pages/update.json ---"
+          cat pages/update.json
+
+      - name: Sanity-check the manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Re-validate before we publish anything user-facing.
+          jq -e '
+            (.versionCode | type == "number") and
+            (.versionName | type == "string" and (. | length > 0)) and
+            (.minimumSupportedVersion | type == "number") and
+            (.apkUrl | startswith("https://github.com/")) and
+            (.sha256 | test("^[0-9a-f]{64}$")) and
+            (.releaseNotes | type == "string") and
+            (.mandatory | type == "boolean") and
+            (.publishedAt | type == "string")
+          ' pages/update.json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages
+
+  deploy_pages:
+    name: Publish update.json to GitHub Pages
+    needs: release
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
