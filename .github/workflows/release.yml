@@ -344,3 +344,77 @@ jobs:
       - name: Deploy
         id: deploy
         uses: actions/deploy-pages@v4
+
+  publish_legacy_mirror:
+    # Mirrors the just-released APK to theshid/miyo-releases under the
+    # stable name `miyo.apk`, so existing external links pointing at
+    # `releases/latest/download/miyo.apk` keep serving the newest version.
+    # No-op (with a logged notice) if LEGACY_RELEASES_PUSH_TOKEN is missing,
+    # so contributors without the cross-repo PAT can still ship.
+    #
+    # PAT requirements: fine-grained token with `Contents: write` scope on
+    # theshid/miyo-releases. Add as repo secret LEGACY_RELEASES_PUSH_TOKEN
+    # on theshid/miyo.
+    name: Mirror APK to theshid/miyo-releases
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ needs.release.outputs.tag }}
+      VERSION_NAME: ${{ needs.release.outputs.version_name }}
+      LEGACY_TOKEN: ${{ secrets.LEGACY_RELEASES_PUSH_TOKEN }}
+    steps:
+      - name: Skip if no legacy-mirror PAT configured
+        id: check
+        shell: bash
+        run: |
+          if [[ -z "$LEGACY_TOKEN" ]]; then
+            echo "::notice::LEGACY_RELEASES_PUSH_TOKEN not set — skipping mirror to theshid/miyo-releases"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download the signed APK from the canonical release
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern "miyo-${TAG}.apk" \
+            --dir . \
+            --clobber
+          # Legacy URL hard-codes `miyo.apk` — rename before upload.
+          mv "miyo-${TAG}.apk" miyo.apk
+          ls -lh miyo.apk
+
+      - name: Publish to theshid/miyo-releases
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.LEGACY_RELEASES_PUSH_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          notes="Mirror of Miyo $VERSION_NAME from theshid/miyo.\n\nStable URL: https://github.com/theshid/miyo-releases/releases/latest/download/miyo.apk\nCanonical release: https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+          if gh release view "$TAG" --repo theshid/miyo-releases >/dev/null 2>&1; then
+            echo "Release $TAG already exists in miyo-releases — re-uploading asset."
+            gh release upload "$TAG" miyo.apk \
+              --repo theshid/miyo-releases \
+              --clobber
+          else
+            gh release create "$TAG" miyo.apk \
+              --repo theshid/miyo-releases \
+              --title "$TAG" \
+              --notes "$(printf '%b' "$notes")"
+          fi
+          # Sanity check the asset name made the round trip.
+          asset=$(gh release view "$TAG" --repo theshid/miyo-releases --json assets --jq '.assets[].name')
+          if [[ "$asset" != "miyo.apk" ]]; then
+            echo "::error::Expected asset name 'miyo.apk' but got '$asset' — the latest/download/miyo.apk URL won't resolve"
+            exit 1
+          fi
+          echo "::notice::Mirror published: https://github.com/theshid/miyo-releases/releases/tag/${TAG}"

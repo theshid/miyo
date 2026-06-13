@@ -105,6 +105,10 @@ secret**:
 | `ANDROID_KEY_ALIAS` | Key alias (debug keystore default: `androiddebugkey`). |
 | `ANDROID_KEY_PASSWORD` | Key password (debug keystore default: `android`). |
 
+| Secret | Purpose |
+| --- | --- |
+| `LEGACY_RELEASES_PUSH_TOKEN` | Fine-grained PAT with `Contents: write` scope on `theshid/miyo-releases`. Enables the `publish_legacy_mirror` job, which mirrors each release's APK to the legacy repo as `miyo.apk` so the stable `releases/latest/download/miyo.apk` URL keeps serving the newest version. Without the secret, the mirror job logs a notice and exits cleanly — the canonical release still ships, only the legacy URL goes stale. |
+
 > 🔕 `SENTRY_AUTH_TOKEN` is currently **inactive**. The Sentry Gradle plugin
 > is removed (Gradle 8.9 task-creation incompatibility), so the workflow no
 > longer performs source-context or ProGuard-mapping uploads. The runtime
