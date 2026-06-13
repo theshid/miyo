@@ -186,11 +186,11 @@ class VideoPlayerViewModel(
             is AnimeSourceFailure.Blocked ->
                 "Anime source is temporarily blocking app access. This isn't specific to this title — try again later."
             is AnimeSourceFailure.Unavailable ->
-                "Anime source is temporarily down. Try again in a few minutes."
+                "Anime source is temporarily unavailable. Try again in a few minutes."
             is AnimeSourceFailure.TransportError ->
-                "Network problem reaching the anime source. Check your connection."
+                "Couldn't reach the anime source. Check your connection and try again."
             is AnimeSourceFailure.ContractChanged ->
-                "Anime source changed its page format. We're working on a fix."
+                "The anime source changed its page format. An app update may be required."
         }
 
     fun selectSourceById(id: String) {

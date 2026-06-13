@@ -14,6 +14,7 @@ import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Anime stream-URL parser scraping anineko.to (the post-anitaku rebrand of
@@ -43,20 +44,7 @@ class GogoParser(
                 extras = mapOf("query" to query),
             ).fold(
                 onFailure = { AnimeSourceResult.Failed(it) },
-                onSuccess = { doc ->
-                    val matches = doc.select(GogoSite.Selectors.SEARCH_RESULTS)
-                    reportSelectorCount(STAGE_SEARCH, GogoSite.Selectors.SEARCH_RESULTS, matches.size, mapOf("query" to query))
-                    AnimeSourceResult.Success(
-                        matches.map { el ->
-                            val img = el.selectFirst("img")
-                            AnimeSearchResult(
-                                slug = el.attr("href").removePrefix(GogoSite.Tokens.CATEGORY_PREFIX),
-                                name = img?.attr("alt").orEmpty(),
-                                cover = img?.attr("src").orEmpty(),
-                            )
-                        },
-                    )
-                },
+                onSuccess = { fetched -> parseSearchResults(fetched, mapOf("query" to query)) },
             )
         }
 
@@ -68,23 +56,7 @@ class GogoParser(
                 extras = mapOf("slug" to slug),
             ).fold(
                 onFailure = { AnimeSourceResult.Failed(it) },
-                onSuccess = { doc ->
-                    val anchors = doc.select(GogoSite.Selectors.EPISODE_LINKS_PRIMARY)
-                    reportSelectorCount(STAGE_EPISODES, GogoSite.Selectors.EPISODE_LINKS_PRIMARY, anchors.size, mapOf("slug" to slug))
-                    val episodes = mutableListOf<Episode>()
-                    for (el in anchors) {
-                        val href = el.attr("href").trim()
-                        if (!href.contains(GogoSite.Tokens.EPISODE_PATH_FRAGMENT)) continue
-                        val num =
-                            GogoSite.Patterns.EPISODE_NUMBER
-                                .find(href)
-                                ?.groupValues
-                                ?.get(1)
-                                ?: continue
-                        episodes.add(Episode(number = num, link = GogoSite.Paths.absoluteUrl(href)))
-                    }
-                    AnimeSourceResult.Success(episodes)
-                },
+                onSuccess = { fetched -> parseEpisodes(fetched, mapOf("slug" to slug)) },
             )
         }
 
@@ -96,42 +68,131 @@ class GogoParser(
                 extras = mapOf("episodeLink" to episodeLink),
             ).fold(
                 onFailure = { AnimeSourceResult.Failed(it) },
-                onSuccess = { doc ->
-                    val serverButtons = doc.select(GogoSite.Selectors.SERVER_LINKS_PRIMARY)
-                    reportSelectorCount(
-                        STAGE_STREAMS,
-                        GogoSite.Selectors.SERVER_LINKS_PRIMARY,
-                        serverButtons.size,
-                        mapOf(
-                            "episodeLink" to episodeLink,
-                        ),
-                    )
-                    val servers = mutableListOf<Triple<String, String, List<SubtitleTrack>>>()
-                    collectServers(serverButtons, servers)
-                    val links = mutableListOf<StreamLink>()
-                    for ((name, url, subs) in servers) {
-                        val extracted = extractDirectLink(name, url, subs)
-                        if (extracted != null) links.add(extracted)
-                    }
-                    AnimeSourceResult.Success(links)
-                },
+                onSuccess = { fetched -> parseStreams(fetched, mapOf("episodeLink" to episodeLink)) },
             )
         }
 
     /**
-     * Single point that performs the network round-trip + classifies the
-     * response. Returns the parsed [Document] on success, or a typed
-     * [`AnimeSourceFailure`] when something blocked us.
+     * Parse search-result cards out of a known-good response. Pure function
+     * over the [Document] so the failure-mode tests don't need a network mock.
      *
-     * Centralising this means every entry point (search / episodes /
-     * streams) gets the same Cloudflare detection, status handling, and
-     * telemetry — no chance for one path to silently swallow a challenge.
+     * Note: zero matches here is AMBIGUOUS — could be a legitimate empty
+     * search result or markup drift. We emit a Sentry warning but still
+     * return `Success(emptyList())` so the UI can render "no results found"
+     * truthfully for benign empty searches.
+     */
+    internal fun parseSearchResults(
+        fetched: FetchedResponse,
+        extras: Map<String, String>,
+    ): AnimeSourceResult<List<AnimeSearchResult>> {
+        val matches = fetched.document.select(GogoSite.Selectors.SEARCH_RESULTS)
+        if (matches.isEmpty()) {
+            logSelectorMiss(STAGE_SEARCH, GogoSite.Selectors.SEARCH_RESULTS, fetched, extras)
+        }
+        return AnimeSourceResult.Success(
+            matches.map { el ->
+                val img = el.selectFirst("img")
+                AnimeSearchResult(
+                    slug = el.attr("href").removePrefix(GogoSite.Tokens.CATEGORY_PREFIX),
+                    name = img?.attr("alt").orEmpty(),
+                    cover = img?.attr("src").orEmpty(),
+                )
+            },
+        )
+    }
+
+    /**
+     * Parse episode anchors. Zero matches is treated as
+     * [`AnimeSourceFailure.ContractChanged`] — a known anime page with no
+     * episode anchors is a strong signal of markup drift, not a "0 episodes"
+     * scenario (real "0 episodes" cases don't reach this codepath; the
+     * source returns a 404 first).
+     */
+    internal fun parseEpisodes(
+        fetched: FetchedResponse,
+        extras: Map<String, String>,
+    ): AnimeSourceResult<List<Episode>> {
+        val anchors = fetched.document.select(GogoSite.Selectors.EPISODE_LINKS_PRIMARY)
+        if (anchors.isEmpty()) {
+            logSelectorMiss(STAGE_EPISODES, GogoSite.Selectors.EPISODE_LINKS_PRIMARY, fetched, extras)
+            return AnimeSourceResult.Failed(AnimeSourceFailure.ContractChanged(STAGE_EPISODES))
+        }
+        val episodes = mutableListOf<Episode>()
+        for (el in anchors) {
+            val href = el.attr("href").trim()
+            if (!href.contains(GogoSite.Tokens.EPISODE_PATH_FRAGMENT)) continue
+            val num =
+                GogoSite.Patterns.EPISODE_NUMBER
+                    .find(href)
+                    ?.groupValues
+                    ?.get(1)
+                    ?: continue
+            episodes.add(Episode(number = num, link = GogoSite.Paths.absoluteUrl(href)))
+        }
+        // Anchors matched but every one was filtered out by the href shape
+        // check — also a contract change.
+        if (episodes.isEmpty()) {
+            logSelectorMiss(STAGE_EPISODES, "post-filter[$STAGE_EPISODES]", fetched, extras + ("anchor_count" to anchors.size.toString()))
+            return AnimeSourceResult.Failed(AnimeSourceFailure.ContractChanged(STAGE_EPISODES))
+        }
+        return AnimeSourceResult.Success(episodes)
+    }
+
+    /**
+     * Parse the embed-server buttons + drive the embed-extraction loop.
+     * Zero buttons on an episode page is treated as
+     * [`AnimeSourceFailure.ContractChanged`] — the markup expects every
+     * episode page to advertise at least one embed.
+     *
+     * Per-embed failures don't fail the whole call; each is logged with
+     * its server name and either silently skipped or surfaced via the
+     * eventual empty-list outcome.
+     */
+    internal fun parseStreams(
+        fetched: FetchedResponse,
+        extras: Map<String, String>,
+    ): AnimeSourceResult<List<StreamLink>> {
+        val serverButtons = fetched.document.select(GogoSite.Selectors.SERVER_LINKS_PRIMARY)
+        if (serverButtons.isEmpty()) {
+            logSelectorMiss(STAGE_STREAMS, GogoSite.Selectors.SERVER_LINKS_PRIMARY, fetched, extras)
+            return AnimeSourceResult.Failed(AnimeSourceFailure.ContractChanged(STAGE_STREAMS))
+        }
+        val servers = mutableListOf<Triple<String, String, List<SubtitleTrack>>>()
+        collectServers(serverButtons, servers)
+        val links = mutableListOf<StreamLink>()
+        for ((name, url, subs) in servers) {
+            val extracted = extractDirectLink(name, url, subs)
+            if (extracted != null) links.add(extracted)
+        }
+        return AnimeSourceResult.Success(links)
+    }
+
+    /**
+     * Wrapper around the fetched document + the response metadata we want
+     * available downstream (status, cf-ray, host) so the selector-zero
+     * telemetry knows where the data came from.
+     */
+    internal data class FetchedResponse(
+        val document: Document,
+        val status: Int,
+        val host: String,
+        val cfRay: String?,
+    )
+
+    /**
+     * Single point that performs the network round-trip + classifies the
+     * response. Returns the parsed [`FetchedResponse`] on success, or a
+     * typed [`AnimeSourceFailure`] when something blocked us.
+     *
+     * Centralising this means every entry point gets the same Cloudflare
+     * detection, status handling, and telemetry — no chance for one path
+     * to silently swallow a challenge.
      */
     private fun fetchDocument(
         url: String,
         stage: String,
         extras: Map<String, String>,
-    ): AnimeSourceResult<Document> {
+    ): AnimeSourceResult<FetchedResponse> {
         return try {
             val response =
                 Jsoup
@@ -144,9 +205,10 @@ class GogoParser(
             val status = response.statusCode()
             val body = response.body()
             val headerLookup: (String) -> String? = { name -> response.header(name) }
+            val cfRay = CloudflareDetector.cfRay(headerLookup)
+            val host = safeHost(url)
 
             if (CloudflareDetector.isChallenge(status, headerLookup, body)) {
-                val cfRay = CloudflareDetector.cfRay(headerLookup)
                 logger.reportWarning(
                     area = AREA,
                     method = stage,
@@ -154,7 +216,7 @@ class GogoParser(
                     extras =
                         extras +
                             mapOf(
-                                "host" to safeHost(url),
+                                "host" to host,
                                 "status" to status.toString(),
                                 "cf-ray" to (cfRay ?: "(none)"),
                             ),
@@ -167,12 +229,24 @@ class GogoParser(
                     area = AREA,
                     method = stage,
                     message = "non-success HTTP status",
-                    extras = extras + mapOf("host" to safeHost(url), "status" to status.toString()),
+                    extras = extras + mapOf("host" to host, "status" to status.toString()),
                 )
                 return AnimeSourceResult.Failed(AnimeSourceFailure.Unavailable(status))
             }
 
-            AnimeSourceResult.Success(Jsoup.parse(body, url))
+            AnimeSourceResult.Success(
+                FetchedResponse(
+                    document = Jsoup.parse(body, url),
+                    status = status,
+                    host = host,
+                    cfRay = cfRay,
+                ),
+            )
+        } catch (ce: CancellationException) {
+            // Coroutine cancellation must propagate untouched — Jsoup itself
+            // is blocking and won't throw this today, but defence-in-depth
+            // covers a future swap to a coroutine-aware engine.
+            throw ce
         } catch (e: IOException) {
             logger.reportError(area = AREA, method = stage, throwable = e, extras = extras + ("host" to safeHost(url)))
             AnimeSourceResult.Failed(AnimeSourceFailure.TransportError(e))
@@ -189,13 +263,12 @@ class GogoParser(
         runCatching { Uri.parse(url).host ?: url }
             .getOrDefault(url)
 
-    private fun reportSelectorCount(
+    private fun logSelectorMiss(
         stage: String,
         selector: String,
-        count: Int,
+        fetched: FetchedResponse,
         extras: Map<String, String>,
     ) {
-        if (count > 0) return
         logger.reportWarning(
             area = AREA,
             method = stage,
@@ -205,6 +278,9 @@ class GogoParser(
                     mapOf(
                         "selector" to selector,
                         "match_count" to "0",
+                        "host" to fetched.host,
+                        "status" to fetched.status.toString(),
+                        "cf-ray" to (fetched.cfRay ?: "(none)"),
                     ),
         )
     }
@@ -229,7 +305,7 @@ class GogoParser(
         subtitles: List<SubtitleTrack> = emptyList(),
     ): StreamLink? {
         return try {
-            val page =
+            val response =
                 Jsoup
                     .connect(url)
                     .ignoreHttpErrors(true)
@@ -237,15 +313,46 @@ class GogoParser(
                     .header("Referer", "${GogoSite.HOST}/")
                     .userAgent(GogoSite.USER_AGENT)
                     .timeout(REQUEST_TIMEOUT_MS)
-                    .get()
-                    .html()
+                    .execute()
+
+            val embedStatus = response.statusCode()
+            val embedBody = response.body()
+            val headerLookup: (String) -> String? = { headerName -> response.header(headerName) }
+
+            // Embed servers themselves can sit behind Cloudflare / fail with
+            // 5xx / time out. Surface per-server failures as breadcrumbs so
+            // the aggregate "no playable streams" doesn't hide the real cause.
+            if (CloudflareDetector.isChallenge(embedStatus, headerLookup, embedBody)) {
+                logger.reportWarning(
+                    area = AREA,
+                    method = "extractDirectLink",
+                    message = "embed CF challenge",
+                    extras =
+                        mapOf(
+                            "server" to name,
+                            "host" to safeHost(url),
+                            "status" to embedStatus.toString(),
+                            "cf-ray" to (CloudflareDetector.cfRay(headerLookup) ?: "(none)"),
+                        ),
+                )
+                return null
+            }
+            if (embedStatus !in 200..299) {
+                logger.reportWarning(
+                    area = AREA,
+                    method = "extractDirectLink",
+                    message = "embed non-success HTTP status",
+                    extras = mapOf("server" to name, "host" to safeHost(url), "status" to embedStatus.toString()),
+                )
+                return null
+            }
 
             // Strip query params from Referer — CDNs reject long/messy Referer headers
             val cleanReferer = url.substringBefore("?")
             val headers = mapOf("Referer" to cleanReferer)
 
             // 1) Direct regex on raw HTML
-            findStreamUrl(page)?.let { (streamUrl, _) ->
+            findStreamUrl(embedBody)?.let { (streamUrl, _) ->
                 return StreamLink(
                     server = name,
                     url = streamUrl,
@@ -256,7 +363,7 @@ class GogoParser(
             }
 
             // 2) Unpack eval(function(p,a,c,k,e,d){...}) obfuscated JS
-            val unpacked = unpackJsPacked(page) ?: return null
+            val unpacked = unpackJsPacked(embedBody) ?: return null
             // Prefer URL-derived subs; fall back to scanning the unpacked JS for VTT tracks.
             val allSubs = if (subtitles.isNotEmpty()) subtitles else parseSubtitlesFromUnpacked(unpacked)
 
@@ -270,6 +377,8 @@ class GogoParser(
                 )
             }
             null
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (e: Exception) {
             logger.reportError(
                 area = AREA,
