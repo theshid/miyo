@@ -5,11 +5,15 @@ import ani.saikou.domain.model.AnimeSearchResult
 import ani.saikou.domain.model.Episode
 import ani.saikou.domain.model.StreamLink
 import ani.saikou.domain.model.SubtitleTrack
+import ani.saikou.domain.model.anime.AnimeSourceFailure
+import ani.saikou.domain.model.anime.AnimeSourceResult
+import ani.saikou.domain.model.anime.fold
 import ani.saikou.platform.log.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
+import org.jsoup.nodes.Document
+import java.io.IOException
 
 /**
  * Anime stream-URL parser scraping anineko.to (the post-anitaku rebrand of
@@ -19,89 +23,191 @@ import org.jsoup.nodes.Element
  * Endpoint paths, CSS selectors, regex patterns, and site-stamped tokens
  * all live in [GogoSite] so a markup change is a one-place fix.
  *
+ * Responses are inspected (status + headers + body sniff) BEFORE parsing,
+ * so the parser distinguishes a Cloudflare challenge from a legitimate
+ * empty result. Failures are surfaced as typed [`AnimeSourceFailure`] —
+ * never swallowed into empty lists, because the UI used to mislabel
+ * outages as "anime not found" when the source had simply rejected us.
+ *
  * Lives in androidMain — Jsoup is JVM-only, [Uri] is Android-specific.
  * Mirrors the [ani.saikou.data.source.manga.MangaPillParser] pattern.
  */
 class GogoParser(
     private val logger: Logger,
 ) {
-    suspend fun search(query: String): List<AnimeSearchResult> =
+    suspend fun search(query: String): AnimeSourceResult<List<AnimeSearchResult>> =
         withContext(Dispatchers.IO) {
-            try {
-                val doc =
-                    Jsoup
-                        .connect(GogoSite.Paths.search(query))
-                        .userAgent(GogoSite.USER_AGENT)
-                        .timeout(10000)
-                        .get()
-
-                doc.select(GogoSite.Selectors.SEARCH_RESULTS).map { el: Element ->
-                    val img = el.selectFirst("img")
-                    AnimeSearchResult(
-                        slug = el.attr("href").removePrefix(GogoSite.Tokens.CATEGORY_PREFIX),
-                        name = img?.attr("alt").orEmpty(),
-                        cover = img?.attr("src").orEmpty(),
+            fetchDocument(
+                url = GogoSite.Paths.search(query),
+                stage = STAGE_SEARCH,
+                extras = mapOf("query" to query),
+            ).fold(
+                onFailure = { AnimeSourceResult.Failed(it) },
+                onSuccess = { doc ->
+                    val matches = doc.select(GogoSite.Selectors.SEARCH_RESULTS)
+                    reportSelectorCount(STAGE_SEARCH, GogoSite.Selectors.SEARCH_RESULTS, matches.size, mapOf("query" to query))
+                    AnimeSourceResult.Success(
+                        matches.map { el ->
+                            val img = el.selectFirst("img")
+                            AnimeSearchResult(
+                                slug = el.attr("href").removePrefix(GogoSite.Tokens.CATEGORY_PREFIX),
+                                name = img?.attr("alt").orEmpty(),
+                                cover = img?.attr("src").orEmpty(),
+                            )
+                        },
                     )
-                }
-            } catch (e: Exception) {
-                reportParserIssue("search", e, mapOf("query" to query))
-                emptyList()
-            }
+                },
+            )
         }
 
-    suspend fun getEpisodes(slug: String): List<Episode> =
+    suspend fun getEpisodes(slug: String): AnimeSourceResult<List<Episode>> =
         withContext(Dispatchers.IO) {
-            val episodes = mutableListOf<Episode>()
-            try {
-                val doc =
-                    Jsoup
-                        .connect(GogoSite.Paths.anime(slug))
-                        .userAgent(GogoSite.USER_AGENT)
-                        .timeout(10000)
-                        .get()
-
-                for (el in doc.select(GogoSite.Selectors.EPISODE_LINKS_PRIMARY)) {
-                    val href = el.attr("href").trim()
-                    if (!href.contains(GogoSite.Tokens.EPISODE_PATH_FRAGMENT)) continue
-                    val num =
-                        GogoSite.Patterns.EPISODE_NUMBER
-                            .find(href)
-                            ?.groupValues
-                            ?.get(1)
-                            ?: continue
-                    episodes.add(Episode(number = num, link = GogoSite.Paths.absoluteUrl(href)))
-                }
-            } catch (e: Exception) {
-                reportParserIssue("getEpisodes", e, mapOf("slug" to slug))
-            }
-            episodes
+            fetchDocument(
+                url = GogoSite.Paths.anime(slug),
+                stage = STAGE_EPISODES,
+                extras = mapOf("slug" to slug),
+            ).fold(
+                onFailure = { AnimeSourceResult.Failed(it) },
+                onSuccess = { doc ->
+                    val anchors = doc.select(GogoSite.Selectors.EPISODE_LINKS_PRIMARY)
+                    reportSelectorCount(STAGE_EPISODES, GogoSite.Selectors.EPISODE_LINKS_PRIMARY, anchors.size, mapOf("slug" to slug))
+                    val episodes = mutableListOf<Episode>()
+                    for (el in anchors) {
+                        val href = el.attr("href").trim()
+                        if (!href.contains(GogoSite.Tokens.EPISODE_PATH_FRAGMENT)) continue
+                        val num =
+                            GogoSite.Patterns.EPISODE_NUMBER
+                                .find(href)
+                                ?.groupValues
+                                ?.get(1)
+                                ?: continue
+                        episodes.add(Episode(number = num, link = GogoSite.Paths.absoluteUrl(href)))
+                    }
+                    AnimeSourceResult.Success(episodes)
+                },
+            )
         }
 
-    suspend fun getStreamLinks(episodeLink: String): List<StreamLink> =
+    suspend fun getStreamLinks(episodeLink: String): AnimeSourceResult<List<StreamLink>> =
         withContext(Dispatchers.IO) {
-            val links = mutableListOf<StreamLink>()
-            try {
-                val doc =
-                    Jsoup
-                        .connect(episodeLink)
-                        .userAgent(GogoSite.USER_AGENT)
-                        .ignoreHttpErrors(true)
-                        .timeout(10000)
-                        .get()
-
-                // (serverName, embedUrl, subtitleTracks)
-                val servers = mutableListOf<Triple<String, String, List<SubtitleTrack>>>()
-                collectServers(doc.select(GogoSite.Selectors.SERVER_LINKS_PRIMARY), servers)
-
-                for ((name, url, subs) in servers) {
-                    val extracted = extractDirectLink(name, url, subs)
-                    if (extracted != null) links.add(extracted)
-                }
-            } catch (e: Exception) {
-                reportParserIssue("getStreamLinks", e, mapOf("episodeLink" to episodeLink))
-            }
-            links
+            fetchDocument(
+                url = episodeLink,
+                stage = STAGE_STREAMS,
+                extras = mapOf("episodeLink" to episodeLink),
+            ).fold(
+                onFailure = { AnimeSourceResult.Failed(it) },
+                onSuccess = { doc ->
+                    val serverButtons = doc.select(GogoSite.Selectors.SERVER_LINKS_PRIMARY)
+                    reportSelectorCount(
+                        STAGE_STREAMS,
+                        GogoSite.Selectors.SERVER_LINKS_PRIMARY,
+                        serverButtons.size,
+                        mapOf(
+                            "episodeLink" to episodeLink,
+                        ),
+                    )
+                    val servers = mutableListOf<Triple<String, String, List<SubtitleTrack>>>()
+                    collectServers(serverButtons, servers)
+                    val links = mutableListOf<StreamLink>()
+                    for ((name, url, subs) in servers) {
+                        val extracted = extractDirectLink(name, url, subs)
+                        if (extracted != null) links.add(extracted)
+                    }
+                    AnimeSourceResult.Success(links)
+                },
+            )
         }
+
+    /**
+     * Single point that performs the network round-trip + classifies the
+     * response. Returns the parsed [Document] on success, or a typed
+     * [`AnimeSourceFailure`] when something blocked us.
+     *
+     * Centralising this means every entry point (search / episodes /
+     * streams) gets the same Cloudflare detection, status handling, and
+     * telemetry — no chance for one path to silently swallow a challenge.
+     */
+    private fun fetchDocument(
+        url: String,
+        stage: String,
+        extras: Map<String, String>,
+    ): AnimeSourceResult<Document> {
+        return try {
+            val response =
+                Jsoup
+                    .connect(url)
+                    .userAgent(GogoSite.USER_AGENT)
+                    .timeout(REQUEST_TIMEOUT_MS)
+                    .ignoreHttpErrors(true) // classify status ourselves
+                    .ignoreContentType(true)
+                    .execute()
+            val status = response.statusCode()
+            val body = response.body()
+            val headerLookup: (String) -> String? = { name -> response.header(name) }
+
+            if (CloudflareDetector.isChallenge(status, headerLookup, body)) {
+                val cfRay = CloudflareDetector.cfRay(headerLookup)
+                logger.reportWarning(
+                    area = AREA,
+                    method = stage,
+                    message = "Cloudflare challenge detected",
+                    extras =
+                        extras +
+                            mapOf(
+                                "host" to safeHost(url),
+                                "status" to status.toString(),
+                                "cf-ray" to (cfRay ?: "(none)"),
+                            ),
+                )
+                return AnimeSourceResult.Failed(AnimeSourceFailure.Blocked(status, cfRay))
+            }
+
+            if (status !in 200..299) {
+                logger.reportWarning(
+                    area = AREA,
+                    method = stage,
+                    message = "non-success HTTP status",
+                    extras = extras + mapOf("host" to safeHost(url), "status" to status.toString()),
+                )
+                return AnimeSourceResult.Failed(AnimeSourceFailure.Unavailable(status))
+            }
+
+            AnimeSourceResult.Success(Jsoup.parse(body, url))
+        } catch (e: IOException) {
+            logger.reportError(area = AREA, method = stage, throwable = e, extras = extras + ("host" to safeHost(url)))
+            AnimeSourceResult.Failed(AnimeSourceFailure.TransportError(e))
+        } catch (e: Exception) {
+            // Defence in depth — Jsoup occasionally throws non-IO runtime errors
+            // (malformed URI, charset issues). Bucket them as transport so the
+            // UI still surfaces a network-style message rather than a generic crash.
+            logger.reportError(area = AREA, method = stage, throwable = e, extras = extras + ("host" to safeHost(url)))
+            AnimeSourceResult.Failed(AnimeSourceFailure.TransportError(e))
+        }
+    }
+
+    private fun safeHost(url: String): String =
+        runCatching { Uri.parse(url).host ?: url }
+            .getOrDefault(url)
+
+    private fun reportSelectorCount(
+        stage: String,
+        selector: String,
+        count: Int,
+        extras: Map<String, String>,
+    ) {
+        if (count > 0) return
+        logger.reportWarning(
+            area = AREA,
+            method = stage,
+            message = "selector matched 0 elements — possible markup change",
+            extras =
+                extras +
+                    mapOf(
+                        "selector" to selector,
+                        "match_count" to "0",
+                    ),
+        )
+    }
 
     private fun collectServers(
         elements: org.jsoup.select.Elements,
@@ -117,14 +223,6 @@ class GogoParser(
         }
     }
 
-    private fun reportParserIssue(
-        method: String,
-        throwable: Throwable,
-        extras: Map<String, String> = emptyMap(),
-    ) {
-        logger.reportError(area = "GogoParser", method = method, throwable = throwable, extras = extras)
-    }
-
     private fun extractDirectLink(
         name: String,
         url: String,
@@ -138,7 +236,7 @@ class GogoParser(
                     .ignoreContentType(true)
                     .header("Referer", "${GogoSite.HOST}/")
                     .userAgent(GogoSite.USER_AGENT)
-                    .timeout(10000)
+                    .timeout(REQUEST_TIMEOUT_MS)
                     .get()
                     .html()
 
@@ -173,7 +271,12 @@ class GogoParser(
             }
             null
         } catch (e: Exception) {
-            reportParserIssue("extractDirectLink", e, mapOf("server" to name, "url" to url))
+            logger.reportError(
+                area = AREA,
+                method = "extractDirectLink",
+                throwable = e,
+                extras = mapOf("server" to name, "url" to url),
+            )
             null
         }
     }
@@ -240,7 +343,12 @@ class GogoParser(
                 }
             }
         } catch (e: Exception) {
-            reportParserIssue("parseSubtitlesFromUrl", e, mapOf("embedUrl" to embedUrl))
+            logger.reportError(
+                area = AREA,
+                method = "parseSubtitlesFromUrl",
+                throwable = e,
+                extras = mapOf("embedUrl" to embedUrl),
+            )
         }
         return tracks
     }
@@ -254,9 +362,17 @@ class GogoParser(
                 .distinctBy { it.url }
                 .toList()
         } catch (e: Exception) {
-            reportParserIssue("parseSubtitlesFromUnpacked", e)
+            logger.reportError(area = AREA, method = "parseSubtitlesFromUnpacked", throwable = e)
             emptyList()
         }
 
     private fun httpsIfy(text: String): String = if (text.startsWith("//")) "https:$text" else text
+
+    private companion object {
+        private const val AREA = "GogoParser"
+        private const val STAGE_SEARCH = "search"
+        private const val STAGE_EPISODES = "getEpisodes"
+        private const val STAGE_STREAMS = "getStreamLinks"
+        private const val REQUEST_TIMEOUT_MS = 10_000
+    }
 }

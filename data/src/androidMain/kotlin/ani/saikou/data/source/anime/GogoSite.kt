@@ -1,5 +1,7 @@
 package ani.saikou.data.source.anime
 
+import java.net.URLEncoder
+
 /**
  * Single source of truth for the anineko.to (the post-anitaku rebrand of
  * GogoAnime) scraping contract: endpoint paths, CSS selectors, regex
@@ -19,7 +21,9 @@ internal object GogoSite {
     const val DEFAULT_QUALITY = "Auto"
 
     object Paths {
-        fun search(query: String): String = "$HOST/browse?keyword=$query"
+        // Percent-encode the search query — without this, spaces ("Aoashi
+        // Season 2") and reserved characters silently corrupted the request.
+        fun search(query: String): String = "$HOST/browse?keyword=${URLEncoder.encode(query, "UTF-8")}"
 
         fun anime(slug: String): String = "$HOST/watch/$slug"
 

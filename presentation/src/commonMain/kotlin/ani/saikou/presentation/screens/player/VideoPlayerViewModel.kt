@@ -11,6 +11,9 @@ import ani.saikou.domain.model.Media
 import ani.saikou.domain.model.SkipTimes
 import ani.saikou.domain.model.StreamLink
 import ani.saikou.domain.model.WatchHistoryItem
+import ani.saikou.domain.model.anime.AnimeSourceFailure
+import ani.saikou.domain.model.anime.AnimeSourceResult
+import ani.saikou.domain.model.anime.LoadedEpisodeStream
 import ani.saikou.domain.usecase.activity.RecordActivityEventUseCase
 import ani.saikou.domain.usecase.anilist.EditListEntryUseCase
 import ani.saikou.domain.usecase.anilist.GetMediaDetailUseCase
@@ -106,7 +109,16 @@ class VideoPlayerViewModel(
             }
 
             // No history — search the source catalog.
-            animeSources = resolveAnimeSources(title)
+            animeSources =
+                when (val outcome = resolveAnimeSources(title)) {
+                    is AnimeSourceResult.Failed -> {
+                        val message = friendlySourceMessage(outcome.failure)
+                        _uiState.update { it.copy(isLoading = false, error = message) }
+                        reportPlayerError("resolveAnimeSources: ${outcome.failure::class.simpleName}")
+                        return@launch
+                    }
+                    is AnimeSourceResult.Success -> outcome.value
+                }
             if (animeSources.isEmpty()) {
                 _uiState.update { it.copy(isLoading = false, error = "Anime not found on source") }
                 reportPlayerError("Anime not found on source")
@@ -134,25 +146,52 @@ class VideoPlayerViewModel(
     }
 
     private suspend fun loadEpisodeFromSource(slug: String) {
-        val links = loadEpisodeStream(slug, episodeNum)
-        if (links == null) {
-            _uiState.update { it.copy(isLoading = false, error = "Episode $episodeNum not found") }
-            reportPlayerError("Episode not found on source")
-            return
-        }
-        if (links.isEmpty()) {
-            _uiState.update { it.copy(isLoading = false, error = "No playable streams found") }
-            reportPlayerError("No playable streams extracted from embeds")
-            return
-        }
-        _uiState.update {
-            it.copy(
-                streamLinks = links,
-                selectedLink = links.firstOrNull(),
-                isLoading = false,
-            )
+        when (val outcome = loadEpisodeStream(slug, episodeNum)) {
+            is AnimeSourceResult.Failed -> {
+                val message = friendlySourceMessage(outcome.failure)
+                _uiState.update { it.copy(isLoading = false, error = message) }
+                reportPlayerError("loadEpisodeStream: ${outcome.failure::class.simpleName}")
+            }
+            is AnimeSourceResult.Success ->
+                when (val loaded = outcome.value) {
+                    is LoadedEpisodeStream.EpisodeNotFound -> {
+                        _uiState.update { it.copy(isLoading = false, error = "Episode $episodeNum not found") }
+                        reportPlayerError("Episode not found on source")
+                    }
+                    is LoadedEpisodeStream.Available -> {
+                        if (loaded.links.isEmpty()) {
+                            _uiState.update { it.copy(isLoading = false, error = "No playable streams found") }
+                            reportPlayerError("No playable streams extracted from embeds")
+                        } else {
+                            _uiState.update {
+                                it.copy(
+                                    streamLinks = loaded.links,
+                                    selectedLink = loaded.links.firstOrNull(),
+                                    isLoading = false,
+                                )
+                            }
+                        }
+                    }
+                }
         }
     }
+
+    /**
+     * Maps a typed source failure to the copy the player surfaces. Specific
+     * messages are favoured over a single generic one so the user knows
+     * whether to retry, try another source, or wait it out.
+     */
+    private fun friendlySourceMessage(failure: AnimeSourceFailure): String =
+        when (failure) {
+            is AnimeSourceFailure.Blocked ->
+                "Anime source is temporarily blocking app access. This isn't specific to this title — try again later."
+            is AnimeSourceFailure.Unavailable ->
+                "Anime source is temporarily down. Try again in a few minutes."
+            is AnimeSourceFailure.TransportError ->
+                "Network problem reaching the anime source. Check your connection."
+            is AnimeSourceFailure.ContractChanged ->
+                "Anime source changed its page format. We're working on a fix."
+        }
 
     fun selectSourceById(id: String) {
         val source = animeSources.find { it.slug == id } ?: return

@@ -148,7 +148,18 @@ fun MediaDetailScreen(
             sourceSearching = true
             pendingEpisode = episodeNum
             val title = media.nameRomaji ?: media.name ?: media.displayTitle
-            val sources = resolveAnimeSources(title)
+            val sources =
+                when (val outcome = resolveAnimeSources(title)) {
+                    is ani.saikou.domain.model.anime.AnimeSourceResult.Failed -> {
+                        // Source rejected / unreachable — let the player render
+                        // the typed error message rather than silently showing
+                        // an empty picker.
+                        onNavigateToPlayer(episodeNum, null)
+                        sourceSearching = false
+                        return@launch
+                    }
+                    is ani.saikou.domain.model.anime.AnimeSourceResult.Success -> outcome.value
+                }
             sourceSearching = false
 
             when {
