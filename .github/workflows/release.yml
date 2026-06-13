@@ -14,6 +14,11 @@ on:
         description: 'Tag to (re-)release, e.g. v1.3.0'
         required: true
         type: string
+      skip_legacy_mirror:
+        description: 'Skip copying the APK to theshid/miyo-releases for this run'
+        required: false
+        type: boolean
+        default: false
 
 # Hold the manifest publish lane single-file. Two simultaneous releases
 # would race on the Pages deployment — concurrency cancels the older run.
@@ -364,13 +369,20 @@ jobs:
       TAG: ${{ needs.release.outputs.tag }}
       VERSION_NAME: ${{ needs.release.outputs.version_name }}
       LEGACY_TOKEN: ${{ secrets.LEGACY_RELEASES_PUSH_TOKEN }}
+      SKIP_BY_OPERATOR: ${{ github.event.inputs.skip_legacy_mirror }}
     steps:
-      - name: Skip if no legacy-mirror PAT configured
+      - name: Skip if no legacy-mirror PAT configured or operator opted out
         id: check
         shell: bash
         run: |
           if [[ -z "$LEGACY_TOKEN" ]]; then
             echo "::notice::LEGACY_RELEASES_PUSH_TOKEN not set — skipping mirror to theshid/miyo-releases"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$SKIP_BY_OPERATOR" == "true" ]]; then
+            # The skip_legacy_mirror input only exists on workflow_dispatch
+            # runs. On tag pushes the env var is empty, so this never matches
+            # accidentally.
+            echo "::notice::skip_legacy_mirror=true — skipping mirror by operator request"
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
