@@ -197,11 +197,9 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          # Optional. When set, app/build.gradle.kts's `hasSentryAuth` flips
-          # to true and the Sentry plugin uploads source context + ProGuard
-          # mapping. When absent, the build still succeeds — uploads are
-          # skipped at the plugin level (see `sentry { … }` block).
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          # NOTE: SENTRY_AUTH_TOKEN was wired here while the Sentry Gradle
+          # plugin was active. The plugin was removed (Gradle 8.9 incompat);
+          # re-add the env var if/when the plugin returns.
         run: ./gradlew --no-daemon :app:assembleRelease
 
       - name: Verify APK was signed and stage artifact

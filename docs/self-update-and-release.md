@@ -105,11 +105,12 @@ secret**:
 | `ANDROID_KEY_ALIAS` | Key alias (debug keystore default: `androiddebugkey`). |
 | `ANDROID_KEY_PASSWORD` | Key password (debug keystore default: `android`). |
 
-Optional:
-
-| Secret | Purpose |
-| --- | --- |
-| `SENTRY_AUTH_TOKEN` | Enables source-context upload to Sentry during the release build. Without it, the build still succeeds (source bundle skipped). |
+> 🔕 `SENTRY_AUTH_TOKEN` is currently **inactive**. The Sentry Gradle plugin
+> is removed (Gradle 8.9 task-creation incompatibility), so the workflow no
+> longer performs source-context or ProGuard-mapping uploads. The runtime
+> Sentry SDK still ships in the APK — crash reporting works. Re-enable the
+> plugin (see `app/build.gradle.kts`) and re-add the secret here if/when the
+> plugin gains Gradle-8.9 compatibility.
 
 The workflow's **Verify release signing secrets are present** step fails fast
 when any of the four required secrets is missing.
@@ -191,8 +192,10 @@ idempotent — it reuses an existing release and re-uploads the asset with
   keytool -printcert -jarfile ~/path/to/miyo.apk | grep "SHA256:"
   ```
 * The CI build never generates a new signing key. The workflow base64-decodes
-  the supplied secret into `app/build/ci-keystore.jks` and uses it for the
-  release signing config.
+  the supplied secret into a JVM temporary file (via `File.createTempFile`,
+  marked `deleteOnExit`) and wires it as the release signing config. The temp
+  file lives outside `app/build/` so `./gradlew clean assembleRelease` cannot
+  delete the keystore between configuration and signing.
 * If at some point you decide a key rotation is necessary, plan a coordinated
   re-onboarding: ship a final 1.2.x release that informs users they must
   uninstall, then publish 1.3.0 under the new key.

@@ -8,7 +8,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.ksp) apply false
-    alias(libs.plugins.sentry.android) apply false
+    // Sentry plugin alias removed — see app/build.gradle.kts for the Gradle
+    // 8.9 incompatibility that motivated removal. SDK dependency still ships.
     alias(libs.plugins.ktlint) apply false
     alias(libs.plugins.detekt) apply false
 }
