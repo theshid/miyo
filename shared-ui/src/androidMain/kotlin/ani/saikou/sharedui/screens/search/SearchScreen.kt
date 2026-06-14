@@ -281,7 +281,7 @@ fun SearchScreen(
                         }
                     }
                 },
-                modifier = Modifier.align(Alignment.BottomEnd),
+                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }

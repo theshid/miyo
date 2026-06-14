@@ -168,7 +168,7 @@ fun AnimeScreen(
         ScrollToTopFab(
             visible = showFab,
             onClick = { scope.launch { listState.animateScrollToItem(0) } },
-            modifier = Modifier.align(Alignment.BottomEnd),
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
