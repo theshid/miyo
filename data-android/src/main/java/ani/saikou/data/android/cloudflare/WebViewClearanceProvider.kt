@@ -12,13 +12,13 @@ import ani.saikou.platform.log.Logger
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * Off-screen WebView solver for Cloudflare's "Just a moment…" challenge.
@@ -127,7 +127,15 @@ class WebViewClearanceProvider(
         withContext(Dispatchers.Main) {
             val target = "https://$host/"
             val cookieManager = CookieManager.getInstance().apply { setAcceptCookie(true) }
-            cookieManager.removeSessionCookies(null)
+            // `removeSessionCookies` only drops cookies without an Expires/Max-Age —
+            // `cf_clearance` is persistent, so a stale-but-rejected cookie would
+            // survive and immediately register as "solved" on the next attempt,
+            // re-issuing a fresh 50-min cache entry around the bad value. Clear
+            // EVERY cookie so the new solve starts from a known-empty jar.
+            suspendCancellableCoroutine<Unit> { cont ->
+                cookieManager.removeAllCookies { cont.resume(Unit) }
+            }
+            cookieManager.flush()
 
             val webView = createSolverWebView()
             cookieManager.setAcceptThirdPartyCookies(webView, true)
@@ -135,15 +143,15 @@ class WebViewClearanceProvider(
             try {
                 val solved =
                     withTimeoutOrNull(headlessTimeoutMs) {
-                        suspendCoroutine<CloudflareClearance?> { continuation ->
-                            val resumed = ContinuationLatch(continuation)
+                        suspendCancellableCoroutine<CloudflareClearance?> { continuation ->
+                            val latch = ContinuationLatch(continuation)
                             webView.webViewClient =
                                 ClearanceWebViewClient(
                                     host = host,
                                     cookieManager = cookieManager,
                                     webView = webView,
                                     cacheTtlMs = cacheTtlMs,
-                                    latch = resumed,
+                                    latch = latch,
                                 )
                             webView.loadUrl(target)
 
@@ -151,13 +159,25 @@ class WebViewClearanceProvider(
                             // real page after the challenge cleared without firing a
                             // distinguishable navigation event. The poll picks up the
                             // cookie even if the client callbacks don't.
-                            pollForCookie(
-                                host = host,
-                                webView = webView,
-                                cookieManager = cookieManager,
-                                cacheTtlMs = cacheTtlMs,
-                                latch = resumed,
-                            )
+                            val pollRunnable =
+                                pollForCookie(
+                                    host = host,
+                                    webView = webView,
+                                    cookieManager = cookieManager,
+                                    cacheTtlMs = cacheTtlMs,
+                                    latch = latch,
+                                )
+
+                            // Timeout (or any upstream cancel) must tear down the
+                            // poll loop too — otherwise the runnable keeps re-posting
+                            // and would touch the WebView after we destroy it in
+                            // `finally`. `invokeOnCancellation` may fire on any
+                            // thread, so hop back to the WebView's handler.
+                            continuation.invokeOnCancellation {
+                                webView.post {
+                                    webView.removeCallbacks(pollRunnable)
+                                }
+                            }
                         }
                     }
                 solved
@@ -189,8 +209,8 @@ class WebViewClearanceProvider(
         cookieManager: CookieManager,
         cacheTtlMs: Long,
         latch: ContinuationLatch<CloudflareClearance?>,
-    ) {
-        webView.post(
+    ): Runnable {
+        val runnable =
             object : Runnable {
                 override fun run() {
                     if (latch.isResumed) return
@@ -202,8 +222,9 @@ class WebViewClearanceProvider(
                     }
                     webView.postDelayed(this, COOKIE_POLL_INTERVAL_MS)
                 }
-            },
-        )
+            }
+        webView.post(runnable)
+        return runnable
     }
 
     private fun bundleClearance(
@@ -286,11 +307,8 @@ class WebViewClearanceProvider(
      * double-resuming the underlying continuation.
      */
     private class ContinuationLatch<T>(
-        private val cont: CancellableContinuation<T>?,
-        private val plain: kotlin.coroutines.Continuation<T>? = null,
+        private val cont: CancellableContinuation<T>,
     ) {
-        constructor(c: kotlin.coroutines.Continuation<T>) : this(null, c)
-
         @Volatile
         var isResumed: Boolean = false
             private set
@@ -300,8 +318,7 @@ class WebViewClearanceProvider(
             if (isResumed) return
             isResumed = true
             try {
-                cont?.resume(value)
-                plain?.resume(value)
+                if (cont.isActive) cont.resume(value)
             } catch (_: CancellationException) {
                 // Continuation already cancelled by the outer withTimeout.
             } catch (_: IllegalStateException) {
