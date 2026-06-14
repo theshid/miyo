@@ -8,6 +8,7 @@ import ani.saikou.data.repository.AnimeSourceRepositoryImpl
 import ani.saikou.data.repository.DownloadRepositoryImpl
 import ani.saikou.data.repository.HistoryRepositoryImpl
 import ani.saikou.data.repository.MangaSourceRepositoryImpl
+import ani.saikou.data.source.anime.AnizoneParser
 import ani.saikou.data.source.anime.GogoParser
 import ani.saikou.data.source.manga.MangaDexParser
 import ani.saikou.data.source.manga.MangaPillParser
@@ -16,6 +17,7 @@ import ani.saikou.domain.repository.AnimeSourceRepository
 import ani.saikou.domain.repository.DownloadRepository
 import ani.saikou.domain.repository.HistoryRepository
 import ani.saikou.domain.repository.MangaSourceRepository
+import ani.saikou.domain.source.AnimeProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -103,7 +105,15 @@ val dataAndroidModule =
         single<ActivityRepository> { ActivityRepositoryImpl(dao = get()) }
 
         // ─── Anime source aggregation ──────────────────────────────────────
-        // Single-provider for now (GogoAnime via GogoParser); future stream
-        // sources slot in here behind the same domain interface.
-        single<AnimeSourceRepository> { AnimeSourceRepositoryImpl(gogo = get()) }
+        // Multi-provider: queries fan out across every registered AnimeProvider.
+        // anizone listed first → its results lead the picker since anineko is
+        // currently behind a Cloudflare block. Order also flows into the
+        // failure-precedence fallback inside the repository.
+        single { AnizoneParser(logger = get()) }
+        single<AnimeSourceRepository> {
+            AnimeSourceRepositoryImpl(
+                providers = listOf<AnimeProvider>(get<AnizoneParser>(), get<GogoParser>()),
+                logger = get(),
+            )
+        }
     }

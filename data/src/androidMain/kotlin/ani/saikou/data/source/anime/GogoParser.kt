@@ -8,6 +8,7 @@ import ani.saikou.domain.model.SubtitleTrack
 import ani.saikou.domain.model.anime.AnimeSourceFailure
 import ani.saikou.domain.model.anime.AnimeSourceResult
 import ani.saikou.domain.model.anime.fold
+import ani.saikou.domain.source.AnimeProvider
 import ani.saikou.platform.log.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,8 +36,12 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class GogoParser(
     private val logger: Logger,
-) {
-    suspend fun search(query: String): AnimeSourceResult<List<AnimeSearchResult>> =
+) : AnimeProvider {
+    override val id: String = "anineko"
+    override val host: String = "anineko.to"
+    override val displayName: String = "Anineko"
+
+    override suspend fun search(query: String): AnimeSourceResult<List<AnimeSearchResult>> =
         withContext(Dispatchers.IO) {
             fetchDocument(
                 url = GogoSite.Paths.search(query),
@@ -48,7 +53,7 @@ class GogoParser(
             )
         }
 
-    suspend fun getEpisodes(slug: String): AnimeSourceResult<List<Episode>> =
+    override suspend fun getEpisodes(slug: String): AnimeSourceResult<List<Episode>> =
         withContext(Dispatchers.IO) {
             fetchDocument(
                 url = GogoSite.Paths.anime(slug),
@@ -60,7 +65,7 @@ class GogoParser(
             )
         }
 
-    suspend fun getStreamLinks(episodeLink: String): AnimeSourceResult<List<StreamLink>> =
+    override suspend fun getStreamLinks(episodeLink: String): AnimeSourceResult<List<StreamLink>> =
         withContext(Dispatchers.IO) {
             fetchDocument(
                 url = episodeLink,
