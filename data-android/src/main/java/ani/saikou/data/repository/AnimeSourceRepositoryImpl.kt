@@ -48,10 +48,15 @@ class AnimeSourceRepositoryImpl(
 
         val results = mutableListOf<AnimeSearchResult>()
         val failures = mutableListOf<Pair<AnimeProvider, AnimeSourceFailure>>()
+        var anyProviderSucceeded = false
         for ((provider, outcome) in outcomes) {
             when (outcome) {
                 is AnimeSourceResult.Failed -> failures.add(provider to outcome.failure)
                 is AnimeSourceResult.Success -> {
+                    // Empty-success counts — one provider returning "no matches"
+                    // means the search itself worked, and the UI should render
+                    // "not found" rather than another provider's failure copy.
+                    anyProviderSucceeded = true
                     for (entry in outcome.value) {
                         results.add(entry.copy(slug = encodeSlug(provider.id, entry.slug)))
                     }
@@ -59,7 +64,7 @@ class AnimeSourceRepositoryImpl(
             }
         }
 
-        if (results.isEmpty() && failures.isNotEmpty()) {
+        if (!anyProviderSucceeded && failures.isNotEmpty()) {
             logger.reportWarning(
                 area = AREA,
                 method = "search",
