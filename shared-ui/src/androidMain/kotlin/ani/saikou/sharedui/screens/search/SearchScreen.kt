@@ -97,15 +97,15 @@ fun SearchScreen(
     }
 
     // Apply initial filters once. When the user lands here from a "search"
-    // tap (no initial filters), open the keyboard so they can type
-    // immediately. When they landed from a category chip (initialGenre /
-    // initialSort / initialType), they want to browse results — don't steal
-    // focus and don't show the IME.
+    // tap, no initial GENRE or SORT is set — open the keyboard so they can
+    // type immediately. `initialType` is just a media-type scope (anime vs
+    // manga) the catalog screens always supply; it doesn't mean the user
+    // pre-selected anything, so it doesn't suppress the focus grab.
     androidx.compose.runtime.LaunchedEffect(Unit) {
         if (initialType != null) viewModel.updateType(initialType)
         if (initialSort != null) viewModel.updateSort(initialSort)
         if (initialGenre != null) viewModel.toggleGenre(initialGenre)
-        if (initialType == null && initialSort == null && initialGenre == null) {
+        if (initialGenre == null && initialSort == null) {
             focusRequester.requestFocus()
             keyboardController?.show()
         }
