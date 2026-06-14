@@ -34,6 +34,17 @@ interface AnimeProvider {
     /** Display copy shown in the source picker. */
     val displayName: String
 
+    /**
+     * Hosts this provider needs Cloudflare clearance for. Empty when the
+     * source isn't behind Cloudflare. The repository / parser HTTP layer
+     * consults the [`CloudflareClearanceProvider`] when a request targets
+     * one of these hosts and injects the resulting cookies + UA. Reused
+     * across calls so a single clearance solve unlocks search + episodes +
+     * stream-page requests.
+     */
+    val cloudflareHosts: Set<String>
+        get() = emptySet()
+
     suspend fun search(query: String): AnimeSourceResult<List<AnimeSearchResult>>
 
     suspend fun getEpisodes(slug: String): AnimeSourceResult<List<Episode>>

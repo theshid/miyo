@@ -1,5 +1,6 @@
 package ani.saikou.data.android.di
 
+import ani.saikou.data.android.cloudflare.WebViewClearanceProvider
 import ani.saikou.data.local.db.SaikouDatabase
 import ani.saikou.data.local.downloads.ChapterSizeEstimator
 import ani.saikou.data.local.downloads.MangaDownloadManager
@@ -18,6 +19,7 @@ import ani.saikou.domain.repository.DownloadRepository
 import ani.saikou.domain.repository.HistoryRepository
 import ani.saikou.domain.repository.MangaSourceRepository
 import ani.saikou.domain.source.AnimeProvider
+import ani.saikou.domain.source.CloudflareClearanceProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -70,9 +72,21 @@ val dataAndroidModule =
         single { get<SaikouDatabase>().watchHistoryDao() }
         single { get<SaikouDatabase>().activityEventDao() }
 
+        // ─── Cloudflare clearance (WebView-backed) ──────────────────────────
+        // Off-screen WebView solver for the "Just a moment…" challenge — the
+        // bundle (cookies + UA + expiry) is fed into parsers that declare
+        // `cloudflareHosts`. Single instance so cache + circuit breaker are
+        // shared across every consumer.
+        single<CloudflareClearanceProvider> {
+            WebViewClearanceProvider(
+                appContext = androidContext(),
+                logger = get(),
+            )
+        }
+
         // ─── Source parsers (JVM-only) ──────────────────────────────────────
         singleOf(::MangaPillParser)
-        singleOf(::GogoParser)
+        single { GogoParser(logger = get(), clearanceProvider = get()) }
 
         // ─── Downloads ──────────────────────────────────────────────────────
         singleOf(::ChapterSizeEstimator)

@@ -9,6 +9,8 @@ import ani.saikou.domain.model.anime.AnimeSourceFailure
 import ani.saikou.domain.model.anime.AnimeSourceResult
 import ani.saikou.domain.model.anime.fold
 import ani.saikou.domain.source.AnimeProvider
+import ani.saikou.domain.source.CloudflareClearance
+import ani.saikou.domain.source.CloudflareClearanceProvider
 import ani.saikou.platform.log.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -36,10 +38,12 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class GogoParser(
     private val logger: Logger,
+    private val clearanceProvider: CloudflareClearanceProvider? = null,
 ) : AnimeProvider {
     override val id: String = "anineko"
     override val host: String = "anineko.to"
     override val displayName: String = "Anineko"
+    override val cloudflareHosts: Set<String> = setOf("anineko.to")
 
     override suspend fun search(query: String): AnimeSourceResult<List<AnimeSearchResult>> =
         withContext(Dispatchers.IO) {
@@ -193,20 +197,68 @@ class GogoParser(
      * detection, status handling, and telemetry — no chance for one path
      * to silently swallow a challenge.
      */
-    private fun fetchDocument(
+    private suspend fun fetchDocument(
         url: String,
         stage: String,
         extras: Map<String, String>,
     ): AnimeSourceResult<FetchedResponse> {
+        val host = safeHost(url)
+        val needsCf = cloudflareHosts.any { host.equals(it, ignoreCase = true) }
+
+        var clearance: CloudflareClearance? =
+            if (needsCf) clearanceProvider?.getClearance(host) else null
+
+        repeat(MAX_FETCH_ATTEMPTS) { attempt ->
+            val result = executeOnce(url, stage, extras, clearance)
+            when (result) {
+                is FetchAttempt.Outcome -> return result.result
+                is FetchAttempt.Challenged -> {
+                    val isLastAttempt = attempt == MAX_FETCH_ATTEMPTS - 1
+                    if (isLastAttempt || !needsCf || clearanceProvider == null) {
+                        return AnimeSourceResult.Failed(AnimeSourceFailure.Blocked(result.status, result.cfRay))
+                    }
+                    // First-attempt challenge: cached clearance was stale or
+                    // we had none. Force a fresh solve, then loop.
+                    clearanceProvider.invalidate(host)
+                    clearance = clearanceProvider.getClearance(host)
+                    if (clearance == null) {
+                        return AnimeSourceResult.Failed(AnimeSourceFailure.Blocked(result.status, result.cfRay))
+                    }
+                }
+            }
+        }
+        // Defensive fallback — repeat blocks shouldn't fall through, but Kotlin
+        // can't prove that without an explicit return.
+        return AnimeSourceResult.Failed(AnimeSourceFailure.Blocked(0, null))
+    }
+
+    private sealed interface FetchAttempt {
+        data class Outcome(
+            val result: AnimeSourceResult<FetchedResponse>,
+        ) : FetchAttempt
+
+        data class Challenged(
+            val status: Int,
+            val cfRay: String?,
+        ) : FetchAttempt
+    }
+
+    private fun executeOnce(
+        url: String,
+        stage: String,
+        extras: Map<String, String>,
+        clearance: CloudflareClearance?,
+    ): FetchAttempt {
         return try {
-            val response =
+            val connection =
                 Jsoup
                     .connect(url)
-                    .userAgent(GogoSite.USER_AGENT)
+                    .userAgent(clearance?.userAgent ?: GogoSite.USER_AGENT)
                     .timeout(REQUEST_TIMEOUT_MS)
                     .ignoreHttpErrors(true) // classify status ourselves
                     .ignoreContentType(true)
-                    .execute()
+            if (clearance != null) connection.cookies(clearance.cookies)
+            val response = connection.execute()
             val status = response.statusCode()
             val body = response.body()
             val headerLookup: (String) -> String? = { name -> response.header(name) }
@@ -226,7 +278,7 @@ class GogoParser(
                                 "cf-ray" to (cfRay ?: "(none)"),
                             ),
                 )
-                return AnimeSourceResult.Failed(AnimeSourceFailure.Blocked(status, cfRay))
+                return FetchAttempt.Challenged(status, cfRay)
             }
 
             if (status !in 200..299) {
@@ -236,15 +288,17 @@ class GogoParser(
                     message = "non-success HTTP status",
                     extras = extras + mapOf("host" to host, "status" to status.toString()),
                 )
-                return AnimeSourceResult.Failed(AnimeSourceFailure.Unavailable(status))
+                return FetchAttempt.Outcome(AnimeSourceResult.Failed(AnimeSourceFailure.Unavailable(status)))
             }
 
-            AnimeSourceResult.Success(
-                FetchedResponse(
-                    document = Jsoup.parse(body, url),
-                    status = status,
-                    host = host,
-                    cfRay = cfRay,
+            FetchAttempt.Outcome(
+                AnimeSourceResult.Success(
+                    FetchedResponse(
+                        document = Jsoup.parse(body, url),
+                        status = status,
+                        host = host,
+                        cfRay = cfRay,
+                    ),
                 ),
             )
         } catch (ce: CancellationException) {
@@ -254,13 +308,13 @@ class GogoParser(
             throw ce
         } catch (e: IOException) {
             logger.reportError(area = AREA, method = stage, throwable = e, extras = extras + ("host" to safeHost(url)))
-            AnimeSourceResult.Failed(AnimeSourceFailure.TransportError(e))
+            FetchAttempt.Outcome(AnimeSourceResult.Failed(AnimeSourceFailure.TransportError(e)))
         } catch (e: Exception) {
             // Defence in depth — Jsoup occasionally throws non-IO runtime errors
             // (malformed URI, charset issues). Bucket them as transport so the
             // UI still surfaces a network-style message rather than a generic crash.
             logger.reportError(area = AREA, method = stage, throwable = e, extras = extras + ("host" to safeHost(url)))
-            AnimeSourceResult.Failed(AnimeSourceFailure.TransportError(e))
+            FetchAttempt.Outcome(AnimeSourceResult.Failed(AnimeSourceFailure.TransportError(e)))
         }
     }
 
@@ -488,5 +542,6 @@ class GogoParser(
         private const val STAGE_EPISODES = "getEpisodes"
         private const val STAGE_STREAMS = "getStreamLinks"
         private const val REQUEST_TIMEOUT_MS = 10_000
+        private const val MAX_FETCH_ATTEMPTS = 2
     }
 }
