@@ -206,6 +206,13 @@ fun HomeScreen(
                             color = OnSurface,
                             fontWeight = FontWeight.SemiBold,
                         )
+                        if (state.appVersionName.isNotBlank()) {
+                            Text(
+                                text = "Miyo v${state.appVersionName}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = OnSurfaceVariant,
+                            )
+                        }
                     }
                 }
                 Row {

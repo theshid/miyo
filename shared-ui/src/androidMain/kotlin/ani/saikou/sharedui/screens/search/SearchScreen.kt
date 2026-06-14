@@ -19,7 +19,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -36,15 +38,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,6 +59,7 @@ import ani.saikou.domain.model.Media
 import ani.saikou.presentation.screens.search.SearchViewModel
 import ani.saikou.sharedui.components.GenreChip
 import ani.saikou.sharedui.components.MediaBannerCard
+import ani.saikou.sharedui.components.ScrollToTopFab
 import ani.saikou.sharedui.theme.GhostBorder
 import ani.saikou.sharedui.theme.OnSurface
 import ani.saikou.sharedui.theme.OnSurfaceVariant
@@ -59,6 +67,7 @@ import ani.saikou.sharedui.theme.Primary
 import ani.saikou.sharedui.theme.SurfaceContainer
 import ani.saikou.sharedui.theme.SurfaceVariant
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -72,12 +81,34 @@ fun SearchScreen(
     viewModel: SearchViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
+    val scope = rememberCoroutineScope()
+    val showFab by remember {
+        derivedStateOf {
+            if (state.isGridView) {
+                gridState.firstVisibleItemIndex > 0
+            } else {
+                listState.firstVisibleItemIndex > 0
+            }
+        }
+    }
 
-    // Apply initial filters once
+    // Apply initial filters once. When the user lands here from a "search"
+    // tap (no initial filters), open the keyboard so they can type
+    // immediately. When they landed from a category chip (initialGenre /
+    // initialSort / initialType), they want to browse results — don't steal
+    // focus and don't show the IME.
     androidx.compose.runtime.LaunchedEffect(Unit) {
         if (initialType != null) viewModel.updateType(initialType)
         if (initialSort != null) viewModel.updateSort(initialSort)
         if (initialGenre != null) viewModel.toggleGenre(initialGenre)
+        if (initialType == null && initialSort == null && initialGenre == null) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
     }
 
     Column(
@@ -100,6 +131,7 @@ fun SearchScreen(
                 query = state.query,
                 onQueryChange = viewModel::updateQuery,
                 modifier = Modifier.weight(1f),
+                focusRequester = focusRequester,
             )
         }
 
@@ -191,48 +223,66 @@ fun SearchScreen(
 
         // ── Results ──────────────────────────────────────────
         val queryLen = state.query.trim().length
-        if (state.isLoading && state.results.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
-            }
-        } else if (queryLen >= 1 && state.results.isEmpty() && !state.isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "No results for \"${state.query}\"",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = OnSurfaceVariant,
-                )
-            }
-        } else if (state.isGridView) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                itemsIndexed(
-                    items = state.results,
-                    key = { _, media -> media.id },
-                ) { index, media ->
-                    SearchGridCard(media = media, onClick = { onNavigateToMedia(media.id) })
-                    if (index == state.results.lastIndex - 2) viewModel.loadMore()
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (state.isLoading && state.results.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Primary, strokeWidth = 2.dp)
+                }
+            } else if (queryLen >= 1 && state.results.isEmpty() && !state.isLoading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "No results for \"${state.query}\"",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurfaceVariant,
+                    )
+                }
+            } else if (state.isGridView) {
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    itemsIndexed(
+                        items = state.results,
+                        key = { _, media -> media.id },
+                    ) { index, media ->
+                        SearchGridCard(media = media, onClick = { onNavigateToMedia(media.id) })
+                        if (index == state.results.lastIndex - 2) viewModel.loadMore()
+                    }
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    itemsIndexed(
+                        items = state.results,
+                        key = { _, media -> media.id },
+                    ) { index, media ->
+                        MediaBannerCard(media = media, onClick = { onNavigateToMedia(media.id) })
+                        if (index == state.results.lastIndex - 2) viewModel.loadMore()
+                    }
                 }
             }
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                itemsIndexed(
-                    items = state.results,
-                    key = { _, media -> media.id },
-                ) { index, media ->
-                    MediaBannerCard(media = media, onClick = { onNavigateToMedia(media.id) })
-                    if (index == state.results.lastIndex - 2) viewModel.loadMore()
-                }
-            }
+
+            ScrollToTopFab(
+                visible = showFab,
+                onClick = {
+                    scope.launch {
+                        if (state.isGridView) {
+                            gridState.animateScrollToItem(0)
+                        } else {
+                            listState.animateScrollToItem(0)
+                        }
+                    }
+                },
+                modifier = Modifier.align(Alignment.BottomEnd),
+            )
         }
     }
 }
@@ -242,6 +292,7 @@ private fun SearchInput(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null,
 ) {
     val shape = MaterialTheme.shapes.extraLarge
 
@@ -269,7 +320,8 @@ private fun SearchInput(
             modifier =
                 Modifier
                     .weight(1f)
-                    .padding(start = 12.dp),
+                    .padding(start = 12.dp)
+                    .let { if (focusRequester != null) it.focusRequester(focusRequester) else it },
             decorationBox = { innerTextField ->
                 if (query.isEmpty()) {
                     Text(

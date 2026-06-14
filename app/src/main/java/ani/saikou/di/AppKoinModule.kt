@@ -116,6 +116,7 @@ import ani.saikou.presentation.screens.stats.StatsViewModel
 import ani.saikou.presentation.screens.torrent.TorrentSearchViewModel
 import ani.saikou.presentation.screens.update.UpdateViewModel
 import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.androidx.viewmodel.dsl.viewModelOf
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.qualifier.named
@@ -295,7 +296,19 @@ val appModule =
         viewModelOf(::CharacterDetailViewModel)
         viewModelOf(::DownloadsViewModel)
         viewModelOf(::FeedbackViewModel)
-        viewModelOf(::HomeViewModel)
+        viewModel {
+            HomeViewModel(
+                getAnilistSnapshot = get(),
+                refreshAnilistSnapshot = get(),
+                observeReadingHistory = get(),
+                observeContinueWatching = get(),
+                observeRecentWatchHistory = get(),
+                observeEpisodesWatchedCount = get(),
+                observeChaptersReadCount = get(),
+                observeActivityCalendar = get(),
+                appVersionName = BuildConfig.VERSION_NAME,
+            )
+        }
         viewModelOf(::LoginViewModel)
         viewModelOf(::MangaReaderViewModel)
         viewModelOf(::MangaViewModel)

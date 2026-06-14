@@ -33,8 +33,9 @@ class HomeViewModel(
     private val observeEpisodesWatchedCount: ObserveEpisodesWatchedCountUseCase,
     private val observeChaptersReadCount: ObserveChaptersReadCountUseCase,
     private val observeActivityCalendar: ObserveActivityCalendarUseCase,
+    appVersionName: String,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(HomeUiState())
+    private val _uiState = MutableStateFlow(HomeUiState(appVersionName = appVersionName))
     val uiState: StateFlow<HomeUiState> = _uiState
 
     init {
@@ -173,4 +174,5 @@ data class HomeUiState(
     val activitiesByDay: Map<LocalDate, List<DayActivity>> = emptyMap(),
     val isLoading: Boolean = true,
     val error: String? = null,
+    val appVersionName: String = "",
 )
