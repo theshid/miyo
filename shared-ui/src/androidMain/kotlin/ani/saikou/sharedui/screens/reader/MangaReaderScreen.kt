@@ -54,6 +54,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -196,6 +198,9 @@ fun MangaReaderScreen(
     var suggestionDismissed by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
     var offlineBannerDismissed by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
     var lastChapterDismissed by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
+    var unknownBannerDismissed by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
+    // Bumped by the "Try again" action to re-run the lookup below.
+    var recheckToken by remember(viewModel.mediaId, viewModel.chapterNum) { mutableIntStateOf(0) }
     var showCellularConfirm by remember { mutableStateOf(false) }
     var estimatedBytes by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
     var downloadQueued by remember(viewModel.mediaId, viewModel.chapterNum) { mutableStateOf(false) }
@@ -209,6 +214,7 @@ fun MangaReaderScreen(
 
     val nextAvailable = nextChapterStatus == MangaReaderViewModel.NextChapterStatus.Available
     val nextAbsent = nextChapterStatus == MangaReaderViewModel.NextChapterStatus.Absent
+    val nextUnknown = nextChapterStatus == MangaReaderViewModel.NextChapterStatus.Unknown
 
     val showSuggestionBanner =
         atEndOfChapter &&
@@ -218,11 +224,21 @@ fun MangaReaderScreen(
             !downloadQueued &&
             isOnline
 
+    // Offline covers both "there *is* a next chapter you can't reach" and
+    // "we couldn't even check" — the copy differs, the trigger doesn't.
     val showOfflineBanner =
         atEndOfChapter &&
-            nextAvailable &&
+            (nextAvailable || nextUnknown) &&
             !offlineBannerDismissed &&
             !isOnline
+
+    // Online but the chapter list lookup came back empty: say the check
+    // failed rather than claiming the series is over.
+    val showUnknownBanner =
+        atEndOfChapter &&
+            nextUnknown &&
+            !unknownBannerDismissed &&
+            isOnline
 
     val showLastChapterBanner =
         atEndOfChapter &&
@@ -231,8 +247,14 @@ fun MangaReaderScreen(
 
     // Kick off the source-vs-disk check once the user hits the last page. Runs
     // for every status, since the "last chapter" banner needs it too.
-    LaunchedEffect(currentPage, totalPages) {
-        if (nextChapterStatus != null) return@LaunchedEffect
+    // Re-keyed on connectivity so an Unknown verdict (lookup failed while
+    // offline) resolves itself when the network comes back, and on
+    // recheckToken so the banner's "Try again" can retry it by hand.
+    LaunchedEffect(currentPage, totalPages, isOnline, recheckToken) {
+        val settled =
+            nextChapterStatus != null &&
+                nextChapterStatus != MangaReaderViewModel.NextChapterStatus.Unknown
+        if (settled) return@LaunchedEffect
         if (totalPages <= 1 || currentPage != totalPages) return@LaunchedEffect
         val status = viewModel.nextChapterStatus()
         nextChapterStatus = status
@@ -521,7 +543,21 @@ fun MangaReaderScreen(
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             OfflineNextChapterBanner(
+                canSeeNextChapter = nextAvailable,
                 onDismiss = { offlineBannerDismissed = true },
+            )
+        }
+
+        // ── Couldn't reach the source to check for more chapters ───
+        AnimatedVisibility(
+            visible = showUnknownBanner,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            UnknownNextChapterBanner(
+                onRetry = { recheckToken++ },
+                onDismiss = { unknownBannerDismissed = true },
             )
         }
 
@@ -823,13 +859,17 @@ private fun PagerReader(
     }
 }
 
-// ── Download Next N Banner ──────────────────────────────────
+// ── End-of-chapter banner scaffold ──────────────────────────
+// Icon, title/subtitle stack, optional action button, dismiss X. Shared by
+// the four end-of-chapter banners below, which differ only in copy.
 @Composable
-private fun DownloadNextChaptersBanner(
-    count: Int,
-    estimateLabel: String?,
-    onDownload: () -> Unit,
+private fun ReaderBanner(
+    icon: ImageVector,
+    title: String,
+    subtitle: String?,
     onDismiss: () -> Unit,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
 ) {
     Row(
         modifier =
@@ -845,82 +885,7 @@ private fun DownloadNextChaptersBanner(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(
-            Icons.Default.Download,
-            contentDescription = null,
-            tint = Primary,
-            modifier = Modifier.size(20.dp),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Save the next $count chapters?",
-                style = MaterialTheme.typography.bodyMedium,
-                color = OnSurface,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (estimateLabel != null) {
-                Text(
-                    text = "About $estimateLabel",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = OnSurfaceVariant,
-                )
-            }
-        }
-        Box(
-            modifier =
-                Modifier
-                    .clip(
-                        androidx.compose.foundation.shape
-                            .RoundedCornerShape(8.dp),
-                    ).background(Primary)
-                    .clickable(onClick = onDownload)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = "Download",
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-            Icon(
-                Icons.Default.Close,
-                contentDescription = "Dismiss",
-                tint = OnSurfaceVariant,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
-}
-
-// ── Last Chapter Banner ─────────────────────────────────────
-@Composable
-private fun LastChapterBanner(
-    isFinished: Boolean,
-    onDismiss: () -> Unit,
-) {
-    val title = if (isFinished) "Series complete" else "You're all caught up"
-    val subtitle =
-        if (isFinished) {
-            "You've reached the end of the series."
-        } else {
-            "This is the latest chapter. New ones will appear as the series releases."
-        }
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .clip(
-                    androidx.compose.foundation.shape
-                        .RoundedCornerShape(12.dp),
-                ).background(SurfaceContainerHigh)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            Icons.Default.CheckCircle,
+            icon,
             contentDescription = null,
             tint = Primary,
             modifier = Modifier.size(20.dp),
@@ -932,11 +897,32 @@ private fun LastChapterBanner(
                 color = OnSurface,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = OnSurfaceVariant,
-            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OnSurfaceVariant,
+                )
+            }
+        }
+        if (actionLabel != null && onAction != null) {
+            Box(
+                modifier =
+                    Modifier
+                        .clip(
+                            androidx.compose.foundation.shape
+                                .RoundedCornerShape(8.dp),
+                        ).background(Primary)
+                        .clickable(onClick = onAction)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = actionLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
         IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
             Icon(
@@ -949,50 +935,82 @@ private fun LastChapterBanner(
     }
 }
 
-// ── Offline Next Chapter Banner ─────────────────────────────
+// ── Download Next N Banner ──────────────────────────────────
 @Composable
-private fun OfflineNextChapterBanner(onDismiss: () -> Unit) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .clip(
-                    androidx.compose.foundation.shape
-                        .RoundedCornerShape(12.dp),
-                ).background(SurfaceContainerHigh)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            Icons.Default.CloudOff,
-            contentDescription = null,
-            tint = Primary,
-            modifier = Modifier.size(20.dp),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "You're offline",
-                style = MaterialTheme.typography.bodyMedium,
-                color = OnSurface,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = "Reconnect to read the next chapter or download more.",
-                style = MaterialTheme.typography.labelSmall,
-                color = OnSurfaceVariant,
-            )
-        }
-        IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-            Icon(
-                Icons.Default.Close,
-                contentDescription = "Dismiss",
-                tint = OnSurfaceVariant,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
+private fun DownloadNextChaptersBanner(
+    count: Int,
+    estimateLabel: String?,
+    onDownload: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ReaderBanner(
+        icon = Icons.Default.Download,
+        title = "Save the next $count chapters?",
+        subtitle = estimateLabel?.let { "About $it" },
+        onDismiss = onDismiss,
+        actionLabel = "Download",
+        onAction = onDownload,
+    )
+}
+
+// ── Last Chapter Banner ─────────────────────────────────────
+// Only ever shown for NextChapterStatus.Absent, which now requires a
+// positive signal (a chapter list or a known total) — an offline reader
+// whose lookup failed gets one of the two banners below instead.
+@Composable
+private fun LastChapterBanner(
+    isFinished: Boolean,
+    onDismiss: () -> Unit,
+) {
+    ReaderBanner(
+        icon = Icons.Default.CheckCircle,
+        title = if (isFinished) "Series complete" else "You're all caught up",
+        subtitle =
+            if (isFinished) {
+                "You've reached the end of the series."
+            } else {
+                "This is the latest chapter. New ones will appear as the series releases."
+            },
+        onDismiss = onDismiss,
+    )
+}
+
+// ── Offline Next Chapter Banner ─────────────────────────────
+// [canSeeNextChapter] separates the two offline endings: we know a next
+// chapter exists but can't fetch it, versus we couldn't reach the source to
+// find out at all.
+@Composable
+private fun OfflineNextChapterBanner(
+    canSeeNextChapter: Boolean,
+    onDismiss: () -> Unit,
+) {
+    ReaderBanner(
+        icon = Icons.Default.CloudOff,
+        title = "You're offline",
+        subtitle =
+            if (canSeeNextChapter) {
+                "Reconnect to read the next chapter or download more."
+            } else {
+                "Reconnect to check whether there are more chapters."
+            },
+        onDismiss = onDismiss,
+    )
+}
+
+// ── Chapter-list lookup failed (online) ─────────────────────
+@Composable
+private fun UnknownNextChapterBanner(
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ReaderBanner(
+        icon = Icons.Default.CloudOff,
+        title = "Couldn't check for more chapters",
+        subtitle = "The source didn't respond — this may not be the last chapter.",
+        onDismiss = onDismiss,
+        actionLabel = "Try again",
+        onAction = onRetry,
+    )
 }
 
 // ── Next Chapter Card ────────────────────────────────────────

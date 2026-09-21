@@ -360,15 +360,18 @@ class MangaReaderViewModel(
             .formatBytes(bytes)
 
     /**
-     * Tri-state classification of what's after the current chapter, driving
-     * which (if any) end-of-chapter banner the reader shows:
+     * Classification of what's after the current chapter, driving which (if
+     * any) end-of-chapter banner the reader shows:
      *  - [Absent]    — no chapter > current exists on the source. The reader
      *                  surfaces a "you've reached the end" banner.
      *  - [Available] — there's a next chapter and it isn't on disk yet.
      *                  Lights up the "save next N" / offline banners.
      *  - [Downloaded] — the next chapter is already on disk; no banner.
+     *  - [Unknown]   — the lookup produced no evidence either way (the chapter
+     *                  list couldn't be fetched and no total is known). The
+     *                  reader says so instead of guessing.
      */
-    enum class NextChapterStatus { Absent, Available, Downloaded }
+    enum class NextChapterStatus { Absent, Available, Downloaded, Unknown }
 
     suspend fun nextChapterStatus(): NextChapterStatus {
         // Make sure the chapter list is loaded — otherwise a cached/offline
@@ -377,7 +380,14 @@ class MangaReaderViewModel(
         // falsely flag every chapter as the last.
         loadChapterListNow()
         val state = _uiState.value
-        val sourceMax = _allChapters.value.maxOfOrNull { it.number.toInt() } ?: 0
+        val chapters = _allChapters.value
+        // "End of series" needs a *positive* signal. With no chapter list
+        // (offline, source error, parser returned nothing) and no known total,
+        // we know nothing about what follows — and the old fall-through to
+        // Absent told an offline reader they'd finished the manga at whatever
+        // chapter they happened to stop on.
+        if (chapters.isEmpty() && (state.totalChapters ?: 0) <= 0) return NextChapterStatus.Unknown
+        val sourceMax = chapters.maxOfOrNull { it.number.toInt() } ?: 0
         // Compare against the larger of sourceMax and the cross-source
         // chapter total. Handles fragmentary listings (MangaDex's
         // "Vagabond (HK Colored)" hosts 5 of 327 chapters) regardless of
