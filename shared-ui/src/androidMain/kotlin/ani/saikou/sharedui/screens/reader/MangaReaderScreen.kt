@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +49,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -67,6 +70,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -95,6 +101,7 @@ import coil3.network.httpHeaders
 import coil3.request.crossfade
 import miyo.shared_ui.generated.resources.Res
 import miyo.shared_ui.generated.resources.error_samurai
+import kotlin.math.roundToInt
 
 enum class ReadingMode { WEBTOON, PAGER_LTR, PAGER_RTL }
 
@@ -431,9 +438,6 @@ fun MangaReaderScreen(
             }
         }
 
-        // ── Double-tap to reset zoom ─────────────────────────
-        // (Single tap toggles overlay, handled above)
-
         // ── Overlay ──────────────────────────────────────────
         AnimatedVisibility(visible = showOverlay, enter = fadeIn(), exit = fadeOut()) {
             Box(Modifier.fillMaxSize()) {
@@ -479,35 +483,59 @@ fun MangaReaderScreen(
                     }
                 }
 
-                // Bottom bar: page counter + zoom reset
-                Row(
+                // Keep zoom controls outside the transformed page content.
+                Column(
                     modifier =
                         Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.7f))
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                            .background(Color.Black.copy(alpha = 0.9f))
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    if (settings.showPageNumber) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Text(
-                            "$currentPage / $totalPages",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = OnSurface,
+                            "Zoom · ${(scale * 100).roundToInt()}%",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White,
                         )
+                        if (settings.showPageNumber) {
+                            Text(
+                                "$currentPage / $totalPages",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White,
+                            )
+                        }
+                        TextButton(
+                            onClick = {
+                                scale = 1f
+                                offsetX = 0f
+                                offsetY = 0f
+                            },
+                            enabled = scale != 1f || offsetX != 0f || offsetY != 0f,
+                            modifier = Modifier.semantics { contentDescription = "Reset zoom to 100 percent" },
+                        ) {
+                            Text("Reset", color = if (scale != 1f) Primary else Color.Gray)
+                        }
                     }
-                    if (scale != 1f) {
-                        GenreChip(text = "Reset Zoom", selected = true, onClick = {
-                            scale = 1f
-                            offsetX = 0f
-                            offsetY = 0f
-                        })
-                    }
+                    ReaderZoomSlider(
+                        scale = scale,
+                        onScaleChange = { newScale ->
+                            val clamped = newScale.coerceIn(0.5f, 5f)
+                            // Keep the same reading position when adjusting magnification.
+                            val ratio = clamped / scale
+                            offsetX = if (clamped > 1f) offsetX * ratio else 0f
+                            offsetY = if (clamped > 1f) offsetY * ratio else 0f
+                            scale = clamped
+                        },
+                    )
                     Text(
-                        "${(scale * 100).toInt()}%",
+                        "Pinch to zoom · Drag to move when enlarged",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Primary,
+                        color = Color.LightGray,
                     )
                 }
             }
@@ -515,7 +543,7 @@ fun MangaReaderScreen(
 
         // ── End-of-chapter download suggestion ───────────────
         AnimatedVisibility(
-            visible = showSuggestionBanner,
+            visible = showSuggestionBanner && !showOverlay,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -537,7 +565,7 @@ fun MangaReaderScreen(
 
         // ── Offline at end of last downloaded chapter ────────
         AnimatedVisibility(
-            visible = showOfflineBanner,
+            visible = showOfflineBanner && !showOverlay,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -550,7 +578,7 @@ fun MangaReaderScreen(
 
         // ── Couldn't reach the source to check for more chapters ───
         AnimatedVisibility(
-            visible = showUnknownBanner,
+            visible = showUnknownBanner && !showOverlay,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -563,7 +591,7 @@ fun MangaReaderScreen(
 
         // ── End-of-series banner (no more chapters on the source) ───
         AnimatedVisibility(
-            visible = showLastChapterBanner,
+            visible = showLastChapterBanner && !showOverlay,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -671,6 +699,35 @@ fun MangaReaderScreen(
                 onboardingPrefs.markReaderTourSeen()
             },
         )
+    }
+}
+
+@Composable
+private fun ReaderZoomSlider(
+    scale: Float,
+    onScaleChange: (Float) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = { onScaleChange(scale - 0.25f) }, enabled = scale > 0.5f) {
+            Icon(Icons.Default.ZoomOut, "Zoom out", tint = if (scale > 0.5f) Color.White else Color.Gray)
+        }
+        Slider(
+            value = scale,
+            onValueChange = onScaleChange,
+            valueRange = 0.5f..5f,
+            modifier =
+                Modifier.weight(1f).semantics {
+                    contentDescription = "Zoom"
+                    stateDescription = "${(scale * 100).roundToInt()} percent"
+                },
+            colors = SliderDefaults.colors(thumbColor = Primary, activeTrackColor = Primary),
+        )
+        IconButton(onClick = { onScaleChange(scale + 0.25f) }, enabled = scale < 5f) {
+            Icon(Icons.Default.ZoomIn, "Zoom in", tint = if (scale < 5f) Color.White else Color.Gray)
+        }
     }
 }
 
